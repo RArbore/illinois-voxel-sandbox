@@ -1,5 +1,8 @@
 cmake_minimum_required(VERSION 3.0)
-
 project(illinois-voxel-sandbox)
 
-add_executable(ivs src/drivers/ivs.cpp)
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED True)
+
+add_subdirectory(drivers)
+add_subdirectory(graphics)
