@@ -6,3 +6,4 @@ set(CMAKE_CXX_STANDARD_REQUIRED True)
 
 add_subdirectory(drivers)
 add_subdirectory(graphics)
+add_subdirectory(utils)

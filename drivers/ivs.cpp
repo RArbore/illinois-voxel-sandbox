@@ -6,6 +6,4 @@ int main(int argc, char *argv[]) {
     while (!shouldExit(context)) {
 	renderFrame(context);
     }
-
-    destroyGraphicsContext(context);
 }

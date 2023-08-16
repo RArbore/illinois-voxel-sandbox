@@ -2,28 +2,25 @@
 #include "Window.h"
 #include "Device.h"
 
-struct GraphicsContext {
-    void create() {
-	valid_ = true;
-	window_ = std::make_unique<Window>();
-	device_ = std::make_unique<Device>();
-    }
+class GraphicsContext {
+public:
+    GraphicsContext();
+private:
+    std::shared_ptr<Window> window_;
+    std::shared_ptr<Device> device_;
 
-    void destroy() {
-	valid_ = false;
-	window_ = nullptr;
-	device_ = nullptr;
-    }
-
-    bool valid_ = false;
-
-    std::unique_ptr<Window> window_ = nullptr;
-    std::unique_ptr<Device> device_ = nullptr;
+    friend std::shared_ptr<GraphicsContext> createGraphicsContext();
+    friend void renderFrame(std::shared_ptr<GraphicsContext>);
+    friend bool shouldExit(std::shared_ptr<GraphicsContext>);
 };
 
+GraphicsContext::GraphicsContext() {
+    window_ = std::make_shared<Window>();
+    device_ = std::make_shared<Device>();
+}
+
 std::shared_ptr<GraphicsContext> createGraphicsContext() {
-    auto context = std::make_shared<GraphicsContext>();
-    context->create();
+    auto context = std::shared_ptr<GraphicsContext>(new GraphicsContext());
     return context;
 }
 
@@ -33,8 +30,4 @@ void renderFrame(std::shared_ptr<GraphicsContext> context) {
 
 bool shouldExit(std::shared_ptr<GraphicsContext> context) {
     return context->window_->shouldClose();
-}
-
-void destroyGraphicsContext(std::shared_ptr<GraphicsContext> context) {
-    context->destroy();
 }
