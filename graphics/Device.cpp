@@ -15,7 +15,7 @@ static const char *const device_extensions[] = {
     VK_EXT_DESCRIPTOR_INDEXING_EXTENSION_NAME,
 };
 
-Device::Device() {
+Device::Device(std::shared_ptr<Window> window): window_(window) {
     VkApplicationInfo app_info {};
     app_info.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
     app_info.pApplicationName = "Illinois Voxel Sandbox";
@@ -35,9 +35,12 @@ Device::Device() {
     create_info.enabledLayerCount = sizeof(validation_layers) / sizeof(validation_layers[0]);
     create_info.ppEnabledLayerNames = validation_layers;
 
-    ASSERT(vkCreateInstance(&create_info, nullptr, &instance), "Couldn't create Vulkan instance.");
+    ASSERT(vkCreateInstance(&create_info, nullptr, &instance_), "Couldn't create Vulkan instance.");
+
+    ASSERT(glfwCreateWindowSurface(instance_, window_->get_window(), NULL, &surface_), "Couldn't create GLFW window surface.");
 }
 
 Device::~Device() {
-    vkDestroyInstance(instance, nullptr);
+    vkDestroySurfaceKHR(instance_, surface_, nullptr);
+    vkDestroyInstance(instance_, nullptr);
 }

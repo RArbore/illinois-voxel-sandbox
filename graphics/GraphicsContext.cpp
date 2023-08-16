@@ -16,7 +16,7 @@ private:
 
 GraphicsContext::GraphicsContext() {
     window_ = std::make_shared<Window>();
-    device_ = std::make_shared<Device>();
+    device_ = std::make_shared<Device>(window_);
 }
 
 std::shared_ptr<GraphicsContext> createGraphicsContext() {

@@ -8,6 +8,8 @@ public:
     Window();
     ~Window();
 
+    GLFWwindow *get_window();
+
     bool shouldClose();
     void pollEvents();
 private:
