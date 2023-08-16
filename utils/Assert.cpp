@@ -10,3 +10,11 @@ void assert_impl(VkResult result, const std::string_view msg, const std::string_
 	exit(-1);
     }
 }
+
+void assert_impl(bool result, const std::string_view msg, const std::string_view file, uint32_t line) {
+    if (!result) {
+	std::cerr << "PANIC: " << msg << "\nOccurred in " << file << " at line " << line << ".\n";
+	__builtin_trap();
+	exit(-1);
+    }
+}

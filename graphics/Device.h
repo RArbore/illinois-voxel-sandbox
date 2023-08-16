@@ -20,5 +20,8 @@ private:
     VkDevice device_;
     VkQueue queue_;
 
+    VkPhysicalDeviceRayTracingPipelinePropertiesKHR ray_tracing_properties_;
+    VkPhysicalDeviceAccelerationStructurePropertiesKHR acceleration_structure_properties_;
+
     std::shared_ptr<Window> window_;
 };
