@@ -25,6 +25,7 @@ struct SwapchainSupport {
 };
 
 int32_t physical_score(VkPhysicalDevice physical, VkSurfaceKHR surface);
+uint32_t physical_check_queue_family(VkPhysicalDevice physical, VkSurfaceKHR surface, VkQueueFlagBits bits);
 
 Device::Device(std::shared_ptr<Window> window): window_(window) {
     VkApplicationInfo app_info {};
@@ -79,9 +80,66 @@ Device::Device(std::shared_ptr<Window> window): window_(window) {
     acceleration_structure_properties_.pNext = nullptr;
     vkGetPhysicalDeviceProperties2(physical_device_, &device_properties);
     std::cout << "INFO: Using device " << device_properties.properties.deviceName << ".\n";
+
+    uint32_t queue_family = physical_check_queue_family(physical_device_, surface_, (VkQueueFlagBits) (VK_QUEUE_GRAPHICS_BIT | VK_QUEUE_COMPUTE_BIT));
+    ASSERT(queue_family != 0xFFFFFFFF, "Could not find queue family.");
+
+    float queue_priority = 1.0f;
+
+    VkDeviceQueueCreateInfo queue_create_info {};
+    queue_create_info.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
+    queue_create_info.queueFamilyIndex = queue_family;
+    queue_create_info.queueCount = 1;
+    queue_create_info.pQueuePriorities = &queue_priority;
+
+    VkPhysicalDeviceBufferDeviceAddressFeatures buffer_device_address_features {};
+    buffer_device_address_features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_BUFFER_DEVICE_ADDRESS_FEATURES;
+    buffer_device_address_features.bufferDeviceAddress = VK_TRUE; 
+    buffer_device_address_features.pNext = NULL;
+
+    VkPhysicalDeviceAccelerationStructureFeaturesKHR acceleration_features {};
+    acceleration_features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ACCELERATION_STRUCTURE_FEATURES_KHR;
+    acceleration_features.accelerationStructure = VK_TRUE;
+    acceleration_features.descriptorBindingAccelerationStructureUpdateAfterBind = VK_TRUE;
+    acceleration_features.pNext = &buffer_device_address_features;
+
+    VkPhysicalDeviceRayTracingPipelineFeaturesKHR ray_tracing_features {};
+    ray_tracing_features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_PIPELINE_FEATURES_KHR;
+    ray_tracing_features.rayTracingPipeline = VK_TRUE;
+    ray_tracing_features.pNext = &acceleration_features;
+
+    VkPhysicalDeviceVulkan11Features vulkan_11_features {};
+    vulkan_11_features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_1_FEATURES;
+    vulkan_11_features.shaderDrawParameters = VK_TRUE;
+    vulkan_11_features.pNext = &ray_tracing_features;
+
+    VkPhysicalDeviceDescriptorIndexingFeatures indexing_features {};
+    indexing_features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DESCRIPTOR_INDEXING_FEATURES;
+    indexing_features.descriptorBindingPartiallyBound = VK_TRUE;
+    indexing_features.runtimeDescriptorArray = VK_TRUE;
+    indexing_features.pNext = &vulkan_11_features;
+
+    VkPhysicalDeviceFeatures2 device_features {};
+    device_features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2;
+    device_features.features.samplerAnisotropy = VK_TRUE;
+    device_features.pNext = &indexing_features;
+
+    vkGetPhysicalDeviceFeatures2(physical_device_, &device_features);
+
+    VkDeviceCreateInfo device_create_info {};
+    device_create_info.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
+    device_create_info.queueCreateInfoCount = 1;
+    device_create_info.pQueueCreateInfos = &queue_create_info;
+    device_create_info.pNext = &device_features;
+    device_create_info.enabledExtensionCount = sizeof(device_extensions) / sizeof(device_extensions[0]);
+    device_create_info.ppEnabledExtensionNames = device_extensions;
+
+    ASSERT(vkCreateDevice(physical_device_, &device_create_info, NULL, &device_), "Couldn't create logical device.");
+    vkGetDeviceQueue(device_, queue_family, 0, &queue_);
 }
 
 Device::~Device() {
+    vkDestroyDevice(device_, NULL);
     vkDestroySurfaceKHR(instance_, surface_, nullptr);
     vkDestroyInstance(instance_, nullptr);
 }
