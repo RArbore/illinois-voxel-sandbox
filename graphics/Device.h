@@ -13,6 +13,10 @@ public:
     Device(std::shared_ptr<Window> window);
     ~Device();
 
+    VkInstance get_instance();
+    VkPhysicalDevice get_physical_device();
+    VkDevice get_device();
+
 private:
     VkInstance instance_;
     VkSurfaceKHR surface_;

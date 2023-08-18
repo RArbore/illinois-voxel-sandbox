@@ -1,6 +1,7 @@
 #include "GraphicsContext.h"
 #include "Window.h"
 #include "Device.h"
+#include "GPUAllocator.h"
 
 class GraphicsContext {
 public:
@@ -8,6 +9,7 @@ public:
 private:
     std::shared_ptr<Window> window_;
     std::shared_ptr<Device> device_;
+    std::shared_ptr<GPUAllocator> gpu_allocator_;
 
     friend std::shared_ptr<GraphicsContext> createGraphicsContext();
     friend void renderFrame(std::shared_ptr<GraphicsContext>);
@@ -17,6 +19,7 @@ private:
 GraphicsContext::GraphicsContext() {
     window_ = std::make_shared<Window>();
     device_ = std::make_shared<Device>(window_);
+    gpu_allocator_ = std::make_shared<GPUAllocator>(device_);
 }
 
 std::shared_ptr<GraphicsContext> createGraphicsContext() {

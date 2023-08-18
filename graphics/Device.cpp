@@ -144,6 +144,18 @@ Device::~Device() {
     vkDestroyInstance(instance_, nullptr);
 }
 
+VkInstance Device::get_instance() {
+    return instance_;
+}
+
+VkPhysicalDevice Device::get_physical_device() {
+    return physical_device_;
+}
+
+VkDevice Device::get_device() {
+    return device_;
+}
+
 uint32_t physical_check_queue_family(VkPhysicalDevice physical, VkSurfaceKHR surface, VkQueueFlagBits bits) {
     uint32_t queue_family_count = 0;
     vkGetPhysicalDeviceQueueFamilyProperties(physical, &queue_family_count, NULL);
