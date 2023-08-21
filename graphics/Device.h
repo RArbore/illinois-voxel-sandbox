@@ -16,7 +16,6 @@ public:
     VkInstance get_instance();
     VkPhysicalDevice get_physical_device();
     VkDevice get_device();
-
 private:
     VkInstance instance_;
     VkSurfaceKHR surface_;
@@ -27,5 +26,5 @@ private:
     VkPhysicalDeviceRayTracingPipelinePropertiesKHR ray_tracing_properties_;
     VkPhysicalDeviceAccelerationStructurePropertiesKHR acceleration_structure_properties_;
 
-    std::shared_ptr<Window> window_;
+    std::shared_ptr<Window> window_ = nullptr;
 };
