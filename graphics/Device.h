@@ -16,6 +16,7 @@ public:
     VkInstance get_instance();
     VkPhysicalDevice get_physical_device();
     VkDevice get_device();
+    VkSurfaceKHR get_surface();
 private:
     VkInstance instance_;
     VkSurfaceKHR surface_;

@@ -18,12 +18,6 @@ static const char *const device_extensions[] = {
     VK_EXT_DESCRIPTOR_INDEXING_EXTENSION_NAME,
 };
 
-struct SwapchainSupport {
-    VkSurfaceCapabilitiesKHR capabilities;
-    std::vector<VkSurfaceFormatKHR> formats;
-    std::vector<VkPresentModeKHR> present_modes;
-};
-
 int32_t physical_score(VkPhysicalDevice physical, VkSurfaceKHR surface);
 uint32_t physical_check_queue_family(VkPhysicalDevice physical, VkSurfaceKHR surface, VkQueueFlagBits bits);
 
@@ -156,6 +150,10 @@ VkDevice Device::get_device() {
     return device_;
 }
 
+VkSurfaceKHR Device::get_surface() {
+    return surface_;
+}
+
 uint32_t physical_check_queue_family(VkPhysicalDevice physical, VkSurfaceKHR surface, VkQueueFlagBits bits) {
     uint32_t queue_family_count = 0;
     vkGetPhysicalDeviceQueueFamilyProperties(physical, &queue_family_count, NULL);
@@ -202,19 +200,6 @@ int32_t physical_check_extensions(VkPhysicalDevice physical) {
     else {
 	return 0;
     }
-}
-
-SwapchainSupport physical_check_swapchain_support(VkPhysicalDevice specific_physical_device, VkSurfaceKHR surface) {
-    uint32_t num_formats, num_present_modes;
-    vkGetPhysicalDeviceSurfaceFormatsKHR(specific_physical_device, surface, &num_formats, NULL);
-    vkGetPhysicalDeviceSurfacePresentModesKHR(specific_physical_device, surface, &num_present_modes, NULL);
-
-    SwapchainSupport ss { {}, std::vector<VkSurfaceFormatKHR>(num_formats), std::vector<VkPresentModeKHR>(num_present_modes) };
-    vkGetPhysicalDeviceSurfaceCapabilitiesKHR(specific_physical_device, surface, &ss.capabilities);
-    vkGetPhysicalDeviceSurfaceFormatsKHR(specific_physical_device, surface, &num_formats, &ss.formats.at(0));
-    vkGetPhysicalDeviceSurfacePresentModesKHR(specific_physical_device, surface, &num_present_modes, &ss.present_modes.at(0));
-
-    return ss;
 }
 
 int32_t physical_check_features_support(VkPhysicalDevice physical) {
@@ -293,8 +278,10 @@ int32_t physical_score(VkPhysicalDevice physical, VkSurfaceKHR surface) {
 	return -1;
     }
 
-    const SwapchainSupport support_check = physical_check_swapchain_support(physical, surface);
-    if (support_check.formats.size() == 0 || support_check.present_modes.size() == 0) {
+    uint32_t num_formats, num_present_modes;
+    vkGetPhysicalDeviceSurfaceFormatsKHR(physical, surface, &num_formats, NULL);
+    vkGetPhysicalDeviceSurfacePresentModesKHR(physical, surface, &num_present_modes, NULL);
+    if (num_formats == 0 || num_present_modes == 0) {
 	return -1;
     }
 
