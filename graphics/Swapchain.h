@@ -15,7 +15,6 @@ private:
     VkExtent2D swapchain_extent_;
     std::vector<VkImage> swapchain_images_;
     std::vector<VkImageView> swapchain_image_views_;
-    std::vector<VkFramebuffer> swapchain_framebuffers_;
 
     std::shared_ptr<Device> device_;
     std::shared_ptr<Window> window_;

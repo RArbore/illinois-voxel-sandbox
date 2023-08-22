@@ -98,11 +98,11 @@ GPUImage::GPUImage(std::shared_ptr<GPUAllocator> allocator, VkExtent2D extent, V
     image_view_create_info.subresourceRange.baseArrayLayer = 0;
     image_view_create_info.subresourceRange.layerCount = array_layers_;
 
-    ASSERT(vkCreateImageView(allocator_->get_device()->get_device(), &image_view_create_info, NULL, &view_), "Unable to create image view.");
+    ASSERT(vkCreateImageView(allocator_->get_device()->get_device(), &image_view_create_info, nullptr, &view_), "Unable to create image view.");
 }
 
 GPUImage::~GPUImage() {
-    vkDestroyImageView(allocator_->get_device()->get_device(), view_, NULL);
+    vkDestroyImageView(allocator_->get_device()->get_device(), view_, nullptr);
     vmaDestroyImage(allocator_->get_vma(), image_, allocation_);
 }
 
@@ -155,10 +155,10 @@ GPUVolume::GPUVolume(std::shared_ptr<GPUAllocator> allocator, VkExtent3D extent,
     image_view_create_info.subresourceRange.baseArrayLayer = 0;
     image_view_create_info.subresourceRange.layerCount = array_layers_;
 
-    ASSERT(vkCreateImageView(allocator_->get_device()->get_device(), &image_view_create_info, NULL, &view_), "Unable to create image view.");
+    ASSERT(vkCreateImageView(allocator_->get_device()->get_device(), &image_view_create_info, nullptr, &view_), "Unable to create image view.");
 }
 
 GPUVolume::~GPUVolume() {
-    vkDestroyImageView(allocator_->get_device()->get_device(), view_, NULL);
+    vkDestroyImageView(allocator_->get_device()->get_device(), view_, nullptr);
     vmaDestroyImage(allocator_->get_vma(), image_, allocation_);
 }
