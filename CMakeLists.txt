@@ -9,3 +9,6 @@ add_subdirectory(graphics)
 add_subdirectory(utils)
 add_subdirectory(drivers)
 add_subdirectory(shaders)
+add_subdirectory(procedural)
+add_subdirectory(voxels)
+
