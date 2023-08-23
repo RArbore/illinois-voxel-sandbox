@@ -34,8 +34,6 @@ private:
     VmaAllocationCreateFlags vma_flags_;
 
     std::shared_ptr<GPUAllocator> allocator_ = nullptr;
-
-    friend class GPUAllocator;
 };
 
 class GPUImage {
@@ -57,8 +55,6 @@ private:
     VkImageLayout last_set_layout_;
 
     std::shared_ptr<GPUAllocator> allocator_;
-
-    friend class GPUAllocator;
 };
 
 class GPUVolume {
@@ -80,6 +76,4 @@ private:
     VkImageLayout last_set_layout_;
 
     std::shared_ptr<GPUAllocator> allocator_;
-
-    friend class GPUAllocator;
 };

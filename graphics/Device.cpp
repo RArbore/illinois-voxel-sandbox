@@ -75,14 +75,14 @@ Device::Device(std::shared_ptr<Window> window): window_(window) {
     vkGetPhysicalDeviceProperties2(physical_device_, &device_properties);
     std::cout << "INFO: Using device " << device_properties.properties.deviceName << ".\n";
 
-    uint32_t queue_family = physical_check_queue_family(physical_device_, surface_, (VkQueueFlagBits) (VK_QUEUE_GRAPHICS_BIT | VK_QUEUE_COMPUTE_BIT));
-    ASSERT(queue_family != 0xFFFFFFFF, "Could not find queue family.");
+    queue_family_ = physical_check_queue_family(physical_device_, surface_, (VkQueueFlagBits) (VK_QUEUE_GRAPHICS_BIT | VK_QUEUE_COMPUTE_BIT));
+    ASSERT(queue_family_ != 0xFFFFFFFF, "Could not find queue family.");
 
     float queue_priority = 1.0f;
 
     VkDeviceQueueCreateInfo queue_create_info {};
     queue_create_info.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
-    queue_create_info.queueFamilyIndex = queue_family;
+    queue_create_info.queueFamilyIndex = queue_family_;
     queue_create_info.queueCount = 1;
     queue_create_info.pQueuePriorities = &queue_priority;
 
@@ -129,7 +129,7 @@ Device::Device(std::shared_ptr<Window> window): window_(window) {
     device_create_info.ppEnabledExtensionNames = device_extensions;
 
     ASSERT(vkCreateDevice(physical_device_, &device_create_info, nullptr, &device_), "Couldn't create logical device.");
-    vkGetDeviceQueue(device_, queue_family, 0, &queue_);
+    vkGetDeviceQueue(device_, queue_family_, 0, &queue_);
 }
 
 Device::~Device() {
@@ -152,6 +152,10 @@ VkDevice Device::get_device() {
 
 VkSurfaceKHR Device::get_surface() {
     return surface_;
+}
+
+uint32_t Device::get_queue_family() {
+    return queue_family_;
 }
 
 uint32_t physical_check_queue_family(VkPhysicalDevice physical, VkSurfaceKHR surface, VkQueueFlagBits bits) {

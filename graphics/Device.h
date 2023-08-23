@@ -17,6 +17,7 @@ public:
     VkPhysicalDevice get_physical_device();
     VkDevice get_device();
     VkSurfaceKHR get_surface();
+    uint32_t get_queue_family();
 private:
     VkInstance instance_;
     VkSurfaceKHR surface_;
@@ -24,6 +25,7 @@ private:
     VkDevice device_;
     VkQueue queue_;
 
+    uint32_t queue_family_;
     VkPhysicalDeviceRayTracingPipelinePropertiesKHR ray_tracing_properties_;
     VkPhysicalDeviceAccelerationStructurePropertiesKHR acceleration_structure_properties_;
 
