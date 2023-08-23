@@ -18,12 +18,6 @@ static const char *const device_extensions[] = {
     VK_EXT_DESCRIPTOR_INDEXING_EXTENSION_NAME,
 };
 
-struct SwapchainSupport {
-    VkSurfaceCapabilitiesKHR capabilities;
-    std::vector<VkSurfaceFormatKHR> formats;
-    std::vector<VkPresentModeKHR> present_modes;
-};
-
 int32_t physical_score(VkPhysicalDevice physical, VkSurfaceKHR surface);
 uint32_t physical_check_queue_family(VkPhysicalDevice physical, VkSurfaceKHR surface, VkQueueFlagBits bits);
 
@@ -49,10 +43,10 @@ Device::Device(std::shared_ptr<Window> window): window_(window) {
 
     ASSERT(vkCreateInstance(&create_info, nullptr, &instance_), "Couldn't create Vulkan instance.");
 
-    ASSERT(glfwCreateWindowSurface(instance_, window_->get_window(), NULL, &surface_), "Couldn't create GLFW window surface.");
+    ASSERT(glfwCreateWindowSurface(instance_, window_->get_window(), nullptr, &surface_), "Couldn't create GLFW window surface.");
 
     uint32_t device_count = 0;
-    vkEnumeratePhysicalDevices(instance_, &device_count, NULL);
+    vkEnumeratePhysicalDevices(instance_, &device_count, nullptr);
     ASSERT(device_count > 0, "No physical devices.");
 
     std::vector<VkPhysicalDevice> possible(device_count);
@@ -95,7 +89,7 @@ Device::Device(std::shared_ptr<Window> window): window_(window) {
     VkPhysicalDeviceBufferDeviceAddressFeatures buffer_device_address_features {};
     buffer_device_address_features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_BUFFER_DEVICE_ADDRESS_FEATURES;
     buffer_device_address_features.bufferDeviceAddress = VK_TRUE; 
-    buffer_device_address_features.pNext = NULL;
+    buffer_device_address_features.pNext = nullptr;
 
     VkPhysicalDeviceAccelerationStructureFeaturesKHR acceleration_features {};
     acceleration_features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ACCELERATION_STRUCTURE_FEATURES_KHR;
@@ -134,12 +128,12 @@ Device::Device(std::shared_ptr<Window> window): window_(window) {
     device_create_info.enabledExtensionCount = sizeof(device_extensions) / sizeof(device_extensions[0]);
     device_create_info.ppEnabledExtensionNames = device_extensions;
 
-    ASSERT(vkCreateDevice(physical_device_, &device_create_info, NULL, &device_), "Couldn't create logical device.");
+    ASSERT(vkCreateDevice(physical_device_, &device_create_info, nullptr, &device_), "Couldn't create logical device.");
     vkGetDeviceQueue(device_, queue_family, 0, &queue_);
 }
 
 Device::~Device() {
-    vkDestroyDevice(device_, NULL);
+    vkDestroyDevice(device_, nullptr);
     vkDestroySurfaceKHR(instance_, surface_, nullptr);
     vkDestroyInstance(instance_, nullptr);
 }
@@ -156,9 +150,13 @@ VkDevice Device::get_device() {
     return device_;
 }
 
+VkSurfaceKHR Device::get_surface() {
+    return surface_;
+}
+
 uint32_t physical_check_queue_family(VkPhysicalDevice physical, VkSurfaceKHR surface, VkQueueFlagBits bits) {
     uint32_t queue_family_count = 0;
-    vkGetPhysicalDeviceQueueFamilyProperties(physical, &queue_family_count, NULL);
+    vkGetPhysicalDeviceQueueFamilyProperties(physical, &queue_family_count, nullptr);
     ASSERT(queue_family_count > 0, "No queue families.");
 
     std::vector<VkQueueFamilyProperties> possible(queue_family_count);
@@ -179,10 +177,10 @@ uint32_t physical_check_queue_family(VkPhysicalDevice physical, VkSurfaceKHR sur
 
 int32_t physical_check_extensions(VkPhysicalDevice physical) {
     uint32_t extension_count = 0;
-    vkEnumerateDeviceExtensionProperties(physical, NULL, &extension_count, NULL);
+    vkEnumerateDeviceExtensionProperties(physical, nullptr, &extension_count, nullptr);
 
     std::vector<VkExtensionProperties> available_extensions(extension_count);
-    vkEnumerateDeviceExtensionProperties(physical, NULL, &extension_count, &available_extensions[0]);
+    vkEnumerateDeviceExtensionProperties(physical, nullptr, &extension_count, &available_extensions[0]);
 
     uint32_t required_extension_index;
     for (required_extension_index = 0; required_extension_index < sizeof(device_extensions) / sizeof(device_extensions[0]); ++required_extension_index) {
@@ -204,23 +202,10 @@ int32_t physical_check_extensions(VkPhysicalDevice physical) {
     }
 }
 
-SwapchainSupport physical_check_swapchain_support(VkPhysicalDevice specific_physical_device, VkSurfaceKHR surface) {
-    uint32_t num_formats, num_present_modes;
-    vkGetPhysicalDeviceSurfaceFormatsKHR(specific_physical_device, surface, &num_formats, NULL);
-    vkGetPhysicalDeviceSurfacePresentModesKHR(specific_physical_device, surface, &num_present_modes, NULL);
-
-    SwapchainSupport ss { {}, std::vector<VkSurfaceFormatKHR>(num_formats), std::vector<VkPresentModeKHR>(num_present_modes) };
-    vkGetPhysicalDeviceSurfaceCapabilitiesKHR(specific_physical_device, surface, &ss.capabilities);
-    vkGetPhysicalDeviceSurfaceFormatsKHR(specific_physical_device, surface, &num_formats, &ss.formats.at(0));
-    vkGetPhysicalDeviceSurfacePresentModesKHR(specific_physical_device, surface, &num_present_modes, &ss.present_modes.at(0));
-
-    return ss;
-}
-
 int32_t physical_check_features_support(VkPhysicalDevice physical) {
     VkPhysicalDeviceBufferDeviceAddressFeatures buffer_device_address_features {};
     buffer_device_address_features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_BUFFER_DEVICE_ADDRESS_FEATURES;
-    buffer_device_address_features.pNext = NULL;
+    buffer_device_address_features.pNext = nullptr;
 
     VkPhysicalDeviceAccelerationStructureFeaturesKHR acceleration_features {};
     acceleration_features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ACCELERATION_STRUCTURE_FEATURES_KHR;
@@ -293,8 +278,10 @@ int32_t physical_score(VkPhysicalDevice physical, VkSurfaceKHR surface) {
 	return -1;
     }
 
-    const SwapchainSupport support_check = physical_check_swapchain_support(physical, surface);
-    if (support_check.formats.size() == 0 || support_check.present_modes.size() == 0) {
+    uint32_t num_formats, num_present_modes;
+    vkGetPhysicalDeviceSurfaceFormatsKHR(physical, surface, &num_formats, nullptr);
+    vkGetPhysicalDeviceSurfacePresentModesKHR(physical, surface, &num_present_modes, nullptr);
+    if (num_formats == 0 || num_present_modes == 0) {
 	return -1;
     }
 

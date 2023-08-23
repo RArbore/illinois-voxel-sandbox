@@ -19,6 +19,10 @@ VmaAllocator GPUAllocator::get_vma() {
     return allocator_;
 }
 
+std::shared_ptr<Device> GPUAllocator::get_device() {
+    return device_;
+}
+
 GPUBuffer::GPUBuffer(std::shared_ptr<GPUAllocator> allocator, VkDeviceSize size, VkDeviceSize alignment, VkBufferUsageFlags usage, VkMemoryPropertyFlags memory_flags, VmaAllocationCreateFlags vma_flags) {
     VkBufferCreateInfo create_info {};
     create_info.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
@@ -43,4 +47,118 @@ GPUBuffer::GPUBuffer(std::shared_ptr<GPUAllocator> allocator, VkDeviceSize size,
 
 GPUBuffer::~GPUBuffer() {
     vmaDestroyBuffer(allocator_->get_vma(), buffer_, allocation_);
+}
+
+GPUImage::GPUImage(std::shared_ptr<GPUAllocator> allocator, VkExtent2D extent, VkFormat format, VkImageCreateFlags create_flags, VkImageUsageFlags usage_flags, VkMemoryPropertyFlags memory_flags, VmaAllocationCreateFlags vma_flags, uint32_t mip_levels, uint32_t array_layers) {
+    VkImageCreateInfo image_create_info {};
+    image_create_info.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
+    image_create_info.flags = create_flags;
+    image_create_info.imageType = VK_IMAGE_TYPE_2D;
+    image_create_info.format = format;
+    image_create_info.extent.width = extent.width;
+    image_create_info.extent.height = extent.height;
+    image_create_info.extent.depth = 1;
+    image_create_info.mipLevels = mip_levels;
+    image_create_info.arrayLayers = array_layers;
+    image_create_info.samples = VK_SAMPLE_COUNT_1_BIT;
+    image_create_info.tiling = VK_IMAGE_TILING_OPTIMAL;
+    image_create_info.usage = usage_flags;
+    image_create_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+    image_create_info.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+
+    VmaAllocationCreateInfo alloc_info {};
+    alloc_info.flags = vma_flags;
+    alloc_info.usage = VMA_MEMORY_USAGE_AUTO;
+    alloc_info.requiredFlags = memory_flags;
+
+    allocator_ = allocator;
+    ASSERT(vmaCreateImage(allocator_->get_vma(), &image_create_info, &alloc_info, &image_, &allocation_, nullptr), "Unable to create image.");
+    extent_ = extent;
+    format_ = format;
+    create_flags_ = create_flags;
+    usage_flags_ = usage_flags;
+    memory_flags_ = memory_flags;
+    vma_flags_ = vma_flags;
+    mip_levels_ = mip_levels;
+    array_layers_ = array_layers;
+    last_set_layout_ = VK_IMAGE_LAYOUT_UNDEFINED;
+
+    VkImageViewCreateInfo image_view_create_info {};
+    image_view_create_info.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+    image_view_create_info.image = image_;
+    image_view_create_info.viewType = VK_IMAGE_VIEW_TYPE_2D;
+    image_view_create_info.format = format_;
+    image_view_create_info.components.r = VK_COMPONENT_SWIZZLE_IDENTITY;
+    image_view_create_info.components.g = VK_COMPONENT_SWIZZLE_IDENTITY;
+    image_view_create_info.components.b = VK_COMPONENT_SWIZZLE_IDENTITY;
+    image_view_create_info.components.a = VK_COMPONENT_SWIZZLE_IDENTITY;
+    image_view_create_info.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+    image_view_create_info.subresourceRange.baseMipLevel = 0;
+    image_view_create_info.subresourceRange.levelCount = mip_levels_;
+    image_view_create_info.subresourceRange.baseArrayLayer = 0;
+    image_view_create_info.subresourceRange.layerCount = array_layers_;
+
+    ASSERT(vkCreateImageView(allocator_->get_device()->get_device(), &image_view_create_info, nullptr, &view_), "Unable to create image view.");
+}
+
+GPUImage::~GPUImage() {
+    vkDestroyImageView(allocator_->get_device()->get_device(), view_, nullptr);
+    vmaDestroyImage(allocator_->get_vma(), image_, allocation_);
+}
+
+GPUVolume::GPUVolume(std::shared_ptr<GPUAllocator> allocator, VkExtent3D extent, VkFormat format, VkImageCreateFlags create_flags, VkImageUsageFlags usage_flags, VkMemoryPropertyFlags memory_flags, VmaAllocationCreateFlags vma_flags, uint32_t mip_levels, uint32_t array_layers) {
+    VkImageCreateInfo image_create_info {};
+    image_create_info.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
+    image_create_info.flags = create_flags;
+    image_create_info.imageType = VK_IMAGE_TYPE_3D;
+    image_create_info.format = format;
+    image_create_info.extent.width = extent.width;
+    image_create_info.extent.height = extent.height;
+    image_create_info.extent.depth = 1;
+    image_create_info.mipLevels = mip_levels;
+    image_create_info.arrayLayers = array_layers;
+    image_create_info.samples = VK_SAMPLE_COUNT_1_BIT;
+    image_create_info.tiling = VK_IMAGE_TILING_OPTIMAL;
+    image_create_info.usage = usage_flags;
+    image_create_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+    image_create_info.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+
+    VmaAllocationCreateInfo alloc_info {};
+    alloc_info.flags = vma_flags;
+    alloc_info.usage = VMA_MEMORY_USAGE_AUTO;
+    alloc_info.requiredFlags = memory_flags;
+
+    allocator_ = allocator;
+    ASSERT(vmaCreateImage(allocator_->get_vma(), &image_create_info, &alloc_info, &image_, &allocation_, nullptr), "Unable to create image.");
+    extent_ = extent;
+    format_ = format;
+    create_flags_ = create_flags;
+    usage_flags_ = usage_flags;
+    memory_flags_ = memory_flags;
+    vma_flags_ = vma_flags;
+    mip_levels_ = mip_levels;
+    array_layers_ = array_layers;
+    last_set_layout_ = VK_IMAGE_LAYOUT_UNDEFINED;
+
+    VkImageViewCreateInfo image_view_create_info {};
+    image_view_create_info.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+    image_view_create_info.image = image_;
+    image_view_create_info.viewType = VK_IMAGE_VIEW_TYPE_3D;
+    image_view_create_info.format = format_;
+    image_view_create_info.components.r = VK_COMPONENT_SWIZZLE_IDENTITY;
+    image_view_create_info.components.g = VK_COMPONENT_SWIZZLE_IDENTITY;
+    image_view_create_info.components.b = VK_COMPONENT_SWIZZLE_IDENTITY;
+    image_view_create_info.components.a = VK_COMPONENT_SWIZZLE_IDENTITY;
+    image_view_create_info.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+    image_view_create_info.subresourceRange.baseMipLevel = 0;
+    image_view_create_info.subresourceRange.levelCount = mip_levels_;
+    image_view_create_info.subresourceRange.baseArrayLayer = 0;
+    image_view_create_info.subresourceRange.layerCount = array_layers_;
+
+    ASSERT(vkCreateImageView(allocator_->get_device()->get_device(), &image_view_create_info, nullptr, &view_), "Unable to create image view.");
+}
+
+GPUVolume::~GPUVolume() {
+    vkDestroyImageView(allocator_->get_device()->get_device(), view_, nullptr);
+    vmaDestroyImage(allocator_->get_vma(), image_, allocation_);
 }
