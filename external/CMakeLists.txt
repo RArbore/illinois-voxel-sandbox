@@ -10,3 +10,5 @@ add_library(vma VmaImpl.cpp)
 
 find_package(Vulkan REQUIRED)
 target_link_libraries(vma PRIVATE Vulkan::Vulkan)
+
+add_subdirectory(Vector)
