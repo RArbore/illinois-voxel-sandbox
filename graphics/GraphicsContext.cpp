@@ -4,6 +4,7 @@
 #include "GPUAllocator.h"
 #include "Swapchain.h"
 #include "Command.h"
+#include "Pipeline.h"
 
 class GraphicsContext {
 public:
@@ -29,6 +30,8 @@ GraphicsContext::GraphicsContext() {
 
     swapchain_ = std::make_shared<Swapchain>(device_, window_);
     command_pool_ = std::make_shared<CommandPool>(device_);
+
+    auto shader = std::make_shared<Shader>(device_, "dumb_rgen");
 }
 
 std::shared_ptr<GraphicsContext> createGraphicsContext() {
