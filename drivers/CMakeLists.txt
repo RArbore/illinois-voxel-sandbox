@@ -11,5 +11,7 @@ target_link_libraries(ivs LINK_PUBLIC vma)
 find_package(Vulkan REQUIRED)
 target_link_libraries(ivs PRIVATE Vulkan::Vulkan)
 
-find_package(glfw3 REQUIRED)
+if (UNIX)
+  find_package(glfw3 REQUIRED)
+endif()
 target_link_libraries(ivs PRIVATE glfw)

@@ -6,7 +6,11 @@
 void assert_impl(VkResult result, const std::string_view msg, const std::string_view file, uint32_t line) {
     if (result != VK_SUCCESS) {
 	std::cerr << "PANIC: " << msg << "\nFound Vulkan error code: " << string_VkResult(result) << "\nOccurred in " << file << " at line " << line << ".\n";
+#if defined(WIN32)
+  __debugbreak();
+#else
 	__builtin_trap();
+#endif
 	exit(-1);
     }
 }
@@ -14,7 +18,11 @@ void assert_impl(VkResult result, const std::string_view msg, const std::string_
 void assert_impl(bool result, const std::string_view msg, const std::string_view file, uint32_t line) {
     if (!result) {
 	std::cerr << "PANIC: " << msg << "\nOccurred in " << file << " at line " << line << ".\n";
+#if defined(WIN32)
+  __debugbreak();
+#else
 	__builtin_trap();
+#endif
 	exit(-1);
     }
 }
