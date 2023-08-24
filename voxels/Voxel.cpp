@@ -5,7 +5,7 @@ Voxel::Voxel(float x, float y, float z) {
 }
 
 Voxel::Voxel(vector3D<float> pos) {
-    position_ = Vector3d<float>(pos);
+    position_ = vector3D<float>(pos);
 }
 
 Voxel::~Voxel() {
