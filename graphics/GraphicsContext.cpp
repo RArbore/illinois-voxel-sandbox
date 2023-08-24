@@ -15,6 +15,7 @@ private:
     std::shared_ptr<GPUAllocator> gpu_allocator_ = nullptr;
     std::shared_ptr<Swapchain> swapchain_ = nullptr;
     std::shared_ptr<CommandPool> command_pool_ = nullptr;
+    std::shared_ptr<RayTracePipeline> ray_trace_pipeline_ = nullptr;
 
     friend std::shared_ptr<GraphicsContext> createGraphicsContext();
     friend void renderFrame(std::shared_ptr<GraphicsContext>);
@@ -32,6 +33,8 @@ GraphicsContext::GraphicsContext() {
     command_pool_ = std::make_shared<CommandPool>(device_);
 
     auto shader = std::make_shared<Shader>(device_, "dumb_rgen");
+    std::vector<std::vector<std::shared_ptr<Shader>>> shader_groups = {{shader}};
+    ray_trace_pipeline_ = std::make_shared<RayTracePipeline>(device_, shader_groups);
 }
 
 std::shared_ptr<GraphicsContext> createGraphicsContext() {

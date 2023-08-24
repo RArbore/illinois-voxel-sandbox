@@ -18,6 +18,15 @@ static const char *const device_extensions[] = {
     VK_EXT_DESCRIPTOR_INDEXING_EXTENSION_NAME,
 };
 
+VKFN_DEF(vkGetAccelerationStructureBuildSizes);
+VKFN_DEF(vkCreateAccelerationStructure);
+VKFN_DEF(vkCmdBuildAccelerationStructures);
+VKFN_DEF(vkGetAccelerationStructureDeviceAddress);
+VKFN_DEF(vkCreateRayTracingPipelines);
+VKFN_DEF(vkGetRayTracingShaderGroupHandles);
+VKFN_DEF(vkDestroyAccelerationStructure);
+VKFN_DEF(vkCmdTraceRays);
+
 int32_t physical_score(VkPhysicalDevice physical, VkSurfaceKHR surface);
 uint32_t physical_check_queue_family(VkPhysicalDevice physical, VkSurfaceKHR surface, VkQueueFlagBits bits);
 
@@ -130,6 +139,15 @@ Device::Device(std::shared_ptr<Window> window): window_(window) {
 
     ASSERT(vkCreateDevice(physical_device_, &device_create_info, nullptr, &device_), "Couldn't create logical device.");
     vkGetDeviceQueue(device_, queue_family_, 0, &queue_);
+
+    VKFN_INIT(vkGetAccelerationStructureBuildSizes);
+    VKFN_INIT(vkCreateAccelerationStructure);
+    VKFN_INIT(vkCmdBuildAccelerationStructures);
+    VKFN_INIT(vkGetAccelerationStructureDeviceAddress);
+    VKFN_INIT(vkCreateRayTracingPipelines);
+    VKFN_INIT(vkGetRayTracingShaderGroupHandles);
+    VKFN_INIT(vkDestroyAccelerationStructure);
+    VKFN_INIT(vkCmdTraceRays);
 }
 
 Device::~Device() {

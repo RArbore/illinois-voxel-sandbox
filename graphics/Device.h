@@ -8,6 +8,24 @@
 
 #include "Window.h"
 
+#define VKFN_EXTERN(fn)				\
+    extern PFN_ ## fn ## KHR fn
+
+#define VKFN_DEF(fn)				\
+    PFN_ ## fn ## KHR fn
+
+#define VKFN_INIT(fn)				\
+    fn = (PFN_ ## fn ## KHR) vkGetDeviceProcAddr(device_, #fn "KHR")
+
+VKFN_EXTERN(vkGetAccelerationStructureBuildSizes);
+VKFN_EXTERN(vkCreateAccelerationStructure);
+VKFN_EXTERN(vkCmdBuildAccelerationStructures);
+VKFN_EXTERN(vkGetAccelerationStructureDeviceAddress);
+VKFN_EXTERN(vkCreateRayTracingPipelines);
+VKFN_EXTERN(vkGetRayTracingShaderGroupHandles);
+VKFN_EXTERN(vkDestroyAccelerationStructure);
+VKFN_EXTERN(vkCmdTraceRays);
+
 class Device {
 public:
     Device(std::shared_ptr<Window> window);

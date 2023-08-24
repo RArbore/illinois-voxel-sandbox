@@ -26,10 +26,100 @@ Shader::Shader(std::shared_ptr<Device> device, std::string_view shader_name) {
 	}
     }
     ASSERT(module_ != VK_NULL_HANDLE, std::string("Couldn't find shader named \"").append(shader_name).append("\"."));
+    if (shader_name.find("rgen") != std::string_view::npos) {
+	stage_ = VK_SHADER_STAGE_RAYGEN_BIT_KHR;
+    } else if (shader_name.find("rchit") != std::string_view::npos) {
+	stage_ = VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR;
+    } else if (shader_name.find("rmiss") != std::string_view::npos) {
+	stage_ = VK_SHADER_STAGE_MISS_BIT_KHR;
+    } else if (shader_name.find("rint") != std::string_view::npos) {
+	stage_ = VK_SHADER_STAGE_INTERSECTION_BIT_KHR;
+    } else if (shader_name.find("comp") != std::string_view::npos) {
+	stage_ = VK_SHADER_STAGE_COMPUTE_BIT;
+    } else {
+	ASSERT(false, "Didn't recognize shader type in shader name.");
+    }
 
     device_ = device;
+    shader_name_ = shader_name;
+}
+
+VkShaderModule Shader::get_module() {
+    return module_;
+}
+
+VkShaderStageFlagBits Shader::get_stage() {
+    return stage_;
 }
 
 Shader::~Shader() {
     vkDestroyShaderModule(device_->get_device(), module_, nullptr);
+}
+
+RayTracePipeline::RayTracePipeline(std::shared_ptr<Device> device, std::vector<std::vector<std::shared_ptr<Shader>>> shader_groups) {
+    std::vector<VkPipelineShaderStageCreateInfo> stage_create_infos;
+    for (auto group : shader_groups) {
+	ASSERT(group.size() > 0, "Shader groups must be non-empty.");
+	for (auto shader : group) {
+	    stage_create_infos.emplace_back();
+	    stage_create_infos.back().sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+	    stage_create_infos.back().stage = shader->get_stage();
+	    stage_create_infos.back().module = shader->get_module();
+	    stage_create_infos.back().pName = "main";
+	}
+    }
+
+    std::vector<VkRayTracingShaderGroupCreateInfoKHR > group_create_infos;
+    uint32_t shader_idx = 0;
+    for (auto group : shader_groups) {
+	group_create_infos.emplace_back();
+	group_create_infos.back().sType = VK_STRUCTURE_TYPE_RAY_TRACING_SHADER_GROUP_CREATE_INFO_KHR;
+	group_create_infos.back().type = VK_RAY_TRACING_SHADER_GROUP_TYPE_TRIANGLES_HIT_GROUP_KHR;
+	group_create_infos.back().anyHitShader = VK_SHADER_UNUSED_KHR;
+	group_create_infos.back().closestHitShader = VK_SHADER_UNUSED_KHR;
+	group_create_infos.back().generalShader = VK_SHADER_UNUSED_KHR;
+	group_create_infos.back().intersectionShader = VK_SHADER_UNUSED_KHR;
+	for (auto it = group.begin(); it != group.end(); ++it) {
+	    bool first_shader = it == group.begin();
+	    auto shader = *it;
+	    VkShaderStageFlags stage = shader->get_stage();
+	    if ((stage == VK_SHADER_STAGE_RAYGEN_BIT_KHR || stage == VK_SHADER_STAGE_MISS_BIT_KHR) && first_shader) {
+		group_create_infos.back().type = VK_RAY_TRACING_SHADER_GROUP_TYPE_GENERAL_KHR;
+		group_create_infos.back().generalShader = shader_idx;
+	    } else if ((stage == VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR) && (group_create_infos.back().type == VK_RAY_TRACING_SHADER_GROUP_TYPE_TRIANGLES_HIT_GROUP_KHR || group_create_infos.back().type == VK_RAY_TRACING_SHADER_GROUP_TYPE_PROCEDURAL_HIT_GROUP_KHR)) {
+		group_create_infos.back().closestHitShader = shader_idx;
+	    } else if ((stage == VK_SHADER_STAGE_ANY_HIT_BIT_KHR) && (group_create_infos.back().type == VK_RAY_TRACING_SHADER_GROUP_TYPE_TRIANGLES_HIT_GROUP_KHR || group_create_infos.back().type == VK_RAY_TRACING_SHADER_GROUP_TYPE_PROCEDURAL_HIT_GROUP_KHR)) {
+		group_create_infos.back().anyHitShader = shader_idx;
+	    } else if ((stage == VK_SHADER_STAGE_INTERSECTION_BIT_KHR) && (first_shader || group_create_infos.back().type == VK_RAY_TRACING_SHADER_GROUP_TYPE_PROCEDURAL_HIT_GROUP_KHR)) {
+		group_create_infos.back().type = VK_RAY_TRACING_SHADER_GROUP_TYPE_PROCEDURAL_HIT_GROUP_KHR;
+		group_create_infos.back().intersectionShader = shader_idx;
+	    } else {
+		ASSERT(false, "Shader group is mal-formed.");
+	    }
+	    ++shader_idx;
+	}
+    }
+
+    VkPipelineLayoutCreateInfo pipeline_layout_create_info {};
+    pipeline_layout_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+    pipeline_layout_create_info.pushConstantRangeCount = 0;
+    pipeline_layout_create_info.setLayoutCount = 0;
+    ASSERT(vkCreatePipelineLayout(device->get_device(), &pipeline_layout_create_info, nullptr, &layout_), "Unable to create ray trace pipeline layout.");
+    
+    VkRayTracingPipelineCreateInfoKHR ray_trace_pipeline_create_info {};
+    ray_trace_pipeline_create_info.sType = VK_STRUCTURE_TYPE_RAY_TRACING_PIPELINE_CREATE_INFO_KHR;
+    ray_trace_pipeline_create_info.stageCount = static_cast<uint32_t>(stage_create_infos.size());
+    ray_trace_pipeline_create_info.pStages = stage_create_infos.data();
+    ray_trace_pipeline_create_info.groupCount = static_cast<uint32_t>(group_create_infos.size());
+    ray_trace_pipeline_create_info.pGroups = group_create_infos.data();
+    ray_trace_pipeline_create_info.maxPipelineRayRecursionDepth = 1;
+    ray_trace_pipeline_create_info.layout = layout_;
+    ASSERT(vkCreateRayTracingPipelines(device->get_device(), {}, {}, 1, &ray_trace_pipeline_create_info, nullptr, &pipeline_), "Unable to create ray trace pipeline.");
+    
+    device_ = device;
+}
+
+RayTracePipeline::~RayTracePipeline() {
+    vkDestroyPipeline(device_->get_device(), pipeline_, nullptr);
+    vkDestroyPipelineLayout(device_->get_device(), layout_, nullptr);
 }
