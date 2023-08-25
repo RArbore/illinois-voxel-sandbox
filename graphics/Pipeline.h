@@ -24,7 +24,7 @@ private:
 
 class RayTracePipeline {
 public:
-    RayTracePipeline(std::shared_ptr<Device> device, std::vector<std::vector<std::shared_ptr<Shader>>> shader_groups);
+    RayTracePipeline(std::shared_ptr<GPUAllocator> allocator, std::vector<std::vector<std::shared_ptr<Shader>>> shader_groups);
     ~RayTracePipeline();
 private:
     VkPipeline pipeline_ = VK_NULL_HANDLE;

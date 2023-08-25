@@ -34,7 +34,7 @@ GraphicsContext::GraphicsContext() {
 
     auto shader = std::make_shared<Shader>(device_, "dumb_rgen");
     std::vector<std::vector<std::shared_ptr<Shader>>> shader_groups = {{shader}};
-    ray_trace_pipeline_ = std::make_shared<RayTracePipeline>(device_, shader_groups);
+    ray_trace_pipeline_ = std::make_shared<RayTracePipeline>(gpu_allocator_, shader_groups);
 }
 
 std::shared_ptr<GraphicsContext> createGraphicsContext() {

@@ -176,6 +176,14 @@ uint32_t Device::get_queue_family() {
     return queue_family_;
 }
 
+VkPhysicalDeviceRayTracingPipelinePropertiesKHR Device::get_ray_tracing_properties() {
+    return ray_tracing_properties_;
+}
+
+VkPhysicalDeviceAccelerationStructurePropertiesKHR Device::get_acceleration_structure_properties() {
+    return acceleration_structure_properties_;
+}
+
 uint32_t physical_check_queue_family(VkPhysicalDevice physical, VkSurfaceKHR surface, VkQueueFlagBits bits) {
     uint32_t queue_family_count = 0;
     vkGetPhysicalDeviceQueueFamilyProperties(physical, &queue_family_count, nullptr);

@@ -58,7 +58,9 @@ Shader::~Shader() {
     vkDestroyShaderModule(device_->get_device(), module_, nullptr);
 }
 
-RayTracePipeline::RayTracePipeline(std::shared_ptr<Device> device, std::vector<std::vector<std::shared_ptr<Shader>>> shader_groups) {
+RayTracePipeline::RayTracePipeline(std::shared_ptr<GPUAllocator> allocator, std::vector<std::vector<std::shared_ptr<Shader>>> shader_groups) {
+    device_ = allocator->get_device();
+
     std::vector<VkPipelineShaderStageCreateInfo> stage_create_infos;
     for (auto group : shader_groups) {
 	ASSERT(group.size() > 0, "Shader groups must be non-empty.");
@@ -72,6 +74,10 @@ RayTracePipeline::RayTracePipeline(std::shared_ptr<Device> device, std::vector<s
     }
 
     uint32_t shader_idx = 0;
+    std::vector<uint32_t> gen_groups;
+    std::vector<uint32_t> miss_groups;
+    std::vector<uint32_t> hit_groups;
+    std::vector<uint32_t> call_groups;
     for (auto group : shader_groups) {
 	groups_.emplace_back();
 	groups_.back().sType = VK_STRUCTURE_TYPE_RAY_TRACING_SHADER_GROUP_CREATE_INFO_KHR;
@@ -97,6 +103,17 @@ RayTracePipeline::RayTracePipeline(std::shared_ptr<Device> device, std::vector<s
 	    } else {
 		ASSERT(false, "Shader group is mal-formed.");
 	    }
+	    if (first_shader) {
+		if (stage == VK_SHADER_STAGE_RAYGEN_BIT_KHR) {
+		    gen_groups.push_back(static_cast<uint32_t>(groups_.size() - 1));
+		} else if (stage == VK_SHADER_STAGE_MISS_BIT_KHR) {
+		    miss_groups.push_back(static_cast<uint32_t>(groups_.size() - 1));
+		} else if (stage == VK_SHADER_STAGE_CALLABLE_BIT_KHR) {
+		    call_groups.push_back(static_cast<uint32_t>(groups_.size() - 1));
+		} else {
+		    hit_groups.push_back(static_cast<uint32_t>(groups_.size() - 1));
+		}
+	    }
 	    ++shader_idx;
 	}
     }
@@ -105,7 +122,7 @@ RayTracePipeline::RayTracePipeline(std::shared_ptr<Device> device, std::vector<s
     pipeline_layout_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
     pipeline_layout_create_info.pushConstantRangeCount = 0;
     pipeline_layout_create_info.setLayoutCount = 0;
-    ASSERT(vkCreatePipelineLayout(device->get_device(), &pipeline_layout_create_info, nullptr, &layout_), "Unable to create ray trace pipeline layout.");
+    ASSERT(vkCreatePipelineLayout(device_->get_device(), &pipeline_layout_create_info, nullptr, &layout_), "Unable to create ray trace pipeline layout.");
     
     VkRayTracingPipelineCreateInfoKHR ray_trace_pipeline_create_info {};
     ray_trace_pipeline_create_info.sType = VK_STRUCTURE_TYPE_RAY_TRACING_PIPELINE_CREATE_INFO_KHR;
@@ -115,9 +132,29 @@ RayTracePipeline::RayTracePipeline(std::shared_ptr<Device> device, std::vector<s
     ray_trace_pipeline_create_info.pGroups = groups_.data();
     ray_trace_pipeline_create_info.maxPipelineRayRecursionDepth = 1;
     ray_trace_pipeline_create_info.layout = layout_;
-    ASSERT(vkCreateRayTracingPipelines(device->get_device(), {}, {}, 1, &ray_trace_pipeline_create_info, nullptr, &pipeline_), "Unable to create ray trace pipeline.");
+    ASSERT(vkCreateRayTracingPipelines(device_->get_device(), {}, {}, 1, &ray_trace_pipeline_create_info, nullptr, &pipeline_), "Unable to create ray trace pipeline.");
     
-    device_ = device;
+
+    const auto align_up = [](uint32_t size, uint32_t alignment) {
+	return (size + (alignment - 1)) & ~(alignment - 1);
+    };
+
+    const auto ray_tracing_properties = device_->get_ray_tracing_properties();
+    const uint32_t handle_count = gen_groups.size() + miss_groups.size() + hit_groups.size() + call_groups.size();
+    const uint32_t handle_size_aligned = align_up(ray_tracing_properties.shaderGroupHandleSize, ray_tracing_properties.shaderGroupHandleAlignment);
+
+    rgen_sbt_region_.stride = align_up(handle_size_aligned, ray_tracing_properties.shaderGroupBaseAlignment);
+    rgen_sbt_region_.size = align_up(gen_groups.size() * handle_size_aligned, ray_tracing_properties.shaderGroupBaseAlignment);
+    miss_sbt_region_.stride = handle_size_aligned;
+    miss_sbt_region_.size = align_up(miss_groups.size() * handle_size_aligned, ray_tracing_properties.shaderGroupBaseAlignment);
+    hit_sbt_region_.stride = handle_size_aligned;
+    hit_sbt_region_.size = align_up(hit_groups.size() * handle_size_aligned, ray_tracing_properties.shaderGroupBaseAlignment);
+    call_sbt_region_.stride = handle_size_aligned;
+    call_sbt_region_.size = align_up(call_groups.size() * handle_size_aligned, ray_tracing_properties.shaderGroupBaseAlignment);
+
+    const uint32_t handles_size = handle_count * ray_tracing_properties.shaderGroupHandleSize;
+    std::vector<char> handles(handles_size);
+    ASSERT(vkGetRayTracingShaderGroupHandles(device_->get_device(), pipeline_, 0, handle_count, handles_size, handles.data()), "Unable to fetch shader group handles from ray trace pipeline.");
 }
 
 RayTracePipeline::~RayTracePipeline() {
