@@ -159,10 +159,10 @@ RayTracePipeline::RayTracePipeline(std::shared_ptr<GPUAllocator> allocator, std:
     const VkDeviceSize sbt_buffer_size = rgen_sbt_region_.size + miss_sbt_region_.size + hit_sbt_region_.size + call_sbt_region_.size;
     sbt_buffer_ = std::make_shared<GPUBuffer>(allocator, sbt_buffer_size, 1, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT | VK_BUFFER_USAGE_SHADER_BINDING_TABLE_BIT_KHR, VK_MEMORY_HEAP_DEVICE_LOCAL_BIT, 0);
     const VkDeviceAddress sbt_buffer_address = sbt_buffer_->get_device_address();
-    rgen_sbt_region.deviceAddress = sbt_buffer_address;
-    miss_sbt_region.deviceAddress = sbt_buffer_address + rgen_sbt_region.size;
-    hit_sbt_region.deviceAddress = sbt_buffer_address + rgen_sbt_region.size + miss_sbt_region.size;
-    call_sbt_region.deviceAddress = sbt_buffer_address + rgen_sbt_region.size + miss_sbt_region.size + hit_sbt_region.size;
+    rgen_sbt_region_.deviceAddress = sbt_buffer_address;
+    miss_sbt_region_.deviceAddress = sbt_buffer_address + rgen_sbt_region_.size;
+    hit_sbt_region_.deviceAddress = sbt_buffer_address + rgen_sbt_region_.size + miss_sbt_region_.size;
+    call_sbt_region_.deviceAddress = sbt_buffer_address + rgen_sbt_region_.size + miss_sbt_region_.size + hit_sbt_region_.size;
 
     const auto get_handle = [&](uint32_t i) { return handles.data() + i * ray_tracing_properties.shaderGroupHandleSize; };
 }
