@@ -49,6 +49,13 @@ GPUBuffer::~GPUBuffer() {
     vmaDestroyBuffer(allocator_->get_vma(), buffer_, allocation_);
 }
 
+VkDeviceAddress GPUBuffer::get_device_address() {
+    VkBufferDeviceAddressInfo buffer_device_address_info {};
+    buffer_device_address_info.sType = VK_STRUCTURE_TYPE_BUFFER_DEVICE_ADDRESS_INFO;
+    buffer_device_address_info.buffer = buffer_;
+    return vkGetBufferDeviceAddress(allocator_->get_device()->get_device(), &buffer_device_address_info);
+}
+
 GPUImage::GPUImage(std::shared_ptr<GPUAllocator> allocator, VkExtent2D extent, VkFormat format, VkImageCreateFlags create_flags, VkImageUsageFlags usage_flags, VkMemoryPropertyFlags memory_flags, VmaAllocationCreateFlags vma_flags, uint32_t mip_levels, uint32_t array_layers) {
     VkImageCreateInfo image_create_info {};
     image_create_info.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
