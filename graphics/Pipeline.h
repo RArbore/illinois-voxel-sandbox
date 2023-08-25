@@ -1,8 +1,11 @@
+#pragma once
+
 #include <vector>
 
 #include <vulkan/vulkan.h>
 
 #include "Device.h"
+#include "GPUAllocator.h"
 
 class Shader {
 public:
@@ -26,6 +29,13 @@ public:
 private:
     VkPipeline pipeline_ = VK_NULL_HANDLE;
     VkPipelineLayout layout_ = VK_NULL_HANDLE;
+    std::vector<VkRayTracingShaderGroupCreateInfoKHR > groups_;
+
+    std::shared_ptr<GPUBuffer> sbt_buffer_ = nullptr;
+    VkStridedDeviceAddressRegionKHR rgen_sbt_region_;
+    VkStridedDeviceAddressRegionKHR miss_sbt_region_;
+    VkStridedDeviceAddressRegionKHR hit_sbt_region_;
+    VkStridedDeviceAddressRegionKHR call_sbt_region_;
 
     std::shared_ptr<Device> device_ = nullptr;
 };
