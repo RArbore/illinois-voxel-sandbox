@@ -6,7 +6,7 @@
 #include "Pipeline.h"
 
 Shader::Shader(std::shared_ptr<Device> device, std::string_view shader_name) {
-    std::vector<std::string_view> possible_prefixes = {"", "build/", "illinois-voxel-sandbox/build/"};
+    std::vector<std::string_view> possible_prefixes = {"", "build/", "illinois-voxel-sandbox/build/", "../", "../../", "../../../", "../../../../"};
     for (auto prefix : possible_prefixes) {
 	std::string relative_path = std::string(prefix).append(shader_name).append(".spv");
 	if (std::filesystem::exists(relative_path)) {
