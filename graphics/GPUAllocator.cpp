@@ -49,6 +49,10 @@ GPUBuffer::~GPUBuffer() {
     vmaDestroyBuffer(allocator_->get_vma(), buffer_, allocation_);
 }
 
+VkBuffer GPUBuffer::get_buffer() {
+    return buffer_;
+}
+
 VkDeviceAddress GPUBuffer::get_device_address() {
     VkBufferDeviceAddressInfo buffer_device_address_info {};
     buffer_device_address_info.sType = VK_STRUCTURE_TYPE_BUFFER_DEVICE_ADDRESS_INFO;
@@ -113,6 +117,10 @@ GPUImage::~GPUImage() {
     vmaDestroyImage(allocator_->get_vma(), image_, allocation_);
 }
 
+VkImage GPUImage::get_image() {
+    return image_;
+}
+
 GPUVolume::GPUVolume(std::shared_ptr<GPUAllocator> allocator, VkExtent3D extent, VkFormat format, VkImageCreateFlags create_flags, VkImageUsageFlags usage_flags, VkMemoryPropertyFlags memory_flags, VmaAllocationCreateFlags vma_flags, uint32_t mip_levels, uint32_t array_layers) {
     VkImageCreateInfo image_create_info {};
     image_create_info.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
@@ -168,4 +176,8 @@ GPUVolume::GPUVolume(std::shared_ptr<GPUAllocator> allocator, VkExtent3D extent,
 GPUVolume::~GPUVolume() {
     vkDestroyImageView(allocator_->get_device()->get_device(), view_, nullptr);
     vmaDestroyImage(allocator_->get_vma(), image_, allocation_);
+}
+
+VkImage GPUVolume::get_image() {
+    return image_;
 }

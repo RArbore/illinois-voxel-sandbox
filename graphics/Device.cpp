@@ -185,7 +185,7 @@ void Device::submit_command(std::shared_ptr<Command> command) {
     submit_info.commandBufferCount = 1;
     submit_info.pCommandBuffers = &buffer;
 	
-    ASSERT(vkQueueSubmit(queue_, 1, &submit_info, VK_NULL_HANDLE), "Unable to submit inefficient command.");
+    ASSERT(vkQueueSubmit(queue_, 1, &submit_info, VK_NULL_HANDLE), "Unable to submit command.");
 }
 
 VkPhysicalDeviceRayTracingPipelinePropertiesKHR Device::get_ray_tracing_properties() {
