@@ -3,6 +3,7 @@
 
 #include "utils/Assert.h"
 #include "Device.h"
+#include "Command.h"
 
 static const char *const validation_layers[] = {
     "VK_LAYER_KHRONOS_validation"
@@ -174,6 +175,17 @@ VkSurfaceKHR Device::get_surface() {
 
 uint32_t Device::get_queue_family() {
     return queue_family_;
+}
+
+void Device::submit_command(std::shared_ptr<Command> command) {
+    const auto buffer = command->get_buffer();
+    
+    VkSubmitInfo submit_info {};
+    submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+    submit_info.commandBufferCount = 1;
+    submit_info.pCommandBuffers = &buffer;
+	
+    ASSERT(vkQueueSubmit(queue_, 1, &submit_info, VK_NULL_HANDLE), "Unable to submit inefficient command.");
 }
 
 VkPhysicalDeviceRayTracingPipelinePropertiesKHR Device::get_ray_tracing_properties() {

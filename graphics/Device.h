@@ -26,6 +26,8 @@ VKFN_EXTERN(vkGetRayTracingShaderGroupHandles);
 VKFN_EXTERN(vkDestroyAccelerationStructure);
 VKFN_EXTERN(vkCmdTraceRays);
 
+class Command;
+
 class Device {
 public:
     Device(std::shared_ptr<Window> window);
@@ -36,6 +38,9 @@ public:
     VkDevice get_device();
     VkSurfaceKHR get_surface();
     uint32_t get_queue_family();
+
+    void submit_command(std::shared_ptr<Command> command);
+
     VkPhysicalDeviceRayTracingPipelinePropertiesKHR get_ray_tracing_properties();
     VkPhysicalDeviceAccelerationStructurePropertiesKHR get_acceleration_structure_properties();
 private:
