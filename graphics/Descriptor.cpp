@@ -32,6 +32,9 @@ DescriptorAllocator::~DescriptorAllocator() {
     for (auto pool : free_pools_) {
 	vkDestroyDescriptorPool(device_->get_device(), pool, nullptr);
     }
+    for (auto [_, layout] : layout_cache_) {
+	vkDestroyDescriptorSetLayout(device_->get_device(), layout, nullptr);
+    }
 }
 
 VkDescriptorPool DescriptorAllocator::grab_pool() {
