@@ -39,6 +39,13 @@ private:
     VmaAllocationCreateFlags vma_flags_;
 
     std::shared_ptr<GPUAllocator> allocator_ = nullptr;
+public:
+    void cpu_map(auto F) {
+	char *buffer_data;
+	vmaMapMemory(allocator_->get_vma(), allocation_, reinterpret_cast<void **>(&buffer_data));
+	F(buffer_data);
+	vmaUnmapMemory(allocator_->get_vma(), allocation_);
+    }
 };
 
 class GPUImage {

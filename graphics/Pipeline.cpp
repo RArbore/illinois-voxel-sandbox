@@ -1,5 +1,6 @@
 #include <filesystem>
 #include <fstream>
+#include <cstring>
 #include <vector>
 
 #include "utils/Assert.h"
@@ -157,7 +158,7 @@ RayTracePipeline::RayTracePipeline(std::shared_ptr<GPUAllocator> allocator, std:
     ASSERT(vkGetRayTracingShaderGroupHandles(device_->get_device(), pipeline_, 0, handle_count, handles_size, handles.data()), "Unable to fetch shader group handles from ray trace pipeline.");
 
     const VkDeviceSize sbt_buffer_size = rgen_sbt_region_.size + miss_sbt_region_.size + hit_sbt_region_.size + call_sbt_region_.size;
-    sbt_buffer_ = std::make_shared<GPUBuffer>(allocator, sbt_buffer_size, 1, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT | VK_BUFFER_USAGE_SHADER_BINDING_TABLE_BIT_KHR, VK_MEMORY_HEAP_DEVICE_LOCAL_BIT, 0);
+    sbt_buffer_ = std::make_shared<GPUBuffer>(allocator, sbt_buffer_size, 1, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT | VK_BUFFER_USAGE_SHADER_BINDING_TABLE_BIT_KHR, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT);
     const VkDeviceAddress sbt_buffer_address = sbt_buffer_->get_device_address();
     rgen_sbt_region_.deviceAddress = sbt_buffer_address;
     miss_sbt_region_.deviceAddress = sbt_buffer_address + rgen_sbt_region_.size;
@@ -165,6 +166,31 @@ RayTracePipeline::RayTracePipeline(std::shared_ptr<GPUAllocator> allocator, std:
     call_sbt_region_.deviceAddress = sbt_buffer_address + rgen_sbt_region_.size + miss_sbt_region_.size + hit_sbt_region_.size;
 
     const auto get_handle = [&](uint32_t i) { return handles.data() + i * ray_tracing_properties.shaderGroupHandleSize; };
+    sbt_buffer_->cpu_map([&](char *base_dst) {
+	char *dst = base_dst;
+	for (uint32_t i = 0; i < gen_groups.size(); ++i) {
+	    memcpy(dst, get_handle(gen_groups.at(i)), ray_tracing_properties.shaderGroupHandleSize);
+	    dst += rgen_sbt_region_.stride;
+	}
+
+	dst = base_dst + rgen_sbt_region_.size;
+	for (uint32_t i = 0; i < miss_groups.size(); ++i) {
+	    memcpy(dst, get_handle(miss_groups.at(i)), ray_tracing_properties.shaderGroupHandleSize);
+	    dst += miss_sbt_region_.stride;
+	}
+
+	dst = base_dst + rgen_sbt_region_.size + miss_sbt_region_.size;
+	for (uint32_t i = 0; i < hit_groups.size(); ++i) {
+	    memcpy(dst, get_handle(hit_groups.at(i)), ray_tracing_properties.shaderGroupHandleSize);
+	    dst += hit_sbt_region_.stride;
+	}
+
+	dst = base_dst + rgen_sbt_region_.size + miss_sbt_region_.size + hit_sbt_region_.size;
+	for (uint32_t i = 0; i < call_groups.size(); ++i) {
+	    memcpy(dst, get_handle(call_groups.at(i)), ray_tracing_properties.shaderGroupHandleSize);
+	    dst += call_sbt_region_.stride;
+	}
+    });
 }
 
 RayTracePipeline::~RayTracePipeline() {
