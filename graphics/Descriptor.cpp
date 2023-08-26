@@ -1,3 +1,5 @@
+#include <algorithm>
+
 #include "utils/Assert.h"
 #include "Descriptor.h"
 
@@ -61,6 +63,46 @@ VkDescriptorPool DescriptorAllocator::grab_new_pool() {
     }
 }
 
+static bool operator==(const std::pair<std::vector<VkDescriptorSetLayoutBinding>, VkDescriptorSetLayoutCreateFlagBits> &a, const std::pair<std::vector<VkDescriptorSetLayoutBinding>, VkDescriptorSetLayoutCreateFlagBits> &b) {
+    if (a.first.size() != b.first.size() || a.second != b.second) {
+	return false;
+    }
+    for (int i = 0; i < a.first.size(); i++) {
+	if (a.first.at(i).binding != b.first.at(i).binding){
+	    return false;
+	}
+	if (a.first.at(i).descriptorType != b.first.at(i).descriptorType){
+	    return false;
+	}
+	if (a.first.at(i).descriptorCount != b.first.at(i).descriptorCount){
+	    return false;
+	}
+	if (a.first.at(i).stageFlags != b.first.at(i).stageFlags){
+	    return false;
+	}
+    }
+    return true;
+}
+
+VkDescriptorSetLayout DescriptorAllocator::grab_layout(const std::vector<VkDescriptorSetLayoutBinding> &bindings, VkDescriptorSetLayoutCreateFlagBits flags) {
+    auto it = layout_cache_.find({bindings, flags});
+    if (it != layout_cache_.end()) {
+	return it->second;
+    }
+
+    VkDescriptorSetLayoutCreateInfo create_info {};
+    create_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+    create_info.pNext = nullptr;
+    create_info.flags = flags;
+    create_info.bindingCount = static_cast<uint32_t>(bindings.size());
+    create_info.pBindings = bindings.data();
+
+    VkDescriptorSetLayout layout;
+    vkCreateDescriptorSetLayout(device_->get_device(), &create_info, nullptr, &layout);
+    layout_cache_.insert({{bindings, flags}, layout});
+    return layout;
+}
+
 void DescriptorAllocator::reset_pools() {
     for (auto pool : used_pools_){
 	vkResetDescriptorPool(device_->get_device(), pool, 0);
@@ -74,8 +116,20 @@ std::shared_ptr<Device> DescriptorAllocator::get_device() {
     return device_;
 }
 
+DescriptorSetLayout::DescriptorSetLayout(std::shared_ptr<DescriptorAllocator> allocator, VkDescriptorSetLayoutCreateFlagBits flags) {
+    allocator_ = allocator;
+    flags_ = flags;
+}
+
+void DescriptorSetLayout::add_binding(VkDescriptorSetLayoutBinding binding) {
+    bindings_.push_back(binding);
+}
+
 VkDescriptorSetLayout DescriptorSetLayout::get_layout() {
-    return layout_;
+    std::sort(bindings_.begin(), bindings_.end(), [](VkDescriptorSetLayoutBinding& a, VkDescriptorSetLayoutBinding& b ){
+	return a.binding < b.binding;
+    });
+    return allocator_->grab_layout(bindings_, flags_);
 }
 
 DescriptorSet::DescriptorSet(std::shared_ptr<DescriptorAllocator> allocator, std::shared_ptr<DescriptorSetLayout> layout) {
