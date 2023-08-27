@@ -5,6 +5,7 @@ find_package(Vulkan REQUIRED)
 if (WIN32)
   add_subdirectory(GLFW)
 endif()
+add_subdirectory(glm)
 
 add_library(vma VmaImpl.cpp)
 
