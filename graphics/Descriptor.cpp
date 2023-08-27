@@ -137,12 +137,12 @@ VkDescriptorSetLayout DescriptorSetLayout::get_layout() {
 
 DescriptorSet::DescriptorSet(std::shared_ptr<DescriptorAllocator> allocator, std::shared_ptr<DescriptorSetLayout> layout) {
     VkDescriptorPool pool = allocator->grab_pool();
-    VkDescriptorSetLayout stack_layout = layout->get_layout();
+    layout_ = layout->get_layout();
     
     VkDescriptorSetAllocateInfo allocate_info = {};
     allocate_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
     allocate_info.pNext = nullptr;
-    allocate_info.pSetLayouts = &stack_layout;
+    allocate_info.pSetLayouts = &layout_;
     allocate_info.descriptorPool = pool;
     allocate_info.descriptorSetCount = 1;
 
@@ -156,4 +156,64 @@ DescriptorSet::DescriptorSet(std::shared_ptr<DescriptorAllocator> allocator, std
     }
 
     allocator_ = allocator;
+}
+
+DescriptorSetBuilder::DescriptorSetBuilder(std::shared_ptr<DescriptorAllocator> allocator, VkDescriptorSetLayoutCreateFlagBits layout_flags) {
+    allocator_ = allocator;
+    layout_ = std::make_shared<DescriptorSetLayout>(allocator_, layout_flags);
+}
+
+DescriptorSetBuilder &DescriptorSetBuilder::bind_buffer(uint32_t binding, VkDescriptorBufferInfo buffer_info, VkDescriptorType type, VkShaderStageFlagBits stages) {
+    VkDescriptorSetLayoutBinding layout_binding {};
+    layout_binding.descriptorCount = 1;
+    layout_binding.descriptorType = type;
+    layout_binding.pImmutableSamplers = nullptr;
+    layout_binding.stageFlags = stages;
+    layout_binding.binding = binding;
+    layout_->add_binding(layout_binding);
+
+    VkWriteDescriptorSet write {};
+    write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+    write.pNext = nullptr;
+    write.descriptorCount = 1;
+    write.descriptorType = type;
+    write.pBufferInfo = &buffer_info;
+    write.dstBinding = binding;
+    writes_.push_back(write);
+
+    return *this;
+}
+
+DescriptorSetBuilder &DescriptorSetBuilder::bind_image(uint32_t binding, VkDescriptorImageInfo image_info, VkDescriptorType type, VkShaderStageFlagBits stages) {
+    VkDescriptorSetLayoutBinding layout_binding {};
+    layout_binding.descriptorCount = 1;
+    layout_binding.descriptorType = type;
+    layout_binding.pImmutableSamplers = nullptr;
+    layout_binding.stageFlags = stages;
+    layout_binding.binding = binding;
+    layout_->add_binding(layout_binding);
+
+    VkWriteDescriptorSet write {};
+    write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+    write.pNext = nullptr;
+    write.descriptorCount = 1;
+    write.descriptorType = type;
+    write.pImageInfo = &image_info;
+    write.dstBinding = binding;
+    writes_.push_back(write);
+
+    return *this;
+}
+
+std::shared_ptr<DescriptorSet> DescriptorSetBuilder::build() {
+    auto set = std::make_shared<DescriptorSet>(allocator_, layout_);
+    update(set);
+    return set;
+}
+
+void DescriptorSetBuilder::update(std::shared_ptr<DescriptorSet> set) {
+    for (auto &write : writes_) {
+	write.dstSet = set->get_set();
+    }
+    vkUpdateDescriptorSets(allocator_->get_device()->get_device(), writes_.size(), writes_.data(), 0, nullptr);
 }

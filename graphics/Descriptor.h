@@ -7,6 +7,8 @@
 
 #include "GPUAllocator.h"
 
+class DescriptorSetBuilder;
+
 class DescriptorAllocator {
 public:
     DescriptorAllocator(std::shared_ptr<Device> device);
@@ -37,7 +39,7 @@ private:
 
     std::unordered_map<std::pair<std::vector<VkDescriptorSetLayoutBinding>, VkDescriptorSetLayoutCreateFlagBits>, VkDescriptorSetLayout, LayoutHasher> layout_cache_;
 
-    std::shared_ptr<Device> device_;
+    std::shared_ptr<Device> device_ = nullptr;
 };
 
 class DescriptorSetLayout {
@@ -47,8 +49,8 @@ public:
     void add_binding(VkDescriptorSetLayoutBinding binding);
     VkDescriptorSetLayout get_layout();
 private:
-    std::shared_ptr<DescriptorAllocator> allocator_;
-    VkDescriptorSetLayoutCreateFlagBits flags_;
+    std::shared_ptr<DescriptorAllocator> allocator_ = nullptr;
+    VkDescriptorSetLayoutCreateFlagBits flags_ = {};
 
     std::vector<VkDescriptorSetLayoutBinding> bindings_;
 };
@@ -56,8 +58,27 @@ private:
 class DescriptorSet {
 public:
     DescriptorSet(std::shared_ptr<DescriptorAllocator> allocator, std::shared_ptr<DescriptorSetLayout> layout);
-private:
-    VkDescriptorSet set_;
 
-    std::shared_ptr<DescriptorAllocator> allocator_;
+    VkDescriptorSet get_set();
+private:
+    VkDescriptorSet set_ = VK_NULL_HANDLE;
+    VkDescriptorSetLayout layout_ = VK_NULL_HANDLE;
+
+    std::shared_ptr<DescriptorAllocator> allocator_ = nullptr;
+};
+
+class DescriptorSetBuilder {
+public:
+    DescriptorSetBuilder(std::shared_ptr<DescriptorAllocator> allocator, VkDescriptorSetLayoutCreateFlagBits layout_flags = {});
+
+    DescriptorSetBuilder &bind_buffer(uint32_t binding, VkDescriptorBufferInfo buffer_info, VkDescriptorType type, VkShaderStageFlagBits stages);
+    DescriptorSetBuilder &bind_image(uint32_t binding, VkDescriptorImageInfo image_info, VkDescriptorType type, VkShaderStageFlagBits stages);
+
+    std::shared_ptr<DescriptorSet> build();
+    void update(std::shared_ptr<DescriptorSet> set);
+private:
+    std::vector<VkWriteDescriptorSet> writes_;
+
+    std::shared_ptr<DescriptorAllocator> allocator_ = nullptr;
+    std::shared_ptr<DescriptorSetLayout> layout_ = nullptr;
 };
