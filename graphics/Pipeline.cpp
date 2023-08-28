@@ -158,7 +158,7 @@ RayTracePipeline::RayTracePipeline(std::shared_ptr<GPUAllocator> allocator, std:
     std::vector<char> handles(handles_size);
     ASSERT(vkGetRayTracingShaderGroupHandles(device_->get_device(), pipeline_, 0, handle_count, handles_size, handles.data()), "Unable to fetch shader group handles from ray trace pipeline.");
 
-    const VkDeviceSize sbt_buffer_size = rgen_sbt_region_.size + miss_sbt_region_.size + hit_sbt_region_.size + call_sbt_region_.size;
+    const VkDeviceSize sbt_buffer_size = rgen_sbt_region_.size + miss_sbt_region_.size + hit_sbt_region_.size + call_sbt_region_.size + 16;
     sbt_buffer_ = std::make_shared<GPUBuffer>(allocator, sbt_buffer_size, 1, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT | VK_BUFFER_USAGE_SHADER_BINDING_TABLE_BIT_KHR, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT);
     const VkDeviceAddress sbt_buffer_address = sbt_buffer_->get_device_address();
     rgen_sbt_region_.deviceAddress = sbt_buffer_address;
@@ -199,7 +199,7 @@ RayTracePipeline::~RayTracePipeline() {
     vkDestroyPipelineLayout(device_->get_device(), layout_, nullptr);
 }
 
-void RayTracePipeline::record(VkCommandBuffer command, std::vector<std::shared_ptr<DescriptorSet>> descriptor_sets) {
+void RayTracePipeline::record(VkCommandBuffer command, std::vector<std::shared_ptr<DescriptorSet>> descriptor_sets, uint32_t width, uint32_t height, uint32_t depth) {
     std::vector<VkDescriptorSet> vk_descriptor_sets;
     for (auto set : descriptor_sets) {
 	vk_descriptor_sets.push_back(set->get_set());
@@ -207,5 +207,5 @@ void RayTracePipeline::record(VkCommandBuffer command, std::vector<std::shared_p
     
     vkCmdBindPipeline(command, VK_PIPELINE_BIND_POINT_RAY_TRACING_KHR, pipeline_);
     vkCmdBindDescriptorSets(command, VK_PIPELINE_BIND_POINT_RAY_TRACING_KHR, layout_, 0, static_cast<uint32_t>(vk_descriptor_sets.size()), vk_descriptor_sets.data(), 0, nullptr);
-    vkCmdTraceRays(command, &rgen_sbt_region_, &miss_sbt_region_, &hit_sbt_region_, &call_sbt_region_, 100, 100, 1);
+    vkCmdTraceRays(command, &rgen_sbt_region_, &miss_sbt_region_, &hit_sbt_region_, &call_sbt_region_, width, height, depth);
 }

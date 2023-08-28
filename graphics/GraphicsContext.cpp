@@ -92,8 +92,10 @@ void renderFrame(std::shared_ptr<GraphicsContext> context) {
     context->frame_fence_->reset();
 
     context->render_command_buffer_->record([&](VkCommandBuffer command_buffer) {
+	VkExtent2D extent = context->swapchain_->get_extent();
+	
 	prologue_barrier.record(command_buffer);
-	context->ray_trace_pipeline_->record(command_buffer, {context->swapchain_descriptors_.at(swapchain_image_index)});
+	context->ray_trace_pipeline_->record(command_buffer, {context->swapchain_descriptors_.at(swapchain_image_index)}, extent.width, extent.height, 1);
 	epilogue_barrier.record(command_buffer);
     });
 

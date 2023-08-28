@@ -16,6 +16,7 @@ Swapchain::Swapchain(std::shared_ptr<Device> device, std::shared_ptr<Window> win
     vkGetPhysicalDeviceSurfacePresentModesKHR(device->get_physical_device(), device->get_surface(), &num_present_modes, &present_modes.at(0));
 
     const auto [surface_format, present_mode, swap_extent] = choose_swapchain_options(device->get_physical_device(), capabilities, formats, present_modes, window->get_window());
+    swapchain_extent_ = swap_extent;
 
     uint32_t image_count =
 	capabilities.maxImageCount > 0 && capabilities.minImageCount >= capabilities.maxImageCount ?
@@ -81,6 +82,10 @@ Swapchain::~Swapchain() {
 
 VkImage Swapchain::get_image(uint32_t image_index) {
     return swapchain_images_.at(image_index);
+}
+
+VkExtent2D Swapchain::get_extent() {
+    return swapchain_extent_;
 }
 
 std::vector<std::shared_ptr<DescriptorSet>> Swapchain::make_image_descriptors(std::shared_ptr<DescriptorAllocator> allocator) {
