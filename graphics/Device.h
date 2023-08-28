@@ -2,6 +2,7 @@
 
 #include <string_view>
 #include <memory>
+#include <vector>
 
 #define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
@@ -27,6 +28,8 @@ VKFN_EXTERN(vkDestroyAccelerationStructure);
 VKFN_EXTERN(vkCmdTraceRays);
 
 class Command;
+class Semaphore;
+class Fence;
 
 class Device {
 public:
@@ -40,7 +43,7 @@ public:
     VkQueue get_queue();
     uint32_t get_queue_family();
 
-    void submit_command(std::shared_ptr<Command> command);
+    void submit_command(std::shared_ptr<Command> command, std::vector<std::shared_ptr<Semaphore>> wait_semaphores = {}, std::vector<std::shared_ptr<Semaphore>> signal_semaphores = {}, std::shared_ptr<Fence> fence = nullptr);
 
     VkPhysicalDeviceRayTracingPipelinePropertiesKHR get_ray_tracing_properties();
     VkPhysicalDeviceAccelerationStructurePropertiesKHR get_acceleration_structure_properties();

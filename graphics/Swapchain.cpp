@@ -79,6 +79,10 @@ Swapchain::~Swapchain() {
     vkDestroySwapchainKHR(device_->get_device(), swapchain_, nullptr);
 }
 
+VkImage Swapchain::get_image(uint32_t image_index) {
+    return swapchain_images_.at(image_index);
+}
+
 std::vector<std::shared_ptr<DescriptorSet>> Swapchain::make_image_descriptors(std::shared_ptr<DescriptorAllocator> allocator) {
     ASSERT(swapchain_images_.size() == swapchain_image_views_.size(), "Swapchain has differing numbers of images and image views.");
     std::vector<std::shared_ptr<DescriptorSet>> sets;

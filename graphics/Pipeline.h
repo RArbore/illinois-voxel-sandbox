@@ -27,6 +27,8 @@ class RayTracePipeline {
 public:
     RayTracePipeline(std::shared_ptr<GPUAllocator> allocator, std::vector<std::vector<std::shared_ptr<Shader>>> shader_groups, std::vector<VkDescriptorSetLayout> descriptor_layouts);
     ~RayTracePipeline();
+
+    void record(VkCommandBuffer command, std::vector<std::shared_ptr<DescriptorSet>> descriptor_sets);
 private:
     VkPipeline pipeline_ = VK_NULL_HANDLE;
     VkPipelineLayout layout_ = VK_NULL_HANDLE;

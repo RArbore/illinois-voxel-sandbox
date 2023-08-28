@@ -198,3 +198,14 @@ RayTracePipeline::~RayTracePipeline() {
     vkDestroyPipeline(device_->get_device(), pipeline_, nullptr);
     vkDestroyPipelineLayout(device_->get_device(), layout_, nullptr);
 }
+
+void RayTracePipeline::record(VkCommandBuffer command, std::vector<std::shared_ptr<DescriptorSet>> descriptor_sets) {
+    std::vector<VkDescriptorSet> vk_descriptor_sets;
+    for (auto set : descriptor_sets) {
+	vk_descriptor_sets.push_back(set->get_set());
+    }
+    
+    vkCmdBindPipeline(command, VK_PIPELINE_BIND_POINT_RAY_TRACING_KHR, pipeline_);
+    vkCmdBindDescriptorSets(command, VK_PIPELINE_BIND_POINT_RAY_TRACING_KHR, layout_, 0, static_cast<uint32_t>(vk_descriptor_sets.size()), vk_descriptor_sets.data(), 0, nullptr);
+    vkCmdTraceRays(command, &rgen_sbt_region_, &miss_sbt_region_, &hit_sbt_region_, &call_sbt_region_, 100, 100, 1);
+}

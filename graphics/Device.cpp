@@ -4,6 +4,7 @@
 #include "utils/Assert.h"
 #include "Device.h"
 #include "Command.h"
+#include "Synchronization.h"
 
 static const char *const validation_layers[] = {
     "VK_LAYER_KHRONOS_validation"
@@ -16,6 +17,7 @@ static const char *const device_extensions[] = {
     VK_KHR_DEFERRED_HOST_OPERATIONS_EXTENSION_NAME,
     VK_KHR_BUFFER_DEVICE_ADDRESS_EXTENSION_NAME,
     VK_KHR_SPIRV_1_4_EXTENSION_NAME,
+    VK_KHR_SYNCHRONIZATION_2_EXTENSION_NAME,
     VK_EXT_DESCRIPTOR_INDEXING_EXTENSION_NAME,
 };
 
@@ -96,10 +98,15 @@ Device::Device(std::shared_ptr<Window> window): window_(window) {
     queue_create_info.queueCount = 1;
     queue_create_info.pQueuePriorities = &queue_priority;
 
+    VkPhysicalDeviceSynchronization2Features synchronization_2_features {};
+    synchronization_2_features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SYNCHRONIZATION_2_FEATURES;
+    synchronization_2_features.pNext = nullptr;
+    synchronization_2_features.synchronization2 = VK_TRUE;
+
     VkPhysicalDeviceBufferDeviceAddressFeatures buffer_device_address_features {};
     buffer_device_address_features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_BUFFER_DEVICE_ADDRESS_FEATURES;
     buffer_device_address_features.bufferDeviceAddress = VK_TRUE; 
-    buffer_device_address_features.pNext = nullptr;
+    buffer_device_address_features.pNext = &synchronization_2_features;
 
     VkPhysicalDeviceAccelerationStructureFeaturesKHR acceleration_features {};
     acceleration_features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ACCELERATION_STRUCTURE_FEATURES_KHR;
@@ -181,15 +188,32 @@ uint32_t Device::get_queue_family() {
     return queue_family_;
 }
 
-void Device::submit_command(std::shared_ptr<Command> command) {
+void Device::submit_command(std::shared_ptr<Command> command, std::vector<std::shared_ptr<Semaphore>> wait_semaphores, std::vector<std::shared_ptr<Semaphore>> signal_semaphores, std::shared_ptr<Fence> fence) {
     const auto buffer = command->get_buffer();
+    const std::vector<VkPipelineStageFlags> wait_stages(wait_semaphores.size(), VK_PIPELINE_STAGE_ALL_COMMANDS_BIT);
+    std::vector<VkSemaphore> vk_wait_semaphores;
+    std::vector<VkSemaphore> vk_signal_semaphores;
+    for (auto semaphore : wait_semaphores) {
+	vk_wait_semaphores.push_back(semaphore->get_semaphore());
+    }
+    for (auto semaphore : signal_semaphores) {
+	vk_signal_semaphores.push_back(semaphore->get_semaphore());
+    }
     
     VkSubmitInfo submit_info {};
     submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+    submit_info.pNext = nullptr;
     submit_info.commandBufferCount = 1;
     submit_info.pCommandBuffers = &buffer;
+    submit_info.waitSemaphoreCount = static_cast<uint32_t>(vk_wait_semaphores.size());
+    submit_info.pWaitSemaphores = vk_wait_semaphores.data();
+    submit_info.pWaitDstStageMask = wait_stages.data();
+    submit_info.signalSemaphoreCount = static_cast<uint32_t>(vk_signal_semaphores.size());
+    submit_info.pSignalSemaphores = vk_signal_semaphores.data();
+
+    VkFence vk_fence = fence->get_fence();
 	
-    ASSERT(vkQueueSubmit(queue_, 1, &submit_info, VK_NULL_HANDLE), "Unable to submit command.");
+    ASSERT(vkQueueSubmit(queue_, 1, &submit_info, vk_fence), "Unable to submit command.");
 }
 
 VkPhysicalDeviceRayTracingPipelinePropertiesKHR Device::get_ray_tracing_properties() {
@@ -249,9 +273,13 @@ int32_t physical_check_extensions(VkPhysicalDevice physical) {
 }
 
 int32_t physical_check_features_support(VkPhysicalDevice physical) {
+    VkPhysicalDeviceSynchronization2Features synchronization_2_features {};
+    synchronization_2_features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SYNCHRONIZATION_2_FEATURES;
+    synchronization_2_features.pNext = nullptr;
+
     VkPhysicalDeviceBufferDeviceAddressFeatures buffer_device_address_features {};
     buffer_device_address_features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_BUFFER_DEVICE_ADDRESS_FEATURES;
-    buffer_device_address_features.pNext = nullptr;
+    buffer_device_address_features.pNext = &synchronization_2_features;
 
     VkPhysicalDeviceAccelerationStructureFeaturesKHR acceleration_features {};
     acceleration_features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ACCELERATION_STRUCTURE_FEATURES_KHR;
@@ -282,7 +310,8 @@ int32_t physical_check_features_support(VkPhysicalDevice physical) {
 	ray_tracing_features.rayTracingPipeline &&
 	acceleration_features.accelerationStructure &&
 	acceleration_features.descriptorBindingAccelerationStructureUpdateAfterBind &&
-	buffer_device_address_features.bufferDeviceAddress
+	buffer_device_address_features.bufferDeviceAddress &&
+	synchronization_2_features.synchronization2
 	) {
 	return 0;
     }

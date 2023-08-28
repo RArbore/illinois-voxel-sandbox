@@ -23,7 +23,11 @@ private:
 
     std::vector<std::shared_ptr<DescriptorSet>> swapchain_descriptors_;
     std::shared_ptr<Fence> frame_fence_ = nullptr;
-    std::shared_ptr<Semaphore> acquire_next_image_semaphore_ = nullptr;
+    std::shared_ptr<Semaphore> acquire_semaphore_ = nullptr;
+    std::shared_ptr<Semaphore> render_semaphore_ = nullptr;
+    std::shared_ptr<Command> render_command_buffer_ = nullptr;
+
+    uint64_t frame_index_ = 0;
 
     friend std::shared_ptr<GraphicsContext> createGraphicsContext();
     friend void renderFrame(std::shared_ptr<GraphicsContext>);
@@ -44,7 +48,9 @@ GraphicsContext::GraphicsContext() {
     std::vector<VkDescriptorSetLayout> layouts = {swapchain_descriptors_.at(0)->get_layout()};
     ray_trace_pipeline_ = std::make_shared<RayTracePipeline>(gpu_allocator_, shader_groups, layouts);
     frame_fence_ = std::make_shared<Fence>(device_);
-    acquire_next_image_semaphore_ = std::make_shared<Semaphore>(device_);
+    acquire_semaphore_ = std::make_shared<Semaphore>(device_);
+    render_semaphore_ = std::make_shared<Semaphore>(device_);
+    render_command_buffer_ = std::make_shared<Command>(command_pool_);
 }
 
 GraphicsContext::~GraphicsContext() {
@@ -59,10 +65,43 @@ std::shared_ptr<GraphicsContext> createGraphicsContext() {
 void renderFrame(std::shared_ptr<GraphicsContext> context) {
     context->window_->pollEvents();
 
-    //frame_fence_->wait();
-    const uint32_t swapchain_image_index = context->swapchain_->acquire_next_image(context->acquire_next_image_semaphore_);
-    //frame_fence_->reset();
-    context->swapchain_->present_image(swapchain_image_index, context->acquire_next_image_semaphore_);
+    context->frame_fence_->wait();
+
+    const uint32_t swapchain_image_index = context->swapchain_->acquire_next_image(context->acquire_semaphore_);
+
+    Barrier prologue_barrier(context->device_,
+			     VK_PIPELINE_STAGE_2_NONE,
+			     VK_ACCESS_2_NONE,
+			     VK_PIPELINE_STAGE_2_RAY_TRACING_SHADER_BIT_KHR,
+			     VK_ACCESS_2_SHADER_WRITE_BIT,
+			     context->swapchain_->get_image(swapchain_image_index),
+			     VK_IMAGE_LAYOUT_UNDEFINED,
+			     VK_IMAGE_LAYOUT_GENERAL
+			     );
+
+    Barrier epilogue_barrier(context->device_,
+			     VK_PIPELINE_STAGE_2_RAY_TRACING_SHADER_BIT_KHR,
+			     VK_ACCESS_2_SHADER_WRITE_BIT,
+			     VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT,
+			     VK_ACCESS_2_MEMORY_READ_BIT,
+			     context->swapchain_->get_image(swapchain_image_index),
+			     VK_IMAGE_LAYOUT_GENERAL,
+			     VK_IMAGE_LAYOUT_PRESENT_SRC_KHR
+			     );
+    
+    context->frame_fence_->reset();
+
+    context->render_command_buffer_->record([&](VkCommandBuffer command_buffer) {
+	prologue_barrier.record(command_buffer);
+	context->ray_trace_pipeline_->record(command_buffer, {context->swapchain_descriptors_.at(swapchain_image_index)});
+	epilogue_barrier.record(command_buffer);
+    });
+
+    context->device_->submit_command(context->render_command_buffer_, {context->acquire_semaphore_}, {context->render_semaphore_}, context->frame_fence_);
+    
+    context->swapchain_->present_image(swapchain_image_index, context->render_semaphore_);
+
+    ++context->frame_index_;
 }
 
 bool shouldExit(std::shared_ptr<GraphicsContext> context) {

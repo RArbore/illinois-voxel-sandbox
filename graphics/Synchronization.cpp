@@ -51,19 +51,14 @@ Barrier::Barrier(std::shared_ptr<Device> device, VkPipelineStageFlags2 src_stage
     add(src_stages, src_accesses, dst_stages, dst_accesses);
 }
 
-Barrier::Barrier(std::shared_ptr<Device> device, VkPipelineStageFlags2 src_stages, VkAccessFlags2 src_accesses, VkPipelineStageFlags2 dst_stages, VkAccessFlags2 dst_accesses, std::shared_ptr<GPUBuffer> buffer, VkDeviceSize offset, VkDeviceSize size) {
+Barrier::Barrier(std::shared_ptr<Device> device, VkPipelineStageFlags2 src_stages, VkAccessFlags2 src_accesses, VkPipelineStageFlags2 dst_stages, VkAccessFlags2 dst_accesses, VkBuffer buffer, VkDeviceSize offset, VkDeviceSize size) {
     device_ = device;
     add(src_stages, src_accesses, dst_stages, dst_accesses, buffer, offset, size);
 }
 
-Barrier::Barrier(std::shared_ptr<Device> device, VkPipelineStageFlags2 src_stages, VkAccessFlags2 src_accesses, VkPipelineStageFlags2 dst_stages, VkAccessFlags2 dst_accesses, std::shared_ptr<GPUImage> image, VkImageSubresourceRange range) {
+Barrier::Barrier(std::shared_ptr<Device> device, VkPipelineStageFlags2 src_stages, VkAccessFlags2 src_accesses, VkPipelineStageFlags2 dst_stages, VkAccessFlags2 dst_accesses, VkImage image, VkImageLayout old_layout, VkImageLayout new_layout, VkImageSubresourceRange range) {
     device_ = device;
-    add(src_stages, src_accesses, dst_stages, dst_accesses, image, range);
-}
-
-Barrier::Barrier(std::shared_ptr<Device> device, VkPipelineStageFlags2 src_stages, VkAccessFlags2 src_accesses, VkPipelineStageFlags2 dst_stages, VkAccessFlags2 dst_accesses, std::shared_ptr<GPUVolume> volume, VkImageSubresourceRange range) {
-    device_ = device;
-    add(src_stages, src_accesses, dst_stages, dst_accesses, volume, range);
+    add(src_stages, src_accesses, dst_stages, dst_accesses, image, old_layout, new_layout, range);
 }
 
 void Barrier::add(VkPipelineStageFlags2 src_stages, VkAccessFlags2 src_accesses, VkPipelineStageFlags2 dst_stages, VkAccessFlags2 dst_accesses) {
@@ -78,7 +73,7 @@ void Barrier::add(VkPipelineStageFlags2 src_stages, VkAccessFlags2 src_accesses,
     global_barriers_.push_back(barrier);
 }
 
-void Barrier::add(VkPipelineStageFlags2 src_stages, VkAccessFlags2 src_accesses, VkPipelineStageFlags2 dst_stages, VkAccessFlags2 dst_accesses, std::shared_ptr<GPUBuffer> buffer, VkDeviceSize offset, VkDeviceSize size) {
+void Barrier::add(VkPipelineStageFlags2 src_stages, VkAccessFlags2 src_accesses, VkPipelineStageFlags2 dst_stages, VkAccessFlags2 dst_accesses, VkBuffer buffer, VkDeviceSize offset, VkDeviceSize size) {
     VkBufferMemoryBarrier2 barrier {};
     barrier.sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER_2;
     barrier.pNext = nullptr;
@@ -88,15 +83,14 @@ void Barrier::add(VkPipelineStageFlags2 src_stages, VkAccessFlags2 src_accesses,
     barrier.dstAccessMask = dst_accesses;
     barrier.srcQueueFamilyIndex = device_->get_queue_family();
     barrier.dstQueueFamilyIndex = device_->get_queue_family();
-    barrier.buffer = buffer->get_buffer();
+    barrier.buffer = buffer;
     barrier.offset = offset;
     barrier.size = size;
 
     buffer_barriers_.push_back(barrier);
-    referenced_buffers_.push_back(buffer);
 }
 
-void Barrier::add(VkPipelineStageFlags2 src_stages, VkAccessFlags2 src_accesses, VkPipelineStageFlags2 dst_stages, VkAccessFlags2 dst_accesses, std::shared_ptr<GPUImage> image, VkImageSubresourceRange range) {
+void Barrier::add(VkPipelineStageFlags2 src_stages, VkAccessFlags2 src_accesses, VkPipelineStageFlags2 dst_stages, VkAccessFlags2 dst_accesses, VkImage image, VkImageLayout old_layout, VkImageLayout new_layout, VkImageSubresourceRange range) {
     VkImageMemoryBarrier2 barrier {};
     barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2;
     barrier.pNext = nullptr;
@@ -106,26 +100,25 @@ void Barrier::add(VkPipelineStageFlags2 src_stages, VkAccessFlags2 src_accesses,
     barrier.dstAccessMask = dst_accesses;
     barrier.srcQueueFamilyIndex = device_->get_queue_family();
     barrier.dstQueueFamilyIndex = device_->get_queue_family();
-    barrier.image = image->get_image();
+    barrier.oldLayout = old_layout;
+    barrier.newLayout = new_layout;
+    barrier.image = image;
     barrier.subresourceRange = range;
 
     image_barriers_.push_back(barrier);
-    referenced_images_.push_back(image);
 }
 
-void Barrier::add(VkPipelineStageFlags2 src_stages, VkAccessFlags2 src_accesses, VkPipelineStageFlags2 dst_stages, VkAccessFlags2 dst_accesses, std::shared_ptr<GPUVolume> volume, VkImageSubresourceRange range) {
-    VkImageMemoryBarrier2 barrier {};
-    barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2;
-    barrier.pNext = nullptr;
-    barrier.srcStageMask = src_stages;
-    barrier.srcAccessMask = src_accesses;
-    barrier.dstStageMask = dst_stages;
-    barrier.dstAccessMask = dst_accesses;
-    barrier.srcQueueFamilyIndex = device_->get_queue_family();
-    barrier.dstQueueFamilyIndex = device_->get_queue_family();
-    barrier.image = volume->get_image();
-    barrier.subresourceRange = range;
+void Barrier::record(VkCommandBuffer command) {
+    VkDependencyInfo dependency_info {};
+    dependency_info.sType = VK_STRUCTURE_TYPE_DEPENDENCY_INFO;
+    dependency_info.pNext = nullptr;
+    dependency_info.dependencyFlags = {};
+    dependency_info.memoryBarrierCount = static_cast<uint32_t>(global_barriers_.size());
+    dependency_info.pMemoryBarriers = global_barriers_.data();
+    dependency_info.bufferMemoryBarrierCount = static_cast<uint32_t>(buffer_barriers_.size());
+    dependency_info.pBufferMemoryBarriers = buffer_barriers_.data();
+    dependency_info.imageMemoryBarrierCount = static_cast<uint32_t>(image_barriers_.size());
+    dependency_info.pImageMemoryBarriers = image_barriers_.data();
 
-    image_barriers_.push_back(barrier);
-    referenced_volumes_.push_back(volume);
+    vkCmdPipelineBarrier2(command, &dependency_info);
 }
