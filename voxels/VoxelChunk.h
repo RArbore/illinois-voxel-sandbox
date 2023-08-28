@@ -2,14 +2,23 @@
 
 #include <glm/glm.hpp>
 
+enum class VoxelFormat {
+    Raw,
+};
+
 class VoxelChunk {
-    public:
-        VoxelChunk CreateChunk();
-        VoxelChunk CreateChunk(float x, float y, float z, int w, int d, int h);
-        VoxelChunk CreateChunk(glm::vec3 pos, glm::vec3 dim);
-        enum Type { basic = 0, Int = 1, Float = 2, Vec3 = 3 };
-    private:
-        glm::vec3 position_;
-        std::shared_ptr<void> chunk_; // Not sure if we need shared_ptrs here if each chunk manages its own set of voxels
-        uint16_t CalculateSize(int w, int d, int h, Type t);
+public:
+    VoxelChunk() = delete;
+    VoxelChunk(VoxelFormat format, const glm::vec3& position = glm::vec3(0.0f, 0.0f, 0.0f));
+
+    // Probably needs a better definition at some point
+    virtual void write_voxel(uint8_t x, uint8_t y, uint8_t z) = 0;
+
+    VoxelFormat get_chunk_format() const { return format_; };
+
+private:
+    glm::vec3 position_;
+    VoxelFormat format_;
+    
+    size_t calculate_size(int w, int d, int h);
 };
