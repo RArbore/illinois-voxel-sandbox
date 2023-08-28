@@ -31,17 +31,16 @@ GraphicsContext::GraphicsContext() {
     window_ = std::make_shared<Window>();
     device_ = std::make_shared<Device>(window_);
     gpu_allocator_ = std::make_shared<GPUAllocator>(device_);
-
     swapchain_ = std::make_shared<Swapchain>(device_, window_);
     command_pool_ = std::make_shared<CommandPool>(device_);
-
-    auto shader = std::make_shared<Shader>(device_, "dumb_rgen");
-    std::vector<std::vector<std::shared_ptr<Shader>>> shader_groups = {{shader}};
-    ray_trace_pipeline_ = std::make_shared<RayTracePipeline>(gpu_allocator_, shader_groups);
-
     descriptor_allocator_ = std::make_shared<DescriptorAllocator>(device_);
 
     swapchain_descriptors_ = swapchain_->make_image_descriptors(descriptor_allocator_);
+
+    auto shader = std::make_shared<Shader>(device_, "dumb_rgen");
+    std::vector<std::vector<std::shared_ptr<Shader>>> shader_groups = {{shader}};
+    std::vector<VkDescriptorSetLayout> layouts = {swapchain_descriptors_.at(0)->get_layout()};
+    ray_trace_pipeline_ = std::make_shared<RayTracePipeline>(gpu_allocator_, shader_groups, layouts);
 }
 
 std::shared_ptr<GraphicsContext> createGraphicsContext() {

@@ -6,6 +6,7 @@
 
 #include "Device.h"
 #include "GPUAllocator.h"
+#include "Descriptor.h"
 
 class Shader {
 public:
@@ -24,7 +25,7 @@ private:
 
 class RayTracePipeline {
 public:
-    RayTracePipeline(std::shared_ptr<GPUAllocator> allocator, std::vector<std::vector<std::shared_ptr<Shader>>> shader_groups);
+    RayTracePipeline(std::shared_ptr<GPUAllocator> allocator, std::vector<std::vector<std::shared_ptr<Shader>>> shader_groups, std::vector<VkDescriptorSetLayout> descriptor_layouts);
     ~RayTracePipeline();
 private:
     VkPipeline pipeline_ = VK_NULL_HANDLE;

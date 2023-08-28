@@ -59,7 +59,7 @@ Shader::~Shader() {
     vkDestroyShaderModule(device_->get_device(), module_, nullptr);
 }
 
-RayTracePipeline::RayTracePipeline(std::shared_ptr<GPUAllocator> allocator, std::vector<std::vector<std::shared_ptr<Shader>>> shader_groups) {
+RayTracePipeline::RayTracePipeline(std::shared_ptr<GPUAllocator> allocator, std::vector<std::vector<std::shared_ptr<Shader>>> shader_groups, std::vector<VkDescriptorSetLayout> descriptor_layouts) {
     device_ = allocator->get_device();
 
     std::vector<VkPipelineShaderStageCreateInfo> stage_create_infos;
@@ -122,7 +122,9 @@ RayTracePipeline::RayTracePipeline(std::shared_ptr<GPUAllocator> allocator, std:
     VkPipelineLayoutCreateInfo pipeline_layout_create_info {};
     pipeline_layout_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
     pipeline_layout_create_info.pushConstantRangeCount = 0;
-    pipeline_layout_create_info.setLayoutCount = 0;
+    pipeline_layout_create_info.pPushConstantRanges = nullptr;
+    pipeline_layout_create_info.setLayoutCount = static_cast<uint32_t>(descriptor_layouts.size());
+    pipeline_layout_create_info.pSetLayouts = descriptor_layouts.data();
     ASSERT(vkCreatePipelineLayout(device_->get_device(), &pipeline_layout_create_info, nullptr, &layout_), "Unable to create ray trace pipeline layout.");
     
     VkRayTracingPipelineCreateInfoKHR ray_trace_pipeline_create_info {};
