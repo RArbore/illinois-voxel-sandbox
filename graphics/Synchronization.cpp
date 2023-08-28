@@ -21,6 +21,10 @@ void Fence::reset() {
     vkResetFences(device_->get_device(), 1, &fence_);
 }
 
+VkFence Fence::get_fence() {
+    return fence_;
+}
+
 Fence::~Fence() {
     vkDestroyFence(device_->get_device(), fence_, nullptr);
 }
@@ -36,6 +40,10 @@ Semaphore::Semaphore(std::shared_ptr<Device> device) {
 
 Semaphore::~Semaphore() {
     vkDestroySemaphore(device_->get_device(), semaphore_, nullptr);
+}
+
+VkSemaphore Semaphore::get_semaphore() {
+    return semaphore_;
 }
 
 Barrier::Barrier(std::shared_ptr<Device> device, VkPipelineStageFlags2 src_stages, VkAccessFlags2 src_accesses, VkPipelineStageFlags2 dst_stages, VkAccessFlags2 dst_accesses) {

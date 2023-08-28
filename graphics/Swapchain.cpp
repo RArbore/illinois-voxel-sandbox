@@ -95,6 +95,28 @@ std::vector<std::shared_ptr<DescriptorSet>> Swapchain::make_image_descriptors(st
     return sets;
 }
 
+uint32_t Swapchain::acquire_next_image(std::shared_ptr<Semaphore> notify) {
+    uint32_t index = 0;
+    const VkResult result = vkAcquireNextImageKHR(device_->get_device(), swapchain_, UINT64_MAX, notify->get_semaphore(), VK_NULL_HANDLE, &index);
+    ASSERT(result == VK_SUCCESS || result == VK_SUBOPTIMAL_KHR, "Unable to acquire next swapchain image.");
+    return index;
+}
+
+void Swapchain::present_image(uint32_t image_index, std::shared_ptr<Semaphore> wait) {
+    VkSemaphore wait_sem = wait->get_semaphore();
+    
+    VkPresentInfoKHR present_info {};
+    present_info.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
+    present_info.waitSemaphoreCount = 1;
+    present_info.pWaitSemaphores = &wait_sem;
+    present_info.swapchainCount = 1;
+    present_info.pSwapchains = &swapchain_;
+    present_info.pImageIndices = &image_index;
+
+    const VkResult result = vkQueuePresentKHR(device_->get_queue(), &present_info);
+    ASSERT(result == VK_SUCCESS || result == VK_SUBOPTIMAL_KHR, "Unable to present swapchain image.");
+}
+
 std::tuple<VkSurfaceFormatKHR, VkPresentModeKHR, VkExtent2D> choose_swapchain_options(VkPhysicalDevice physical_device, VkSurfaceCapabilitiesKHR capabilities, const std::vector<VkSurfaceFormatKHR> &formats, const std::vector<VkPresentModeKHR> &present_modes, GLFWwindow *window) {
     VkSurfaceFormatKHR surface_format {};
     VkPresentModeKHR present_mode {};

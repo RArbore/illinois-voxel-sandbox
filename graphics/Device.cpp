@@ -173,6 +173,10 @@ VkSurfaceKHR Device::get_surface() {
     return surface_;
 }
 
+VkQueue Device::get_queue() {
+    return queue_;
+}
+
 uint32_t Device::get_queue_family() {
     return queue_family_;
 }

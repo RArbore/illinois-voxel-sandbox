@@ -11,6 +11,7 @@
 class GraphicsContext {
 public:
     GraphicsContext();
+    ~GraphicsContext();
 private:
     std::shared_ptr<Window> window_ = nullptr;
     std::shared_ptr<Device> device_ = nullptr;
@@ -21,6 +22,8 @@ private:
     std::shared_ptr<DescriptorAllocator> descriptor_allocator_ = nullptr;
 
     std::vector<std::shared_ptr<DescriptorSet>> swapchain_descriptors_;
+    std::shared_ptr<Fence> frame_fence_ = nullptr;
+    std::shared_ptr<Semaphore> acquire_next_image_semaphore_ = nullptr;
 
     friend std::shared_ptr<GraphicsContext> createGraphicsContext();
     friend void renderFrame(std::shared_ptr<GraphicsContext>);
@@ -36,11 +39,16 @@ GraphicsContext::GraphicsContext() {
     descriptor_allocator_ = std::make_shared<DescriptorAllocator>(device_);
 
     swapchain_descriptors_ = swapchain_->make_image_descriptors(descriptor_allocator_);
-
     auto shader = std::make_shared<Shader>(device_, "dumb_rgen");
     std::vector<std::vector<std::shared_ptr<Shader>>> shader_groups = {{shader}};
     std::vector<VkDescriptorSetLayout> layouts = {swapchain_descriptors_.at(0)->get_layout()};
     ray_trace_pipeline_ = std::make_shared<RayTracePipeline>(gpu_allocator_, shader_groups, layouts);
+    frame_fence_ = std::make_shared<Fence>(device_);
+    acquire_next_image_semaphore_ = std::make_shared<Semaphore>(device_);
+}
+
+GraphicsContext::~GraphicsContext() {
+    vkDeviceWaitIdle(device_->get_device());
 }
 
 std::shared_ptr<GraphicsContext> createGraphicsContext() {
@@ -50,6 +58,11 @@ std::shared_ptr<GraphicsContext> createGraphicsContext() {
 
 void renderFrame(std::shared_ptr<GraphicsContext> context) {
     context->window_->pollEvents();
+
+    //frame_fence_->wait();
+    const uint32_t swapchain_image_index = context->swapchain_->acquire_next_image(context->acquire_next_image_semaphore_);
+    //frame_fence_->reset();
+    context->swapchain_->present_image(swapchain_image_index, context->acquire_next_image_semaphore_);
 }
 
 bool shouldExit(std::shared_ptr<GraphicsContext> context) {

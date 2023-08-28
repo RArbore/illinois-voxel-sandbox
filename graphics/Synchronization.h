@@ -13,6 +13,8 @@ public:
 
     void wait();
     void reset();
+
+    VkFence get_fence();
 private:
     VkFence fence_;
 
@@ -23,6 +25,8 @@ class Semaphore {
 public:
     Semaphore(std::shared_ptr<Device> device);
     ~Semaphore();
+
+    VkSemaphore get_semaphore();
 private:
     VkSemaphore semaphore_;
 

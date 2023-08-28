@@ -37,6 +37,7 @@ public:
     VkPhysicalDevice get_physical_device();
     VkDevice get_device();
     VkSurfaceKHR get_surface();
+    VkQueue get_queue();
     uint32_t get_queue_family();
 
     void submit_command(std::shared_ptr<Command> command);
