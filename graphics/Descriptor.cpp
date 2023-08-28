@@ -158,6 +158,14 @@ DescriptorSet::DescriptorSet(std::shared_ptr<DescriptorAllocator> allocator, std
     allocator_ = allocator;
 }
 
+VkDescriptorSet DescriptorSet::get_set() {
+    return set_;
+}
+
+VkDescriptorSetLayout DescriptorSet::get_layout() {
+    return layout_;
+}
+
 DescriptorSetBuilder::DescriptorSetBuilder(std::shared_ptr<DescriptorAllocator> allocator, VkDescriptorSetLayoutCreateFlagBits layout_flags) {
     allocator_ = allocator;
     layout_ = std::make_shared<DescriptorSetLayout>(allocator_, layout_flags);
@@ -172,12 +180,14 @@ DescriptorSetBuilder &DescriptorSetBuilder::bind_buffer(uint32_t binding, VkDesc
     layout_binding.binding = binding;
     layout_->add_binding(layout_binding);
 
+    buffer_infos_.push_back(buffer_info);
+
     VkWriteDescriptorSet write {};
     write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
     write.pNext = nullptr;
     write.descriptorCount = 1;
     write.descriptorType = type;
-    write.pBufferInfo = &buffer_info;
+    write.pBufferInfo = &buffer_infos_.back();
     write.dstBinding = binding;
     writes_.push_back(write);
 
@@ -193,12 +203,14 @@ DescriptorSetBuilder &DescriptorSetBuilder::bind_image(uint32_t binding, VkDescr
     layout_binding.binding = binding;
     layout_->add_binding(layout_binding);
 
+    image_infos_.push_back(image_info);
+
     VkWriteDescriptorSet write {};
     write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
     write.pNext = nullptr;
     write.descriptorCount = 1;
     write.descriptorType = type;
-    write.pImageInfo = &image_info;
+    write.pImageInfo = &image_infos_.back();
     write.dstBinding = binding;
     writes_.push_back(write);
 
@@ -212,6 +224,7 @@ std::shared_ptr<DescriptorSet> DescriptorSetBuilder::build() {
 }
 
 void DescriptorSetBuilder::update(std::shared_ptr<DescriptorSet> set) {
+    ASSERT(set->get_layout() == layout_->get_layout(), "Can't update descriptor set with different layout.");
     for (auto &write : writes_) {
 	write.dstSet = set->get_set();
     }

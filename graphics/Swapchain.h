@@ -5,12 +5,14 @@
 #include <vulkan/vulkan.h>
 
 #include "Window.h"
-#include "Device.h"
+#include "Descriptor.h"
 
 class Swapchain {
 public:
     Swapchain(std::shared_ptr<Device> device, std::shared_ptr<Window> window);
     ~Swapchain();
+
+    std::vector<std::shared_ptr<DescriptorSet>> make_image_descriptors(std::shared_ptr<DescriptorAllocator> allocator);
 private:
     VkSwapchainKHR swapchain_;
     VkFormat swapchain_format_;

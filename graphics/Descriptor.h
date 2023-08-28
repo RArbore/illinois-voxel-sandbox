@@ -7,8 +7,6 @@
 
 #include "GPUAllocator.h"
 
-class DescriptorSetBuilder;
-
 class DescriptorAllocator {
 public:
     DescriptorAllocator(std::shared_ptr<Device> device);
@@ -60,6 +58,7 @@ public:
     DescriptorSet(std::shared_ptr<DescriptorAllocator> allocator, std::shared_ptr<DescriptorSetLayout> layout);
 
     VkDescriptorSet get_set();
+    VkDescriptorSetLayout get_layout();
 private:
     VkDescriptorSet set_ = VK_NULL_HANDLE;
     VkDescriptorSetLayout layout_ = VK_NULL_HANDLE;
@@ -81,4 +80,7 @@ private:
 
     std::shared_ptr<DescriptorAllocator> allocator_ = nullptr;
     std::shared_ptr<DescriptorSetLayout> layout_ = nullptr;
+
+    std::vector<VkDescriptorBufferInfo> buffer_infos_;
+    std::vector<VkDescriptorImageInfo> image_infos_;
 };

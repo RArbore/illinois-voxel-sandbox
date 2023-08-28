@@ -135,7 +135,6 @@ RayTracePipeline::RayTracePipeline(std::shared_ptr<GPUAllocator> allocator, std:
     ray_trace_pipeline_create_info.layout = layout_;
     ASSERT(vkCreateRayTracingPipelines(device_->get_device(), {}, {}, 1, &ray_trace_pipeline_create_info, nullptr, &pipeline_), "Unable to create ray trace pipeline.");
     
-
     const auto align_up = [](uint32_t size, uint32_t alignment) {
 	return (size + (alignment - 1)) & ~(alignment - 1);
     };

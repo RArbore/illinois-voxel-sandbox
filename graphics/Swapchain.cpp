@@ -1,7 +1,7 @@
 #include "utils/Assert.h"
 #include "Swapchain.h"
 
-std::tuple<VkSurfaceFormatKHR, VkPresentModeKHR, VkExtent2D> choose_swapchain_options(VkSurfaceCapabilitiesKHR capabilities, const std::vector<VkSurfaceFormatKHR> &formats, const std::vector<VkPresentModeKHR> &present_modes, GLFWwindow *window);
+std::tuple<VkSurfaceFormatKHR, VkPresentModeKHR, VkExtent2D> choose_swapchain_options(VkPhysicalDevice physical_device, VkSurfaceCapabilitiesKHR capabilities, const std::vector<VkSurfaceFormatKHR> &formats, const std::vector<VkPresentModeKHR> &present_modes, GLFWwindow *window);
 
 Swapchain::Swapchain(std::shared_ptr<Device> device, std::shared_ptr<Window> window) {
     uint32_t num_formats, num_present_modes;
@@ -15,7 +15,7 @@ Swapchain::Swapchain(std::shared_ptr<Device> device, std::shared_ptr<Window> win
     vkGetPhysicalDeviceSurfaceFormatsKHR(device->get_physical_device(), device->get_surface(), &num_formats, &formats.at(0));
     vkGetPhysicalDeviceSurfacePresentModesKHR(device->get_physical_device(), device->get_surface(), &num_present_modes, &present_modes.at(0));
 
-    const auto [surface_format, present_mode, swap_extent] = choose_swapchain_options(capabilities, formats, present_modes, window->get_window());
+    const auto [surface_format, present_mode, swap_extent] = choose_swapchain_options(device->get_physical_device(), capabilities, formats, present_modes, window->get_window());
 
     uint32_t image_count =
 	capabilities.maxImageCount > 0 && capabilities.minImageCount >= capabilities.maxImageCount ?
@@ -30,7 +30,7 @@ Swapchain::Swapchain(std::shared_ptr<Device> device, std::shared_ptr<Window> win
     create_info.imageColorSpace = surface_format.colorSpace;
     create_info.imageExtent = swap_extent;
     create_info.imageArrayLayers = 1;
-    create_info.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
+    create_info.imageUsage = VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
     create_info.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
     create_info.preTransform = capabilities.currentTransform;
     create_info.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
@@ -79,15 +79,32 @@ Swapchain::~Swapchain() {
     vkDestroySwapchainKHR(device_->get_device(), swapchain_, nullptr);
 }
 
-std::tuple<VkSurfaceFormatKHR, VkPresentModeKHR, VkExtent2D> choose_swapchain_options(VkSurfaceCapabilitiesKHR capabilities, const std::vector<VkSurfaceFormatKHR> &formats, const std::vector<VkPresentModeKHR> &present_modes, GLFWwindow *window) {
+std::vector<std::shared_ptr<DescriptorSet>> Swapchain::make_image_descriptors(std::shared_ptr<DescriptorAllocator> allocator) {
+    ASSERT(swapchain_images_.size() == swapchain_image_views_.size(), "Swapchain has differing numbers of images and image views.");
+    std::vector<std::shared_ptr<DescriptorSet>> sets;
+    for (std::size_t i = 0; i < swapchain_images_.size(); ++i) {
+	VkImageView view = swapchain_image_views_.at(i);
+	DescriptorSetBuilder builder(allocator);
+	builder.bind_image(0, {
+		.sampler = VK_NULL_HANDLE,
+		.imageView = view,
+		.imageLayout = VK_IMAGE_LAYOUT_GENERAL,
+	    }, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, VK_SHADER_STAGE_RAYGEN_BIT_KHR);
+	sets.emplace_back(builder.build());
+    }
+    return sets;
+}
+
+std::tuple<VkSurfaceFormatKHR, VkPresentModeKHR, VkExtent2D> choose_swapchain_options(VkPhysicalDevice physical_device, VkSurfaceCapabilitiesKHR capabilities, const std::vector<VkSurfaceFormatKHR> &formats, const std::vector<VkPresentModeKHR> &present_modes, GLFWwindow *window) {
     VkSurfaceFormatKHR surface_format {};
     VkPresentModeKHR present_mode {};
     VkExtent2D swap_extent {};
     
     uint32_t format_index = 0;
+    VkImageFormatProperties properties;
     for (; format_index < formats.size(); ++format_index) {
-	if (formats[format_index].format == VK_FORMAT_B8G8R8A8_SRGB && formats[format_index].colorSpace == VK_COLOR_SPACE_SRGB_NONLINEAR_KHR) {
-	    surface_format = formats[format_index];
+	if (vkGetPhysicalDeviceImageFormatProperties(physical_device, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_TYPE_2D, VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT, 0, &properties) == VK_SUCCESS) {
+	    surface_format = formats.at(format_index);
 	    break;
 	}
     }
