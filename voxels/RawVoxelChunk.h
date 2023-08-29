@@ -2,8 +2,6 @@
 
 #include <map>
 
-#include <glm/glm.hpp>
-
 #include "VoxelChunk.h"
 
 struct RawVoxel {

@@ -7,4 +7,4 @@ set(voxel_chunks
 
 add_library(voxels ${voxel_chunks} VoxelManager.cpp)
 
-target_link_libraries(voxels PRIVATE glm)
+target_include_directories(voxels PUBLIC ${CMAKE_SOURCE_DIR})
