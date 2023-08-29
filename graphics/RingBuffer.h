@@ -15,11 +15,6 @@ public:
 			std::span<std::byte> src,
 			std::vector<std::shared_ptr<Semaphore>> wait_semaphores,
 			std::vector<std::shared_ptr<Semaphore>> signal_semaphores);
-
-    void copy_from_device(std::span<std::byte> dst,
-			  std::shared_ptr<GPUBuffer> src,
-			  std::vector<std::shared_ptr<Semaphore>> wait_semaphores,
-			  std::vector<std::shared_ptr<Semaphore>> signal_semaphores);
 private:
     struct InFlightCopy {
 	std::shared_ptr<Command> command_;
