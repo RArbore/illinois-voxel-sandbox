@@ -1,6 +1,6 @@
 #pragma once
 
-#include <map>
+#include <array>
 
 #include <glm/glm.hpp>
 
@@ -8,16 +8,15 @@
 
 struct RawVoxel {
 	glm::vec3 color_;
+	bool visible_;
 };
 
 class RawVoxelChunk : public VoxelChunk {
 public:
-	RawVoxelChunk(const glm::vec3& position = glm::vec3(0.0f, 0.0f, 0.0f));
+	RawVoxelChunk(const glm::vec3& position);
 
-	virtual void write_voxel(uint8_t x, uint8_t y, uint8_t z) override;
+	void write_voxel(int x, int y, int z, const RawVoxel& voxel);
 
 private:
-	// An unsigned char is 1 byte, and we want 512 bits = 64 bytes
-	unsigned char voxels_[64];
-	std::map<int, RawVoxel> attributes_;
+	std::array<RawVoxel, 512> voxels_;
 };
