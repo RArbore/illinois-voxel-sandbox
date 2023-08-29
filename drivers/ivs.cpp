@@ -1,9 +1,9 @@
 #include <graphics/GraphicsContext.h>
 
 int main(int argc, char *argv[]) {
-    auto context = createGraphicsContext();
+    auto context = create_graphics_context();
 
-    while (!shouldExit(context)) {
-	renderFrame(context);
+    while (!should_exit(context)) {
+	render_frame(context, nullptr);
     }
 }

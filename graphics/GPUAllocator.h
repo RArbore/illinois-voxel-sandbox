@@ -1,5 +1,7 @@
 #pragma once
 
+#include <span>
+
 #include <vulkan/vulkan.h>
 
 #include "external/VulkanMemoryAllocator/include/vk_mem_alloc.h"
@@ -30,6 +32,7 @@ public:
 
     VkBuffer get_buffer();
     VkDeviceAddress get_device_address();
+    VkDeviceSize get_size();
 private:
     VkBuffer buffer_ = VK_NULL_HANDLE;
     VmaAllocation allocation_ = VK_NULL_HANDLE;
@@ -46,6 +49,9 @@ public:
 	F(buffer_data);
 	vmaUnmapMemory(allocator_->get_vma(), allocation_);
     }
+
+    std::span<std::byte> cpu_map();
+    void cpu_unmap();
 };
 
 class GPUImage {

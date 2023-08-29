@@ -60,6 +60,20 @@ VkDeviceAddress GPUBuffer::get_device_address() {
     return vkGetBufferDeviceAddress(allocator_->get_device()->get_device(), &buffer_device_address_info);
 }
 
+VkDeviceSize GPUBuffer::get_size() {
+    return size_;
+}
+
+std::span<std::byte> GPUBuffer::cpu_map() {
+    void *data;
+    vmaMapMemory(allocator_->get_vma(), allocation_, &data);
+    return std::span<std::byte>(reinterpret_cast<std::byte *>(data), size_);
+}
+
+void GPUBuffer::cpu_unmap() {
+    vmaUnmapMemory(allocator_->get_vma(), allocation_);
+}
+
 GPUImage::GPUImage(std::shared_ptr<GPUAllocator> allocator, VkExtent2D extent, VkFormat format, VkImageCreateFlags create_flags, VkImageUsageFlags usage_flags, VkMemoryPropertyFlags memory_flags, VmaAllocationCreateFlags vma_flags, uint32_t mip_levels, uint32_t array_layers) {
     VkImageCreateInfo image_create_info {};
     image_create_info.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;

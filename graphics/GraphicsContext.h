@@ -9,12 +9,12 @@ class GraphicsContext;
 class GraphicsModel;
 class GraphicsScene;
 
-std::shared_ptr<GraphicsContext> createGraphicsContext();
+std::shared_ptr<GraphicsContext> create_graphics_context();
 
-void renderFrame(std::shared_ptr<GraphicsContext>);
+void render_frame(std::shared_ptr<GraphicsContext> context, std::shared_ptr<GraphicsScene> scene);
 
-bool shouldExit(std::shared_ptr<GraphicsContext>);
+bool should_exit(std::shared_ptr<GraphicsContext> context);
 
-std::shared_ptr<GraphicsModel> add_model(std::shared_ptr<GraphicsContext>, const VoxelChunk &chunk);
+std::shared_ptr<GraphicsModel> build_model(std::shared_ptr<GraphicsContext> context, const VoxelChunk &chunk);
 
-std::shared_ptr<GraphicsScene> build_scene(std::shared_ptr<GraphicsContext>, const std::vector<std::shared_ptr<GraphicsModel>> &models);
+std::shared_ptr<GraphicsScene> build_scene(std::shared_ptr<GraphicsContext> context, const std::vector<std::shared_ptr<GraphicsModel>> &models);

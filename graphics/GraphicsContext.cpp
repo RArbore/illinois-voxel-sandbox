@@ -29,9 +29,35 @@ private:
 
     uint64_t frame_index_ = 0;
 
-    friend std::shared_ptr<GraphicsContext> createGraphicsContext();
-    friend void renderFrame(std::shared_ptr<GraphicsContext>);
-    friend bool shouldExit(std::shared_ptr<GraphicsContext>);
+    friend std::shared_ptr<GraphicsContext> create_graphics_context();
+    friend void render_frame(std::shared_ptr<GraphicsContext> context, std::shared_ptr<GraphicsScene> scene);
+    friend bool should_exit(std::shared_ptr<GraphicsContext> context);
+    friend std::shared_ptr<GraphicsModel> build_model(std::shared_ptr<GraphicsContext> context, const VoxelChunk &chunk);
+    friend std::shared_ptr<GraphicsScene> build_scene(std::shared_ptr<GraphicsContext> context, const std::vector<std::shared_ptr<GraphicsModel>> &models);
+};
+
+class GraphicsModel {
+public:
+    GraphicsModel();
+private:
+
+    friend std::shared_ptr<GraphicsContext> create_graphics_context();
+    friend void render_frame(std::shared_ptr<GraphicsContext> context, std::shared_ptr<GraphicsScene> scene);
+    friend bool should_exit(std::shared_ptr<GraphicsContext> context);
+    friend std::shared_ptr<GraphicsModel> build_model(std::shared_ptr<GraphicsContext> context, const VoxelChunk &chunk);
+    friend std::shared_ptr<GraphicsScene> build_scene(std::shared_ptr<GraphicsContext> context, const std::vector<std::shared_ptr<GraphicsModel>> &models);
+};
+
+class GraphicsScene {
+public:
+    GraphicsScene();
+private:
+
+    friend std::shared_ptr<GraphicsContext> create_graphics_context();
+    friend void render_frame(std::shared_ptr<GraphicsContext> context, std::shared_ptr<GraphicsScene> scene);
+    friend bool should_exit(std::shared_ptr<GraphicsContext> context);
+    friend std::shared_ptr<GraphicsModel> build_model(std::shared_ptr<GraphicsContext> context, const VoxelChunk &chunk);
+    friend std::shared_ptr<GraphicsScene> build_scene(std::shared_ptr<GraphicsContext> context, const std::vector<std::shared_ptr<GraphicsModel>> &models);
 };
 
 GraphicsContext::GraphicsContext() {
@@ -57,12 +83,12 @@ GraphicsContext::~GraphicsContext() {
     vkDeviceWaitIdle(device_->get_device());
 }
 
-std::shared_ptr<GraphicsContext> createGraphicsContext() {
+std::shared_ptr<GraphicsContext> create_graphics_context() {
     auto context = std::shared_ptr<GraphicsContext>(new GraphicsContext());
     return context;
 }
 
-void renderFrame(std::shared_ptr<GraphicsContext> context) {
+void render_frame(std::shared_ptr<GraphicsContext> context, std::shared_ptr<GraphicsScene> scene) {
     context->window_->pollEvents();
 
     context->frame_fence_->wait();
@@ -106,6 +132,15 @@ void renderFrame(std::shared_ptr<GraphicsContext> context) {
     ++context->frame_index_;
 }
 
-bool shouldExit(std::shared_ptr<GraphicsContext> context) {
+bool should_exit(std::shared_ptr<GraphicsContext> context) {
     return context->window_->shouldClose();
+}
+
+
+std::shared_ptr<GraphicsModel> build_model(std::shared_ptr<GraphicsContext>, const VoxelChunk &chunk) {
+    return nullptr;
+}
+
+std::shared_ptr<GraphicsScene> build_scene(std::shared_ptr<GraphicsContext>, const std::vector<std::shared_ptr<GraphicsModel>> &models) {
+    return nullptr;
 }
