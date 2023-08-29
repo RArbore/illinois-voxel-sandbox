@@ -1,6 +1,6 @@
 #include "VoxelChunk.h"
 
-VoxelChunk::VoxelChunk(VoxelFormat format, const glm::vec3& position = glm::vec3(0.0f, 0.0f, 0.0f)) :
+VoxelChunk::VoxelChunk(VoxelFormat format, const glm::vec3& position) :
     format_{format},
     position_{position}
 {}

@@ -1,3 +1,5 @@
+#include <cstring>
+
 #include "RawVoxelChunk.h"
 
 RawVoxelChunk::RawVoxelChunk(const glm::vec3& position) :
