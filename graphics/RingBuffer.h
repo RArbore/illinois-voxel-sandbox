@@ -12,6 +12,7 @@ public:
     ~RingBuffer();
 
     void copy_to_device(std::shared_ptr<GPUBuffer> dst,
+			VkDeviceSize dst_offset,
 			std::span<std::byte> src,
 			std::vector<std::shared_ptr<Semaphore>> wait_semaphores,
 			std::vector<std::shared_ptr<Semaphore>> signal_semaphores);

@@ -15,6 +15,7 @@ RingBuffer::~RingBuffer() {
 }
 
 void RingBuffer::copy_to_device(std::shared_ptr<GPUBuffer> dst,
+				VkDeviceSize dst_offset,
 				std::span<std::byte> src,
 				std::vector<std::shared_ptr<Semaphore>> wait_semaphores,
 				std::vector<std::shared_ptr<Semaphore>> signal_semaphores) {
@@ -44,7 +45,7 @@ void RingBuffer::copy_to_device(std::shared_ptr<GPUBuffer> dst,
 	command->record([&](VkCommandBuffer command) {
 	    VkBufferCopy copy {};
 	    copy.srcOffset = virtual_counter_ % size;
-	    copy.dstOffset = 0;
+	    copy.dstOffset = dst_offset;
 	    copy.size = src.size();
 	    vkCmdCopyBuffer(command, buffer_->get_buffer(), dst->get_buffer(), 1, &copy);
 	});
@@ -69,11 +70,11 @@ void RingBuffer::copy_to_device(std::shared_ptr<GPUBuffer> dst,
 	command->record([&](VkCommandBuffer command) {
 	    VkBufferCopy first_copy {};
 	    first_copy.srcOffset = virtual_counter_ % size;
-	    first_copy.dstOffset = 0;
+	    first_copy.dstOffset = dst_offset;
 	    first_copy.size = first_size;
 	    VkBufferCopy second_copy {};
 	    second_copy.srcOffset = 0;
-	    second_copy.dstOffset = first_size;
+	    second_copy.dstOffset = dst_offset + first_size;
 	    second_copy.size = second_size;
 	    VkBufferCopy copies[2] = {first_copy, second_copy};
 	    vkCmdCopyBuffer(command, buffer_->get_buffer(), dst->get_buffer(), 2, copies);

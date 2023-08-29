@@ -7,6 +7,7 @@
 #include "Pipeline.h"
 #include "Synchronization.h"
 #include "Descriptor.h"
+#include "RingBuffer.h"
 
 class GraphicsContext {
 public:
@@ -20,6 +21,7 @@ private:
     std::shared_ptr<CommandPool> command_pool_ = nullptr;
     std::shared_ptr<RayTracePipeline> ray_trace_pipeline_ = nullptr;
     std::shared_ptr<DescriptorAllocator> descriptor_allocator_ = nullptr;
+    std::shared_ptr<RingBuffer> ring_buffer_ = nullptr;
 
     std::vector<std::shared_ptr<DescriptorSet>> swapchain_descriptors_;
     std::shared_ptr<Fence> frame_fence_ = nullptr;
@@ -67,6 +69,7 @@ GraphicsContext::GraphicsContext() {
     swapchain_ = std::make_shared<Swapchain>(device_, window_);
     command_pool_ = std::make_shared<CommandPool>(device_);
     descriptor_allocator_ = std::make_shared<DescriptorAllocator>(device_);
+    ring_buffer_ = std::make_shared<RingBuffer>(gpu_allocator_, command_pool_, 1 << 24);
 
     swapchain_descriptors_ = swapchain_->make_image_descriptors(descriptor_allocator_);
     auto shader = std::make_shared<Shader>(device_, "dumb_rgen");
