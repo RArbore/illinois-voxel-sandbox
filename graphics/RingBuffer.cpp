@@ -19,6 +19,7 @@ void RingBuffer::copy_to_device(std::shared_ptr<GPUBuffer> dst,
 				std::vector<std::shared_ptr<Semaphore>> wait_semaphores,
 				std::vector<std::shared_ptr<Semaphore>> signal_semaphores) {
     const VkDeviceSize size = buffer_->get_size(); 
+    ASSERT(src.size() <= size, "Copy size is too large for ring buffer.");
 
     const bool blocked =
 	!in_flight_copies_.empty() &&
@@ -39,6 +40,7 @@ void RingBuffer::copy_to_device(std::shared_ptr<GPUBuffer> dst,
     if (!wraparound_necessary) {
 	void *const dst_ptr = buffer_map_.data() + (virtual_counter_ % size);
 	memcpy(dst_ptr, src.data(), src.size());
+
 	command->record([&](VkCommandBuffer command) {
 	    VkBufferCopy copy {};
 	    copy.srcOffset = virtual_counter_ % size;
@@ -47,6 +49,7 @@ void RingBuffer::copy_to_device(std::shared_ptr<GPUBuffer> dst,
 	    vkCmdCopyBuffer(command, buffer_->get_buffer(), dst->get_buffer(), 1, &copy);
 	});
 	device_->submit_command(command, wait_semaphores, signal_semaphores, fence);
+
 	InFlightCopy copy {};
 	copy.command_ = command;
 	copy.fence_ = fence;
@@ -62,6 +65,7 @@ void RingBuffer::copy_to_device(std::shared_ptr<GPUBuffer> dst,
 	const VkDeviceSize second_size = src.size() - first_size;
 	memcpy(first_dst_ptr, src.data(), first_size);
 	memcpy(second_dst_ptr, src.data() + first_size, second_size);
+
 	command->record([&](VkCommandBuffer command) {
 	    VkBufferCopy first_copy {};
 	    first_copy.srcOffset = virtual_counter_ % size;
@@ -75,6 +79,7 @@ void RingBuffer::copy_to_device(std::shared_ptr<GPUBuffer> dst,
 	    vkCmdCopyBuffer(command, buffer_->get_buffer(), dst->get_buffer(), 2, copies);
 	});
 	device_->submit_command(command, wait_semaphores, signal_semaphores, fence);
+	
 	InFlightCopy copy {};
 	copy.command_ = command;
 	copy.fence_ = fence;
