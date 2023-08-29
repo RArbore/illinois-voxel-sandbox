@@ -2,7 +2,7 @@
 
 #include <map>
 
-#include <glm/glm.hpp>
+#include <external/glm/glm/glm.hpp>
 
 #include "VoxelChunk.h"
 
