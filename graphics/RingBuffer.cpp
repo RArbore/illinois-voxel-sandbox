@@ -16,7 +16,7 @@ RingBuffer::~RingBuffer() {
 
 void RingBuffer::copy_to_device(std::shared_ptr<GPUBuffer> dst,
 				VkDeviceSize dst_offset,
-				std::span<std::byte> src,
+				std::span<const std::byte> src,
 				std::vector<std::shared_ptr<Semaphore>> wait_semaphores,
 				std::vector<std::shared_ptr<Semaphore>> signal_semaphores) {
     const VkDeviceSize size = buffer_->get_size(); 

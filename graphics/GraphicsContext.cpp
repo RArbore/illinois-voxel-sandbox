@@ -139,11 +139,97 @@ bool should_exit(std::shared_ptr<GraphicsContext> context) {
     return context->window_->shouldClose();
 }
 
+std::shared_ptr<GraphicsModel> build_model(std::shared_ptr<GraphicsContext> context, const VoxelChunk &chunk) {
+    VkAabbPositionsKHR cube {};
+    cube.minX = 0.0f;
+    cube.minY = 0.0f;
+    cube.minZ = 0.0f;
+    cube.maxX = 1.0f;
+    cube.maxY = 1.0f;
+    cube.maxZ = 1.0f;
 
-std::shared_ptr<GraphicsModel> build_model(std::shared_ptr<GraphicsContext>, const VoxelChunk &chunk) {
+    std::shared_ptr<GPUBuffer> cube_buffer = std::make_shared<GPUBuffer>(context->gpu_allocator_,
+									 sizeof(VkAabbPositionsKHR),
+									 1,
+									 VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
+									 VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+									 0);
+    std::shared_ptr<Semaphore> cube_upload = std::make_shared<Semaphore>(context->device_);
+    context->ring_buffer_->copy_to_device(cube_buffer,
+					  0,
+					  std::as_bytes(std::span<VkAabbPositionsKHR>(&cube, 1)),
+					  {},
+					  {cube_upload});
+
+    const VkDeviceSize alignment = context->device_->get_acceleration_structure_properties().minAccelerationStructureScratchOffsetAlignment;
+
+    VkAccelerationStructureGeometryAabbsDataKHR geometry_aabbs_data {};
+    geometry_aabbs_data.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_AABBS_DATA_KHR;
+    geometry_aabbs_data.data.deviceAddress = cube_buffer->get_device_address();
+    geometry_aabbs_data.stride = sizeof(VkAabbPositionsKHR);
+
+    VkAccelerationStructureGeometryKHR blas_geometry {};
+    blas_geometry.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_KHR;
+    blas_geometry.geometryType = VK_GEOMETRY_TYPE_AABBS_KHR;
+    blas_geometry.flags = VK_GEOMETRY_OPAQUE_BIT_KHR;
+    blas_geometry.geometry.aabbs = geometry_aabbs_data;
+
+    VkAccelerationStructureBuildRangeInfoKHR blas_build_range_info {};
+    blas_build_range_info.firstVertex = 0;
+    blas_build_range_info.primitiveCount = 1;
+    blas_build_range_info.primitiveOffset = 0;
+    blas_build_range_info.transformOffset = 0;
+    const VkAccelerationStructureBuildRangeInfoKHR blas_build_range_infos[1][1] = {{blas_build_range_info}};
+
+    VkAccelerationStructureBuildGeometryInfoKHR blas_build_geometry_info {};
+    blas_build_geometry_info.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_GEOMETRY_INFO_KHR;
+    blas_build_geometry_info.type = VK_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL_KHR;
+    blas_build_geometry_info.flags = VK_BUILD_ACCELERATION_STRUCTURE_ALLOW_UPDATE_BIT_KHR | VK_BUILD_ACCELERATION_STRUCTURE_ALLOW_COMPACTION_BIT_KHR | VK_BUILD_ACCELERATION_STRUCTURE_PREFER_FAST_TRACE_BIT_KHR;
+    blas_build_geometry_info.mode = VK_BUILD_ACCELERATION_STRUCTURE_MODE_BUILD_KHR;
+    blas_build_geometry_info.geometryCount = 1;
+    blas_build_geometry_info.pGeometries = &blas_geometry;
+
+    const uint32_t max_primitive_counts[] = {1};
+
+    VkAccelerationStructureBuildSizesInfoKHR blas_build_sizes_info {};
+    blas_build_sizes_info.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_SIZES_INFO_KHR;
+    vkGetAccelerationStructureBuildSizes(context->device_->get_device(), VK_ACCELERATION_STRUCTURE_BUILD_TYPE_DEVICE_KHR, &blas_build_geometry_info, max_primitive_counts, &blas_build_sizes_info);
+
+    std::shared_ptr<GPUBuffer> scratch_buffer = std::make_shared<GPUBuffer>(context->gpu_allocator_,
+									    blas_build_sizes_info.buildScratchSize,
+									    alignment,
+									    VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
+									    VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+									    0);
+
+    std::shared_ptr<GPUBuffer> storage_buffer = std::make_shared<GPUBuffer>(context->gpu_allocator_,
+									    blas_build_sizes_info.accelerationStructureSize,
+									    alignment,
+									    VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_STORAGE_BIT_KHR,
+									    VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+									    0);
+
+    VkAccelerationStructureCreateInfoKHR bottom_level_create_info {};
+    bottom_level_create_info.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_CREATE_INFO_KHR;
+    bottom_level_create_info.buffer = storage_buffer->get_buffer();
+    bottom_level_create_info.offset = 0;
+    bottom_level_create_info.size = blas_build_sizes_info.accelerationStructureSize;
+    bottom_level_create_info.type = VK_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL_KHR;
+
+    VkAccelerationStructureKHR bottom_level_acceleration_structure;
+    ASSERT(vkCreateAccelerationStructure(context->device_->get_device(), &bottom_level_create_info, NULL, &bottom_level_acceleration_structure), "Unable to create bottom level acceleration structure.");
+
+    blas_build_geometry_info.dstAccelerationStructure = bottom_level_acceleration_structure;
+    blas_build_geometry_info.scratchData.deviceAddress = scratch_buffer->get_device_address();
+
+    std::shared_ptr<Command> build_command = std::make_shared<Command>(context->command_pool_);
+    build_command->record([&](VkCommandBuffer command) {
+	vkCmdBuildAccelerationStructures(command, 1, &blas_build_geometry_info, reinterpret_cast<const VkAccelerationStructureBuildRangeInfoKHR* const*>(blas_build_range_infos));
+    });
+    
     return nullptr;
 }
 
-std::shared_ptr<GraphicsScene> build_scene(std::shared_ptr<GraphicsContext>, const std::vector<std::shared_ptr<GraphicsModel>> &models) {
+std::shared_ptr<GraphicsScene> build_scene(std::shared_ptr<GraphicsContext> context, const std::vector<std::shared_ptr<GraphicsModel>> &models) {
     return nullptr;
 }
