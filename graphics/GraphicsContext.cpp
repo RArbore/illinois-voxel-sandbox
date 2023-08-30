@@ -8,6 +8,7 @@
 #include "Synchronization.h"
 #include "Descriptor.h"
 #include "RingBuffer.h"
+#include "Geometry.h"
 
 class GraphicsContext {
 public:
@@ -139,7 +140,7 @@ bool should_exit(std::shared_ptr<GraphicsContext> context) {
     return context->window_->shouldClose();
 }
 
-std::vector<std::shared_ptr<GraphicsModel>> build_models(std::shared_ptr<GraphicsContext> context, std::vector<std::reference_wrapper<const VoxelChunk>> chunks) {
+std::shared_ptr<GraphicsModel> build_models(std::shared_ptr<GraphicsContext> context, const VoxelChunk &chunk) {
     /*VkAabbPositionsKHR cube {};
     cube.minX = 0.0f;
     cube.minY = 0.0f;
@@ -225,10 +226,9 @@ std::vector<std::shared_ptr<GraphicsModel>> build_models(std::shared_ptr<Graphic
     std::shared_ptr<Command> build_command = std::make_shared<Command>(context->command_pool_);
     build_command->record([&](VkCommandBuffer command) {
 	vkCmdBuildAccelerationStructures(command, 1, &blas_build_geometry_info, reinterpret_cast<const VkAccelerationStructureBuildRangeInfoKHR* const*>(blas_build_range_infos));
-    });
+	});*/
     
-    return nullptr;*/
-    return {};
+    return nullptr;
 }
 
 std::shared_ptr<GraphicsScene> build_scene(std::shared_ptr<GraphicsContext> context, const std::vector<std::shared_ptr<GraphicsModel>> &models) {

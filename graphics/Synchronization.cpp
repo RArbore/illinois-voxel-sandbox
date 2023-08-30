@@ -80,6 +80,12 @@ void Semaphore::set_signal_value(uint64_t signal_value) {
     signal_value_ = signal_value;
 }
 
+void Semaphore::increment() {
+    ASSERT(timeline_, "Must be a timeline semaphore to set a increment timeline.");
+    ++wait_value_;
+    ++signal_value_;
+}
+
 Barrier::Barrier(std::shared_ptr<Device> device, VkPipelineStageFlags2 src_stages, VkAccessFlags2 src_accesses, VkPipelineStageFlags2 dst_stages, VkAccessFlags2 dst_accesses) {
     device_ = device;
     add(src_stages, src_accesses, dst_stages, dst_accesses);

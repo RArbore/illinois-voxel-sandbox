@@ -3,12 +3,18 @@
 #include "GPUAllocator.h"
 #include "RingBuffer.h"
 
-class AccelerationStructureBuilder {
+class BLAS {
 public:
-    AccelerationStructureBuilder(std::shared_ptr<GPUAllocator> allocator, std::shared_ptr<RingBuffer> ring_buffer);
-private:
-    std::shared_ptr<GPUBuffer> cube_buffer_ = nullptr;
-    std::shared_ptr<Semaphore> cube_buffer_timeline_ = nullptr;
+    BLAS(std::shared_ptr<GPUAllocator> allocator, std::shared_ptr<CommandPool> command_pool, std::shared_ptr<RingBuffer> ring_buffer, std::vector<VkAabbPositionsKHR> chunks);
 
-    std::shared_ptr<Device> device_ = nullptr;
+    VkAccelerationStructureKHR get_blas();
+
+    std::shared_ptr<Semaphore> get_timeline();
+private:
+    VkAccelerationStructureKHR blas_ = VK_NULL_HANDLE;
+    
+    std::shared_ptr<GPUBuffer> cube_buffer_ = nullptr;
+    std::shared_ptr<Semaphore> timeline_ = nullptr;
+    std::shared_ptr<GPUBuffer> scratch_buffer_ = nullptr;
+    std::shared_ptr<GPUBuffer> storage_buffer_ = nullptr;
 };

@@ -35,6 +35,7 @@ public:
 
     void set_wait_value(uint64_t wait_value);
     void set_signal_value(uint64_t signal_value);
+    void increment();
 private:
     VkSemaphore semaphore_ = VK_NULL_HANDLE;
     bool timeline_;
