@@ -28,7 +28,7 @@ public:
 
     VkSemaphore get_semaphore();
 
-    bool is_timeline()
+    bool is_timeline();
 
     uint64_t get_wait_value();
     uint64_t get_signal_value();
