@@ -82,7 +82,7 @@ BLAS::BLAS(std::shared_ptr<GPUAllocator> allocator, std::shared_ptr<CommandPool>
 	vkCmdBuildAccelerationStructures(command, 1, &blas_build_geometry_info, reinterpret_cast<const VkAccelerationStructureBuildRangeInfoKHR* const*>(blas_build_range_infos));
     });
     timeline_->increment();
-    allocator->get_device()->submit_command(build_command, {timeline_});
+    allocator->get_device()->submit_command(build_command, {timeline_}, {timeline_});
 }
 
 VkAccelerationStructureKHR BLAS::get_blas() {
