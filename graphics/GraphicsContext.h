@@ -1,5 +1,6 @@
 #pragma once
 
+#include <functional>
 #include <memory>
 #include <vector>
 
@@ -15,6 +16,6 @@ void render_frame(std::shared_ptr<GraphicsContext> context, std::shared_ptr<Grap
 
 bool should_exit(std::shared_ptr<GraphicsContext> context);
 
-std::shared_ptr<GraphicsModel> build_model(std::shared_ptr<GraphicsContext> context, const VoxelChunk &chunk);
+std::vector<std::shared_ptr<GraphicsModel>> build_models(std::shared_ptr<GraphicsContext> context, std::vector<std::reference_wrapper<const VoxelChunk>> chunks);
 
 std::shared_ptr<GraphicsScene> build_scene(std::shared_ptr<GraphicsContext> context, const std::vector<std::shared_ptr<GraphicsModel>> &models);

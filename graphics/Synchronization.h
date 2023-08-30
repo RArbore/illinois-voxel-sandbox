@@ -16,21 +16,32 @@ public:
 
     VkFence get_fence();
 private:
-    VkFence fence_;
+    VkFence fence_ = VK_NULL_HANDLE;
 
-    std::shared_ptr<Device> device_;
+    std::shared_ptr<Device> device_ = nullptr;
 };
 
 class Semaphore {
 public:
-    Semaphore(std::shared_ptr<Device> device);
+    Semaphore(std::shared_ptr<Device> device, bool timeline = false);
     ~Semaphore();
 
     VkSemaphore get_semaphore();
-private:
-    VkSemaphore semaphore_;
 
-    std::shared_ptr<Device> device_;
+    bool is_timeline()
+
+    uint64_t get_wait_value();
+    uint64_t get_signal_value();
+
+    void set_wait_value(uint64_t wait_value);
+    void set_signal_value(uint64_t signal_value);
+private:
+    VkSemaphore semaphore_ = VK_NULL_HANDLE;
+    bool timeline_;
+    uint64_t wait_value_;
+    uint64_t signal_value_;
+
+    std::shared_ptr<Device> device_ = nullptr;
 };
 
 class Barrier {
@@ -49,5 +60,5 @@ private:
     std::vector<VkBufferMemoryBarrier2> buffer_barriers_;
     std::vector<VkImageMemoryBarrier2> image_barriers_;
 
-    std::shared_ptr<Device> device_;
+    std::shared_ptr<Device> device_ = nullptr;
 };

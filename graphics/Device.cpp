@@ -199,10 +199,31 @@ void Device::submit_command(std::shared_ptr<Command> command, std::vector<std::s
     for (auto semaphore : signal_semaphores) {
 	vk_signal_semaphores.push_back(semaphore->get_semaphore());
     }
+
+    std::vector<uint64_t> timeline_wait_values;
+    for (const auto semaphore : wait_semaphores) {
+	if (semaphore->is_timeline()) {
+	    timeline_wait_values.push_back(semaphore->get_wait_value());
+	}
+    }
+    std::vector<uint64_t> timeline_signal_values;
+    for (const auto semaphore : signal_semaphores) {
+	if (semaphore->is_timeline()) {
+	    timeline_signal_values.push_back(semaphore->get_signal_value());
+	}
+    }
+
+    VkTimelineSemaphoreSubmitInfo timeline_semaphore_info {};
+    timeline_semaphore_info.sType = VK_STRUCTURE_TYPE_TIMELINE_SEMAPHORE_SUBMIT_INFO;
+    timeline_semaphore_info.pNext = nullptr;
+    timeline_semaphore_info.waitSemaphoreValueCount = static_cast<uint32_t>(timeline_wait_values.size());
+    timeline_semaphore_info.pWaitSemaphoreValues = timeline_wait_values.data();
+    timeline_semaphore_info.signalSemaphoreValueCount = static_cast<uint32_t>(timeline_signal_values.size());
+    timeline_semaphore_info.pSignalSemaphoreValues = timeline_signal_values.data();
     
     VkSubmitInfo submit_info {};
     submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-    submit_info.pNext = nullptr;
+    submit_info.pNext = &timeline_semaphore_info;
     submit_info.commandBufferCount = 1;
     submit_info.pCommandBuffers = &buffer;
     submit_info.waitSemaphoreCount = static_cast<uint32_t>(vk_wait_semaphores.size());

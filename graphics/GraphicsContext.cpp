@@ -139,8 +139,8 @@ bool should_exit(std::shared_ptr<GraphicsContext> context) {
     return context->window_->shouldClose();
 }
 
-std::shared_ptr<GraphicsModel> build_model(std::shared_ptr<GraphicsContext> context, const VoxelChunk &chunk) {
-    VkAabbPositionsKHR cube {};
+std::vector<std::shared_ptr<GraphicsModel>> build_models(std::shared_ptr<GraphicsContext> context, std::vector<std::reference_wrapper<const VoxelChunk>> chunks) {
+    /*VkAabbPositionsKHR cube {};
     cube.minX = 0.0f;
     cube.minY = 0.0f;
     cube.minZ = 0.0f;
@@ -227,7 +227,8 @@ std::shared_ptr<GraphicsModel> build_model(std::shared_ptr<GraphicsContext> cont
 	vkCmdBuildAccelerationStructures(command, 1, &blas_build_geometry_info, reinterpret_cast<const VkAccelerationStructureBuildRangeInfoKHR* const*>(blas_build_range_infos));
     });
     
-    return nullptr;
+    return nullptr;*/
+    return {};
 }
 
 std::shared_ptr<GraphicsScene> build_scene(std::shared_ptr<GraphicsContext> context, const std::vector<std::shared_ptr<GraphicsModel>> &models) {

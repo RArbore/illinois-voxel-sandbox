@@ -29,12 +29,22 @@ Fence::~Fence() {
     vkDestroyFence(device_->get_device(), fence_, nullptr);
 }
 
-Semaphore::Semaphore(std::shared_ptr<Device> device) {
+Semaphore::Semaphore(std::shared_ptr<Device> device, bool timeline) {
+    VkSemaphoreTypeCreateInfo semaphore_type_info {};
+    semaphore_type_info.sType = VK_STRUCTURE_TYPE_SEMAPHORE_TYPE_CREATE_INFO;
+    semaphore_type_info.pNext = nullptr;
+    semaphore_type_info.semaphoreType = timeline ? VK_SEMAPHORE_TYPE_TIMELINE : VK_SEMAPHORE_TYPE_BINARY;
+    semaphore_type_info.initialValue = 0;
+
     VkSemaphoreCreateInfo semaphore_info {};
     semaphore_info.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
+    semaphore_info.pNext = &semaphore_type_info;
 
     ASSERT(vkCreateSemaphore(device->get_device(), &semaphore_info, nullptr, &semaphore_), "Unable to create semaphore.");
 
+    timeline_ = timeline;
+    wait_value_ = 0;
+    signal_value_ = 0;
     device_ = device;
 }
 
@@ -44,6 +54,30 @@ Semaphore::~Semaphore() {
 
 VkSemaphore Semaphore::get_semaphore() {
     return semaphore_;
+}
+
+bool Semaphore::is_timeline() {
+    return timeline_;
+}
+
+uint64_t Semaphore::get_wait_value() {
+    ASSERT(timeline_, "Must be a timeline semaphore to get a wait value.");
+    return wait_value_;
+}
+
+uint64_t Semaphore::get_signal_value() {
+    ASSERT(timeline_, "Must be a timeline semaphore to get a signal value.");
+    return signal_value_;
+}
+
+void Semaphore::set_wait_value(uint64_t wait_value) {
+    ASSERT(timeline_, "Must be a timeline semaphore to set a wait value.");
+    wait_value_ = wait_value;
+}
+
+void Semaphore::set_signal_value(uint64_t signal_value) {
+    ASSERT(timeline_, "Must be a timeline semaphore to set a signal value.");
+    signal_value_ = signal_value;
 }
 
 Barrier::Barrier(std::shared_ptr<Device> device, VkPipelineStageFlags2 src_stages, VkAccessFlags2 src_accesses, VkPipelineStageFlags2 dst_stages, VkAccessFlags2 dst_accesses) {
