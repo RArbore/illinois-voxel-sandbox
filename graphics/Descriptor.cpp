@@ -226,11 +226,12 @@ DescriptorSetBuilder &DescriptorSetBuilder::bind_acceleration_structure(uint32_t
     layout_binding.binding = binding;
     layout_->add_binding(layout_binding);
 
+    acceleration_structure_info.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET_ACCELERATION_STRUCTURE_KHR;
     acceleration_structure_infos_.push_back(acceleration_structure_info);
     
     VkWriteDescriptorSet write {};
     write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-    write.pNext = &acceleration_structure_info;
+    write.pNext = &acceleration_structure_infos_.back();
     write.descriptorCount = 1;
     write.descriptorType = VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR;
     write.pImageInfo = NULL;

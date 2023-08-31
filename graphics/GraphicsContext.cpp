@@ -27,6 +27,7 @@ private:
     std::shared_ptr<RingBuffer> ring_buffer_ = nullptr;
 
     std::vector<std::shared_ptr<DescriptorSet>> swapchain_descriptors_;
+    std::shared_ptr<DescriptorSet> acceleration_structure_descriptor_ = nullptr;
     std::shared_ptr<Fence> frame_fence_ = nullptr;
     std::shared_ptr<Semaphore> acquire_semaphore_ = nullptr;
     std::shared_ptr<Semaphore> render_semaphore_ = nullptr;
