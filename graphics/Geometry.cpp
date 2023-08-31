@@ -114,6 +114,72 @@ TLAS::TLAS(std::shared_ptr<GPUAllocator> allocator, std::shared_ptr<CommandPool>
 				{timeline_});
 
     const VkDeviceSize alignment = allocator->get_device()->get_acceleration_structure_properties().minAccelerationStructureScratchOffsetAlignment;
+
+    VkAccelerationStructureGeometryInstancesDataKHR geometry_instances_data {};
+    geometry_instances_data.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_INSTANCES_DATA_KHR;
+    geometry_instances_data.data.deviceAddress = instances_buffer_->get_device_address();
+
+    VkAccelerationStructureGeometryKHR tlas_geometry {};
+    tlas_geometry.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_KHR;
+    tlas_geometry.geometryType = VK_GEOMETRY_TYPE_INSTANCES_KHR;
+    tlas_geometry.geometry.instances = geometry_instances_data;
+
+    VkAccelerationStructureBuildRangeInfoKHR tlas_build_range_info {};
+    tlas_build_range_info.firstVertex = 0;
+    tlas_build_range_info.primitiveCount = static_cast<uint32_t>(instances.size());
+    tlas_build_range_info.primitiveOffset = 0;
+    tlas_build_range_info.transformOffset = 0;
+    const VkAccelerationStructureBuildRangeInfoKHR tlas_build_range_infos[1][1] = {{tlas_build_range_info}}; 
+
+    VkAccelerationStructureBuildGeometryInfoKHR tlas_build_geometry_info {};
+    tlas_build_geometry_info.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_GEOMETRY_INFO_KHR;
+    tlas_build_geometry_info.type = VK_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL_KHR;
+    tlas_build_geometry_info.flags = VK_BUILD_ACCELERATION_STRUCTURE_PREFER_FAST_TRACE_BIT_KHR;
+    tlas_build_geometry_info.mode = VK_BUILD_ACCELERATION_STRUCTURE_MODE_BUILD_KHR;
+    tlas_build_geometry_info.geometryCount = 1;
+    tlas_build_geometry_info.pGeometries = &tlas_geometry;
+
+    const uint32_t max_instances_counts[] = {static_cast<uint32_t>(instances.size())};
+
+    VkAccelerationStructureBuildSizesInfoKHR tlas_build_sizes_info {};
+    tlas_build_sizes_info.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_SIZES_INFO_KHR;
+    vkGetAccelerationStructureBuildSizesKHR(allocator->get_device()->get_device(), VK_ACCELERATION_STRUCTURE_BUILD_TYPE_DEVICE_KHR, &tlas_build_geometry_info, max_instances_counts, &tlas_build_sizes_info);
+
+    scratch_buffer_ = std::make_shared<GPUBuffer>(allocator,
+						  tlas_build_sizes_info.buildScratchSize,
+						  alignment,
+						  VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
+						  VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+						  0);
+    
+    storage_buffer_ = std::make_shared<GPUBuffer>(allocator,
+						  tlas_build_sizes_info.accelerationStructureSize,
+						  alignment,
+						  VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_STORAGE_BIT_KHR,
+						  VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+						  0);
+
+    VkAccelerationStructureCreateInfoKHR top_level_create_info {};
+    top_level_create_info.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_CREATE_INFO_KHR;
+    top_level_create_info.buffer = storage_buffer_->get_buffer();
+    top_level_create_info.offset = 0;
+    top_level_create_info.size = tlas_build_sizes_info.accelerationStructureSize;
+    top_level_create_info.type = VK_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL_KHR;
+
+    VkAccelerationStructureKHR top_level_acceleration_structure;
+    ASSERT(vkCreateAccelerationStructure(allocator->get_device()->get_device(), &top_level_create_info, NULL, &top_level_acceleration_structure), "Unable to create top level acceleration structure.");
+
+    tlas_build_geometry_info.dstAccelerationStructure = top_level_acceleration_structure;
+    tlas_build_geometry_info.scratchData.deviceAddress = scratch_buffer_->get_device_address();
+
+    std::shared_ptr<Command> build_command = std::make_shared<Command>(command_pool);
+    build_command->record([&](VkCommandBuffer command) {
+	vkCmdBuildAccelerationStructures(command, 1, &tlas_build_geometry_info, reinterpret_cast<const VkAccelerationStructureBuildRangeInfoKHR* const*>(tlas_build_range_infos));
+    });
+    timeline_->set_wait_value(INSTANCES_BUFFER_TIMELINE);
+    timeline_->set_signal_value(TLAS_BUILD_TIMELINE);
+    allocator->get_device()->submit_command(build_command, {timeline_}, {timeline_});
+
     contained_structures_ = bottom_structures;
 }
 
