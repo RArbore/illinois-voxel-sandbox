@@ -64,6 +64,10 @@ VkDeviceSize GPUBuffer::get_size() {
     return size_;
 }
 
+std::shared_ptr<GPUAllocator> GPUBuffer::get_allocator() {
+    return allocator_;
+}
+
 std::span<std::byte> GPUBuffer::cpu_map() {
     void *data;
     vmaMapMemory(allocator_->get_vma(), allocation_, &data);

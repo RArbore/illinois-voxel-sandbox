@@ -33,6 +33,8 @@ public:
     VkBuffer get_buffer();
     VkDeviceAddress get_device_address();
     VkDeviceSize get_size();
+
+    std::shared_ptr<GPUAllocator> get_allocator();
 private:
     VkBuffer buffer_ = VK_NULL_HANDLE;
     VmaAllocation allocation_ = VK_NULL_HANDLE;

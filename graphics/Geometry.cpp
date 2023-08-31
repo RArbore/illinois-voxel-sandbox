@@ -2,15 +2,15 @@
 #include "Geometry.h"
 
 BLAS::BLAS(std::shared_ptr<GPUAllocator> allocator, std::shared_ptr<CommandPool> command_pool, std::shared_ptr<RingBuffer> ring_buffer, std::vector<VkAabbPositionsKHR> chunks) {
-    cube_buffer_ = std::make_shared<GPUBuffer>(allocator,
+    geometry_buffer_ = std::make_shared<GPUBuffer>(allocator,
 					       chunks.size() * sizeof(VkAabbPositionsKHR),
 					       sizeof(VkAabbPositionsKHR),
 					       VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
 					       VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
 					       0);
     timeline_ = std::make_shared<Semaphore>(allocator->get_device(), true);
-    timeline_->set_signal_value(1);
-    ring_buffer->copy_to_device(cube_buffer_,
+    timeline_->set_signal_value(GEOMETRY_BUFFER_TIMELINE);
+    ring_buffer->copy_to_device(geometry_buffer_,
 				0,
 				std::as_bytes(std::span<VkAabbPositionsKHR>(chunks.data(), chunks.size())),
 				{},
@@ -20,7 +20,7 @@ BLAS::BLAS(std::shared_ptr<GPUAllocator> allocator, std::shared_ptr<CommandPool>
 
     VkAccelerationStructureGeometryAabbsDataKHR geometry_aabbs_data {};
     geometry_aabbs_data.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_AABBS_DATA_KHR;
-    geometry_aabbs_data.data.deviceAddress = cube_buffer_->get_device_address();
+    geometry_aabbs_data.data.deviceAddress = geometry_buffer_->get_device_address();
     geometry_aabbs_data.stride = sizeof(VkAabbPositionsKHR);
 
     VkAccelerationStructureGeometryKHR blas_geometry {};
@@ -81,8 +81,13 @@ BLAS::BLAS(std::shared_ptr<GPUAllocator> allocator, std::shared_ptr<CommandPool>
     build_command->record([&](VkCommandBuffer command) {
 	vkCmdBuildAccelerationStructures(command, 1, &blas_build_geometry_info, reinterpret_cast<const VkAccelerationStructureBuildRangeInfoKHR* const*>(blas_build_range_infos));
     });
-    timeline_->increment();
+    timeline_->set_wait_value(GEOMETRY_BUFFER_TIMELINE);
+    timeline_->set_signal_value(BLAS_BUILD_TIMELINE);
     allocator->get_device()->submit_command(build_command, {timeline_}, {timeline_});
+}
+
+BLAS::~BLAS() {
+    vkDestroyAccelerationStructure(geometry_buffer_->get_allocator()->get_device()->get_device(), blas_, nullptr);
 }
 
 VkAccelerationStructureKHR BLAS::get_blas() {
@@ -91,4 +96,27 @@ VkAccelerationStructureKHR BLAS::get_blas() {
 
 std::shared_ptr<Semaphore> BLAS::get_timeline() {
     return timeline_;
+}
+
+TLAS::TLAS(std::shared_ptr<GPUAllocator> allocator, std::shared_ptr<CommandPool> command_pool, std::shared_ptr<RingBuffer> ring_buffer, std::vector<std::shared_ptr<BLAS>> bottom_structures, std::vector<VkAccelerationStructureInstanceKHR> instances) {
+    instances_buffer_ = std::make_shared<GPUBuffer>(allocator,
+					       instances.size() * sizeof(VkAccelerationStructureInstanceKHR),
+					       sizeof(VkAccelerationStructureInstanceKHR),
+					       VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
+					       VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+					       0);
+    timeline_ = std::make_shared<Semaphore>(allocator->get_device(), true);
+    timeline_->set_signal_value(INSTANCES_BUFFER_TIMELINE);
+    ring_buffer->copy_to_device(instances_buffer_,
+				0,
+				std::as_bytes(std::span<VkAccelerationStructureInstanceKHR>(instances.data(), instances.size())),
+				{},
+				{timeline_});
+
+    const VkDeviceSize alignment = allocator->get_device()->get_acceleration_structure_properties().minAccelerationStructureScratchOffsetAlignment;
+    contained_structures_ = bottom_structures;
+}
+
+TLAS::~TLAS() {
+    vkDestroyAccelerationStructure(scratch_buffer_->get_allocator()->get_device()->get_device(), tlas_, nullptr);
 }
