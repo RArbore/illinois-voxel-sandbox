@@ -36,31 +36,44 @@ private:
     friend void render_frame(std::shared_ptr<GraphicsContext> context, std::shared_ptr<GraphicsScene> scene);
     friend bool should_exit(std::shared_ptr<GraphicsContext> context);
     friend std::shared_ptr<GraphicsModel> build_model(std::shared_ptr<GraphicsContext> context, const VoxelChunk &chunk);
-    friend std::shared_ptr<GraphicsScene> build_scene(std::shared_ptr<GraphicsContext> context, const std::vector<std::shared_ptr<GraphicsModel>> &models);
+    friend std::shared_ptr<GraphicsObject> build_object(std::shared_ptr<GraphicsContext> context, std::shared_ptr<GraphicsModel> model, const glm::mat3x4 &transform);
+    friend std::shared_ptr<GraphicsScene> build_scene(std::shared_ptr<GraphicsContext> context, const std::vector<std::shared_ptr<GraphicsObject>> &objects);
 };
 
 class GraphicsModel {
 public:
     GraphicsModel();
 private:
-
     friend std::shared_ptr<GraphicsContext> create_graphics_context();
     friend void render_frame(std::shared_ptr<GraphicsContext> context, std::shared_ptr<GraphicsScene> scene);
     friend bool should_exit(std::shared_ptr<GraphicsContext> context);
     friend std::shared_ptr<GraphicsModel> build_model(std::shared_ptr<GraphicsContext> context, const VoxelChunk &chunk);
-    friend std::shared_ptr<GraphicsScene> build_scene(std::shared_ptr<GraphicsContext> context, const std::vector<std::shared_ptr<GraphicsModel>> &models);
+    friend std::shared_ptr<GraphicsObject> build_object(std::shared_ptr<GraphicsContext> context, std::shared_ptr<GraphicsModel> model, const glm::mat3x4 &transform);
+    friend std::shared_ptr<GraphicsScene> build_scene(std::shared_ptr<GraphicsContext> context, const std::vector<std::shared_ptr<GraphicsObject>> &objects);
+};
+
+class GraphicsObject {
+public:
+    GraphicsObject();
+private:
+    friend std::shared_ptr<GraphicsContext> create_graphics_context();
+    friend void render_frame(std::shared_ptr<GraphicsContext> context, std::shared_ptr<GraphicsScene> scene);
+    friend bool should_exit(std::shared_ptr<GraphicsContext> context);
+    friend std::shared_ptr<GraphicsModel> build_model(std::shared_ptr<GraphicsContext> context, const VoxelChunk &chunk);
+    friend std::shared_ptr<GraphicsObject> build_object(std::shared_ptr<GraphicsContext> context, std::shared_ptr<GraphicsModel> model, const glm::mat3x4 &transform);
+    friend std::shared_ptr<GraphicsScene> build_scene(std::shared_ptr<GraphicsContext> context, const std::vector<std::shared_ptr<GraphicsObject>> &objects);
 };
 
 class GraphicsScene {
 public:
     GraphicsScene();
 private:
-
     friend std::shared_ptr<GraphicsContext> create_graphics_context();
     friend void render_frame(std::shared_ptr<GraphicsContext> context, std::shared_ptr<GraphicsScene> scene);
     friend bool should_exit(std::shared_ptr<GraphicsContext> context);
     friend std::shared_ptr<GraphicsModel> build_model(std::shared_ptr<GraphicsContext> context, const VoxelChunk &chunk);
-    friend std::shared_ptr<GraphicsScene> build_scene(std::shared_ptr<GraphicsContext> context, const std::vector<std::shared_ptr<GraphicsModel>> &models);
+    friend std::shared_ptr<GraphicsObject> build_object(std::shared_ptr<GraphicsContext> context, std::shared_ptr<GraphicsModel> model, const glm::mat3x4 &transform);
+    friend std::shared_ptr<GraphicsScene> build_scene(std::shared_ptr<GraphicsContext> context, const std::vector<std::shared_ptr<GraphicsObject>> &objects);
 };
 
 GraphicsContext::GraphicsContext() {
@@ -140,10 +153,14 @@ bool should_exit(std::shared_ptr<GraphicsContext> context) {
     return context->window_->shouldClose();
 }
 
-std::shared_ptr<GraphicsModel> build_models(std::shared_ptr<GraphicsContext> context, const VoxelChunk &chunk) {
+std::shared_ptr<GraphicsModel> build_model(std::shared_ptr<GraphicsContext> context, const VoxelChunk &chunk) {
     return nullptr;
 }
 
-std::shared_ptr<GraphicsScene> build_scene(std::shared_ptr<GraphicsContext> context, const std::vector<std::shared_ptr<GraphicsModel>> &models) {
+std::shared_ptr<GraphicsObject> build_object(std::shared_ptr<GraphicsContext> context, std::shared_ptr<GraphicsModel> model, const glm::mat3x4 &transform) {
+    return nullptr;
+}
+
+std::shared_ptr<GraphicsScene> build_scene(std::shared_ptr<GraphicsContext> context, const std::vector<std::shared_ptr<GraphicsObject>> &objects) {
     return nullptr;
 }
