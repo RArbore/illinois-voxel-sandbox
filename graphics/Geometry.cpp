@@ -1,9 +1,9 @@
 #include "utils/Assert.h"
 #include "Geometry.h"
 
-BLAS::BLAS(std::shared_ptr<GPUAllocator> allocator, std::shared_ptr<CommandPool> command_pool, std::shared_ptr<RingBuffer> ring_buffer, std::vector<VkAabbPositionsKHR> chunks) {
+BLAS::BLAS(std::shared_ptr<GPUAllocator> allocator, std::shared_ptr<CommandPool> command_pool, std::shared_ptr<RingBuffer> ring_buffer, std::vector<VkAabbPositionsKHR> aabbs) {
     geometry_buffer_ = std::make_shared<GPUBuffer>(allocator,
-					       chunks.size() * sizeof(VkAabbPositionsKHR),
+					       aabbs.size() * sizeof(VkAabbPositionsKHR),
 					       sizeof(VkAabbPositionsKHR),
 					       VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
 					       VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
@@ -12,7 +12,7 @@ BLAS::BLAS(std::shared_ptr<GPUAllocator> allocator, std::shared_ptr<CommandPool>
     timeline_->set_signal_value(GEOMETRY_BUFFER_TIMELINE);
     ring_buffer->copy_to_device(geometry_buffer_,
 				0,
-				std::as_bytes(std::span<VkAabbPositionsKHR>(chunks.data(), chunks.size())),
+				std::as_bytes(std::span<VkAabbPositionsKHR>(aabbs.data(), aabbs.size())),
 				{},
 				{timeline_});
 
@@ -31,7 +31,7 @@ BLAS::BLAS(std::shared_ptr<GPUAllocator> allocator, std::shared_ptr<CommandPool>
 
     VkAccelerationStructureBuildRangeInfoKHR blas_build_range_info {};
     blas_build_range_info.firstVertex = 0;
-    blas_build_range_info.primitiveCount = static_cast<uint32_t>(chunks.size());
+    blas_build_range_info.primitiveCount = static_cast<uint32_t>(aabbs.size());
     blas_build_range_info.primitiveOffset = 0;
     blas_build_range_info.transformOffset = 0;
     const VkAccelerationStructureBuildRangeInfoKHR blas_build_range_infos[1][1] = {{blas_build_range_info}};
@@ -44,7 +44,7 @@ BLAS::BLAS(std::shared_ptr<GPUAllocator> allocator, std::shared_ptr<CommandPool>
     blas_build_geometry_info.geometryCount = 1;
     blas_build_geometry_info.pGeometries = &blas_geometry;
 
-    const uint32_t max_primitive_counts[] = {static_cast<uint32_t>(chunks.size())};
+    const uint32_t max_primitive_counts[] = {static_cast<uint32_t>(aabbs.size())};
 
     VkAccelerationStructureBuildSizesInfoKHR blas_build_sizes_info {};
     blas_build_sizes_info.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_SIZES_INFO_KHR;
@@ -98,6 +98,13 @@ std::shared_ptr<Semaphore> BLAS::get_timeline() {
     return timeline_;
 }
 
+VkDeviceAddress BLAS::get_device_address() {
+    VkAccelerationStructureDeviceAddressInfoKHR acceleration_structure_device_address_info {};
+    acceleration_structure_device_address_info.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_DEVICE_ADDRESS_INFO_KHR;
+    acceleration_structure_device_address_info.accelerationStructure = blas_;
+    return vkGetAccelerationStructureDeviceAddress(scratch_buffer_->get_allocator()->get_device()->get_device(), &acceleration_structure_device_address_info);
+}
+
 TLAS::TLAS(std::shared_ptr<GPUAllocator> allocator, std::shared_ptr<CommandPool> command_pool, std::shared_ptr<RingBuffer> ring_buffer, std::vector<std::shared_ptr<BLAS>> bottom_structures, std::vector<VkAccelerationStructureInstanceKHR> instances) {
     instances_buffer_ = std::make_shared<GPUBuffer>(allocator,
 					       instances.size() * sizeof(VkAccelerationStructureInstanceKHR),
@@ -143,7 +150,7 @@ TLAS::TLAS(std::shared_ptr<GPUAllocator> allocator, std::shared_ptr<CommandPool>
 
     VkAccelerationStructureBuildSizesInfoKHR tlas_build_sizes_info {};
     tlas_build_sizes_info.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_SIZES_INFO_KHR;
-    vkGetAccelerationStructureBuildSizesKHR(allocator->get_device()->get_device(), VK_ACCELERATION_STRUCTURE_BUILD_TYPE_DEVICE_KHR, &tlas_build_geometry_info, max_instances_counts, &tlas_build_sizes_info);
+    vkGetAccelerationStructureBuildSizes(allocator->get_device()->get_device(), VK_ACCELERATION_STRUCTURE_BUILD_TYPE_DEVICE_KHR, &tlas_build_geometry_info, max_instances_counts, &tlas_build_sizes_info);
 
     scratch_buffer_ = std::make_shared<GPUBuffer>(allocator,
 						  tlas_build_sizes_info.buildScratchSize,
@@ -193,4 +200,11 @@ VkAccelerationStructureKHR TLAS::get_tlas() {
 
 std::shared_ptr<Semaphore> TLAS::get_timeline() {
     return timeline_;
+}
+
+VkDeviceAddress TLAS::get_device_address() {
+    VkAccelerationStructureDeviceAddressInfoKHR acceleration_structure_device_address_info {};
+    acceleration_structure_device_address_info.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_DEVICE_ADDRESS_INFO_KHR;
+    acceleration_structure_device_address_info.accelerationStructure = tlas_;
+    return vkGetAccelerationStructureDeviceAddress(scratch_buffer_->get_allocator()->get_device()->get_device(), &acceleration_structure_device_address_info);
 }

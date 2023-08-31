@@ -5,12 +5,14 @@
 
 class BLAS {
 public:
-    BLAS(std::shared_ptr<GPUAllocator> allocator, std::shared_ptr<CommandPool> command_pool, std::shared_ptr<RingBuffer> ring_buffer, std::vector<VkAabbPositionsKHR> chunks);
+    BLAS(std::shared_ptr<GPUAllocator> allocator, std::shared_ptr<CommandPool> command_pool, std::shared_ptr<RingBuffer> ring_buffer, std::vector<VkAabbPositionsKHR> aabbs);
     ~BLAS();
 
     VkAccelerationStructureKHR get_blas();
 
     std::shared_ptr<Semaphore> get_timeline();
+
+    VkDeviceAddress get_device_address();
 
     static const uint64_t GEOMETRY_BUFFER_TIMELINE = 1;
     static const uint64_t BLAS_BUILD_TIMELINE = 2;
@@ -31,6 +33,8 @@ public:
     VkAccelerationStructureKHR get_tlas();
 
     std::shared_ptr<Semaphore> get_timeline();
+
+    VkDeviceAddress get_device_address();
 
     static const uint64_t INSTANCES_BUFFER_TIMELINE = 1;
     static const uint64_t TLAS_BUILD_TIMELINE = 2;

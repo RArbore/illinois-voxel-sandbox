@@ -1,3 +1,5 @@
+#include <cstring>
+
 #include "GraphicsContext.h"
 #include "Window.h"
 #include "Device.h"
@@ -42,8 +44,10 @@ private:
 
 class GraphicsModel {
 public:
-    GraphicsModel();
+    GraphicsModel(std::shared_ptr<BLAS> blas): blas_(blas) {}
 private:
+    std::shared_ptr<BLAS> blas_;
+    
     friend std::shared_ptr<GraphicsContext> create_graphics_context();
     friend void render_frame(std::shared_ptr<GraphicsContext> context, std::shared_ptr<GraphicsScene> scene);
     friend bool should_exit(std::shared_ptr<GraphicsContext> context);
@@ -54,8 +58,11 @@ private:
 
 class GraphicsObject {
 public:
-    GraphicsObject();
+    GraphicsObject(std::shared_ptr<GraphicsModel> model, glm::mat3x4 transform): model_(model), transform_(transform) {}
 private:
+    std::shared_ptr<GraphicsModel> model_;
+    glm::mat3x4 transform_;
+    
     friend std::shared_ptr<GraphicsContext> create_graphics_context();
     friend void render_frame(std::shared_ptr<GraphicsContext> context, std::shared_ptr<GraphicsScene> scene);
     friend bool should_exit(std::shared_ptr<GraphicsContext> context);
@@ -66,8 +73,11 @@ private:
 
 class GraphicsScene {
 public:
-    GraphicsScene();
+    GraphicsScene(std::shared_ptr<TLAS> tlas, std::vector<std::shared_ptr<GraphicsObject>> objects): tlas_(tlas), objects_(objects) {}
 private:
+    std::shared_ptr<TLAS> tlas_;
+    std::vector<std::shared_ptr<GraphicsObject>> objects_;
+    
     friend std::shared_ptr<GraphicsContext> create_graphics_context();
     friend void render_frame(std::shared_ptr<GraphicsContext> context, std::shared_ptr<GraphicsScene> scene);
     friend bool should_exit(std::shared_ptr<GraphicsContext> context);
@@ -154,13 +164,34 @@ bool should_exit(std::shared_ptr<GraphicsContext> context) {
 }
 
 std::shared_ptr<GraphicsModel> build_model(std::shared_ptr<GraphicsContext> context, const VoxelChunk &chunk) {
-    return nullptr;
+    std::vector<VkAabbPositionsKHR> aabbs = {{0.0F, 0.0F, 0.0F, 1.0F, 1.0F, 1.0F}};
+    std::shared_ptr<BLAS> blas = std::make_shared<BLAS>(context->gpu_allocator_, context->command_pool_, context->ring_buffer_, aabbs);
+    return std::make_shared<GraphicsModel>(blas);
 }
 
 std::shared_ptr<GraphicsObject> build_object(std::shared_ptr<GraphicsContext> context, std::shared_ptr<GraphicsModel> model, const glm::mat3x4 &transform) {
-    return nullptr;
+    return std::make_shared<GraphicsObject>(model, transform);
 }
 
+static_assert(sizeof(VkTransformMatrixKHR) == sizeof(glm::mat3x4));
 std::shared_ptr<GraphicsScene> build_scene(std::shared_ptr<GraphicsContext> context, const std::vector<std::shared_ptr<GraphicsObject>> &objects) {
-    return nullptr;
+    std::vector<std::shared_ptr<BLAS>> bottom_structures;
+    for (const auto object : objects) {
+	bottom_structures.emplace_back(object->model_->blas_);
+    }
+    std::vector<VkAccelerationStructureInstanceKHR> instances;
+    for (const auto object : objects) {
+	VkTransformMatrixKHR transform {};
+	memcpy(&transform, &object->transform_, sizeof(VkTransformMatrixKHR));
+	instances.emplace_back(
+			       transform,
+			       0,
+			       0xFF,
+			       0,
+			       0,
+			       object->model_->blas_->get_device_address()
+			       );
+    }
+    std::shared_ptr<TLAS> tlas = std::make_shared<TLAS>(context->gpu_allocator_, context->command_pool_, context->ring_buffer_, bottom_structures, instances);
+    return std::make_shared<GraphicsScene>(tlas, objects);
 }
