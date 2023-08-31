@@ -186,3 +186,11 @@ TLAS::TLAS(std::shared_ptr<GPUAllocator> allocator, std::shared_ptr<CommandPool>
 TLAS::~TLAS() {
     vkDestroyAccelerationStructure(scratch_buffer_->get_allocator()->get_device()->get_device(), tlas_, nullptr);
 }
+
+VkAccelerationStructureKHR TLAS::get_tlas() {
+    return tlas_;
+}
+
+std::shared_ptr<Semaphore> TLAS::get_timeline() {
+    return timeline_;
+}
