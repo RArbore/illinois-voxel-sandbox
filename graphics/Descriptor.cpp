@@ -217,6 +217,30 @@ DescriptorSetBuilder &DescriptorSetBuilder::bind_image(uint32_t binding, VkDescr
     return *this;
 }
 
+DescriptorSetBuilder &DescriptorSetBuilder::bind_acceleration_structure(uint32_t binding, VkWriteDescriptorSetAccelerationStructureKHR acceleration_structure_info, VkShaderStageFlagBits stages) {
+    VkDescriptorSetLayoutBinding layout_binding {};
+    layout_binding.descriptorCount = 1;
+    layout_binding.descriptorType = VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR;
+    layout_binding.pImmutableSamplers = nullptr;
+    layout_binding.stageFlags = stages;
+    layout_binding.binding = binding;
+    layout_->add_binding(layout_binding);
+
+    acceleration_structure_infos_.push_back(acceleration_structure_info);
+    
+    VkWriteDescriptorSet write {};
+    write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+    write.pNext = &acceleration_structure_info;
+    write.descriptorCount = 1;
+    write.descriptorType = VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR;
+    write.pImageInfo = NULL;
+    write.pBufferInfo = NULL;
+    write.pTexelBufferView = NULL;
+    writes_.push_back(write);
+
+    return *this;
+}
+
 std::shared_ptr<DescriptorSet> DescriptorSetBuilder::build() {
     auto set = std::make_shared<DescriptorSet>(allocator_, layout_);
     update(set);

@@ -72,6 +72,7 @@ public:
 
     DescriptorSetBuilder &bind_buffer(uint32_t binding, VkDescriptorBufferInfo buffer_info, VkDescriptorType type, VkShaderStageFlagBits stages);
     DescriptorSetBuilder &bind_image(uint32_t binding, VkDescriptorImageInfo image_info, VkDescriptorType type, VkShaderStageFlagBits stages);
+    DescriptorSetBuilder &bind_acceleration_structure(uint32_t binding, VkWriteDescriptorSetAccelerationStructureKHR acceleration_structure_info, VkShaderStageFlagBits stages);
 
     std::shared_ptr<DescriptorSet> build();
     void update(std::shared_ptr<DescriptorSet> set);
@@ -83,4 +84,5 @@ private:
 
     std::vector<VkDescriptorBufferInfo> buffer_infos_;
     std::vector<VkDescriptorImageInfo> image_infos_;
+    std::vector<VkWriteDescriptorSetAccelerationStructureKHR > acceleration_structure_infos_;
 };
