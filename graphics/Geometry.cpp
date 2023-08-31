@@ -1,13 +1,25 @@
 #include "utils/Assert.h"
 #include "Geometry.h"
 
+static inline uint64_t round_up_pow2(uint64_t x) {
+    x--;
+    x |= x >> 1;
+    x |= x >> 2;
+    x |= x >> 4;
+    x |= x >> 8;
+    x |= x >> 16;
+    x |= x >> 32;
+    x++;
+    return x;
+}
+
 BLAS::BLAS(std::shared_ptr<GPUAllocator> allocator, std::shared_ptr<CommandPool> command_pool, std::shared_ptr<RingBuffer> ring_buffer, std::vector<VkAabbPositionsKHR> aabbs) {
     geometry_buffer_ = std::make_shared<GPUBuffer>(allocator,
-					       aabbs.size() * sizeof(VkAabbPositionsKHR),
-					       sizeof(VkAabbPositionsKHR),
-					       VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
-					       VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
-					       0);
+						   aabbs.size() * sizeof(VkAabbPositionsKHR),
+						   round_up_pow2(sizeof(VkAabbPositionsKHR)),
+						   VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
+						   VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+						   0);
     timeline_ = std::make_shared<Semaphore>(allocator->get_device(), true);
     timeline_->set_signal_value(GEOMETRY_BUFFER_TIMELINE);
     ring_buffer->copy_to_device(geometry_buffer_,
@@ -34,7 +46,7 @@ BLAS::BLAS(std::shared_ptr<GPUAllocator> allocator, std::shared_ptr<CommandPool>
     blas_build_range_info.primitiveCount = static_cast<uint32_t>(aabbs.size());
     blas_build_range_info.primitiveOffset = 0;
     blas_build_range_info.transformOffset = 0;
-    const VkAccelerationStructureBuildRangeInfoKHR blas_build_range_infos[1][1] = {{blas_build_range_info}};
+    const VkAccelerationStructureBuildRangeInfoKHR *const blas_build_range_infos[] = {&blas_build_range_info};
 
     VkAccelerationStructureBuildGeometryInfoKHR blas_build_geometry_info {};
     blas_build_geometry_info.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_GEOMETRY_INFO_KHR;
@@ -71,10 +83,9 @@ BLAS::BLAS(std::shared_ptr<GPUAllocator> allocator, std::shared_ptr<CommandPool>
     bottom_level_create_info.size = blas_build_sizes_info.accelerationStructureSize;
     bottom_level_create_info.type = VK_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL_KHR;
 
-    VkAccelerationStructureKHR bottom_level_acceleration_structure;
-    ASSERT(vkCreateAccelerationStructure(allocator->get_device()->get_device(), &bottom_level_create_info, NULL, &bottom_level_acceleration_structure), "Unable to create bottom level acceleration structure.");
+    ASSERT(vkCreateAccelerationStructure(allocator->get_device()->get_device(), &bottom_level_create_info, NULL, &blas_), "Unable to create bottom level acceleration structure.");
 
-    blas_build_geometry_info.dstAccelerationStructure = bottom_level_acceleration_structure;
+    blas_build_geometry_info.dstAccelerationStructure = blas_;
     blas_build_geometry_info.scratchData.deviceAddress = scratch_buffer_->get_device_address();
 
     std::shared_ptr<Command> build_command = std::make_shared<Command>(command_pool);
@@ -107,11 +118,11 @@ VkDeviceAddress BLAS::get_device_address() {
 
 TLAS::TLAS(std::shared_ptr<GPUAllocator> allocator, std::shared_ptr<CommandPool> command_pool, std::shared_ptr<RingBuffer> ring_buffer, std::vector<std::shared_ptr<BLAS>> bottom_structures, std::vector<VkAccelerationStructureInstanceKHR> instances) {
     instances_buffer_ = std::make_shared<GPUBuffer>(allocator,
-					       instances.size() * sizeof(VkAccelerationStructureInstanceKHR),
-					       sizeof(VkAccelerationStructureInstanceKHR),
-					       VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
-					       VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
-					       0);
+						    instances.size() * sizeof(VkAccelerationStructureInstanceKHR),
+						    round_up_pow2(sizeof(VkAccelerationStructureInstanceKHR)),
+						    VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
+						    VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+						    0);
     timeline_ = std::make_shared<Semaphore>(allocator->get_device(), true);
     timeline_->set_signal_value(INSTANCES_BUFFER_TIMELINE);
     ring_buffer->copy_to_device(instances_buffer_,
@@ -136,7 +147,7 @@ TLAS::TLAS(std::shared_ptr<GPUAllocator> allocator, std::shared_ptr<CommandPool>
     tlas_build_range_info.primitiveCount = static_cast<uint32_t>(instances.size());
     tlas_build_range_info.primitiveOffset = 0;
     tlas_build_range_info.transformOffset = 0;
-    const VkAccelerationStructureBuildRangeInfoKHR tlas_build_range_infos[1][1] = {{tlas_build_range_info}}; 
+    const VkAccelerationStructureBuildRangeInfoKHR *const tlas_build_range_infos[] = {&tlas_build_range_info};
 
     VkAccelerationStructureBuildGeometryInfoKHR tlas_build_geometry_info {};
     tlas_build_geometry_info.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_GEOMETRY_INFO_KHR;
@@ -173,10 +184,9 @@ TLAS::TLAS(std::shared_ptr<GPUAllocator> allocator, std::shared_ptr<CommandPool>
     top_level_create_info.size = tlas_build_sizes_info.accelerationStructureSize;
     top_level_create_info.type = VK_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL_KHR;
 
-    VkAccelerationStructureKHR top_level_acceleration_structure;
-    ASSERT(vkCreateAccelerationStructure(allocator->get_device()->get_device(), &top_level_create_info, NULL, &top_level_acceleration_structure), "Unable to create top level acceleration structure.");
+    ASSERT(vkCreateAccelerationStructure(allocator->get_device()->get_device(), &top_level_create_info, NULL, &tlas_), "Unable to create top level acceleration structure.");
 
-    tlas_build_geometry_info.dstAccelerationStructure = top_level_acceleration_structure;
+    tlas_build_geometry_info.dstAccelerationStructure = tlas_;
     tlas_build_geometry_info.scratchData.deviceAddress = scratch_buffer_->get_device_address();
 
     std::shared_ptr<Command> build_command = std::make_shared<Command>(command_pool);

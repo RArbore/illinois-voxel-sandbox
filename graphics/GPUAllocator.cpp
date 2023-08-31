@@ -40,6 +40,7 @@ GPUBuffer::GPUBuffer(std::shared_ptr<GPUAllocator> allocator, VkDeviceSize size,
 	ASSERT(vmaCreateBufferWithAlignment(allocator_->get_vma(), &create_info, &alloc_info, alignment, &buffer_, &allocation_, nullptr), "Unable to create buffer.");
     }
 
+    size_ = size;
     usage_ = usage;
     memory_flags_ = memory_flags;
     vma_flags_ = vma_flags;

@@ -98,10 +98,15 @@ Device::Device(std::shared_ptr<Window> window): window_(window) {
     queue_create_info.queueCount = 1;
     queue_create_info.pQueuePriorities = &queue_priority;
 
+    VkPhysicalDeviceTimelineSemaphoreFeatures timeline_semaphore_features {};
+    timeline_semaphore_features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_TIMELINE_SEMAPHORE_FEATURES;
+    timeline_semaphore_features.timelineSemaphore = VK_TRUE;
+    timeline_semaphore_features.pNext = nullptr;
+
     VkPhysicalDeviceSynchronization2Features synchronization_2_features {};
     synchronization_2_features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SYNCHRONIZATION_2_FEATURES;
-    synchronization_2_features.pNext = nullptr;
     synchronization_2_features.synchronization2 = VK_TRUE;
+    synchronization_2_features.pNext = &timeline_semaphore_features;
 
     VkPhysicalDeviceBufferDeviceAddressFeatures buffer_device_address_features {};
     buffer_device_address_features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_BUFFER_DEVICE_ADDRESS_FEATURES;
@@ -232,7 +237,7 @@ void Device::submit_command(std::shared_ptr<Command> command, std::vector<std::s
     submit_info.signalSemaphoreCount = static_cast<uint32_t>(vk_signal_semaphores.size());
     submit_info.pSignalSemaphores = vk_signal_semaphores.data();
 
-    VkFence vk_fence = fence->get_fence();
+    VkFence vk_fence = fence ? fence->get_fence() : VK_NULL_HANDLE;
 	
     ASSERT(vkQueueSubmit(queue_, 1, &submit_info, vk_fence), "Unable to submit command.");
 }
@@ -294,9 +299,13 @@ int32_t physical_check_extensions(VkPhysicalDevice physical) {
 }
 
 int32_t physical_check_features_support(VkPhysicalDevice physical) {
+    VkPhysicalDeviceTimelineSemaphoreFeatures timeline_semaphore_features {};
+    timeline_semaphore_features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_TIMELINE_SEMAPHORE_FEATURES;
+    timeline_semaphore_features.pNext = nullptr;
+
     VkPhysicalDeviceSynchronization2Features synchronization_2_features {};
     synchronization_2_features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SYNCHRONIZATION_2_FEATURES;
-    synchronization_2_features.pNext = nullptr;
+    synchronization_2_features.pNext = &timeline_semaphore_features;
 
     VkPhysicalDeviceBufferDeviceAddressFeatures buffer_device_address_features {};
     buffer_device_address_features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_BUFFER_DEVICE_ADDRESS_FEATURES;
@@ -332,7 +341,8 @@ int32_t physical_check_features_support(VkPhysicalDevice physical) {
 	acceleration_features.accelerationStructure &&
 	acceleration_features.descriptorBindingAccelerationStructureUpdateAfterBind &&
 	buffer_device_address_features.bufferDeviceAddress &&
-	synchronization_2_features.synchronization2
+	synchronization_2_features.synchronization2 &&
+	timeline_semaphore_features.timelineSemaphore
 	) {
 	return 0;
     }
