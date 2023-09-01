@@ -97,9 +97,14 @@ GraphicsContext::GraphicsContext() {
     ring_buffer_ = std::make_shared<RingBuffer>(gpu_allocator_, command_pool_, 1 << 24);
 
     swapchain_descriptors_ = swapchain_->make_image_descriptors(descriptor_allocator_);
+
+    DescriptorSetBuilder builder(descriptor_allocator_);
+    builder.bind_acceleration_structure(0, {}, VK_SHADER_STAGE_RAYGEN_BIT_KHR);
+
     auto shader = std::make_shared<Shader>(device_, "dumb_rgen");
     std::vector<std::vector<std::shared_ptr<Shader>>> shader_groups = {{shader}};
-    std::vector<VkDescriptorSetLayout> layouts = {swapchain_descriptors_.at(0)->get_layout()};
+    std::vector<VkDescriptorSetLayout> layouts = {swapchain_descriptors_.at(0)->get_layout(), builder.get_layout()->get_layout()};
+
     ray_trace_pipeline_ = std::make_shared<RayTracePipeline>(gpu_allocator_, shader_groups, layouts);
     frame_fence_ = std::make_shared<Fence>(device_);
     acquire_semaphore_ = std::make_shared<Semaphore>(device_);
@@ -117,6 +122,16 @@ std::shared_ptr<GraphicsContext> create_graphics_context() {
 }
 
 void render_frame(std::shared_ptr<GraphicsContext> context, std::shared_ptr<GraphicsScene> scene) {
+    if (context->frame_index_ == 0) {
+	VkAccelerationStructureKHR tlas = scene->tlas_->get_tlas();
+	DescriptorSetBuilder builder(context->descriptor_allocator_);
+	builder.bind_acceleration_structure(0, {
+		.accelerationStructureCount = 1,
+		.pAccelerationStructures = &tlas,
+	    }, VK_SHADER_STAGE_RAYGEN_BIT_KHR);
+	context->acceleration_structure_descriptor_ = builder.build();
+    }
+    
     context->window_->pollEvents();
 
     context->frame_fence_->wait();
@@ -149,7 +164,7 @@ void render_frame(std::shared_ptr<GraphicsContext> context, std::shared_ptr<Grap
 	VkExtent2D extent = context->swapchain_->get_extent();
 	
 	prologue_barrier.record(command_buffer);
-	context->ray_trace_pipeline_->record(command_buffer, {context->swapchain_descriptors_.at(swapchain_image_index)}, extent.width, extent.height, 1);
+	context->ray_trace_pipeline_->record(command_buffer, {context->swapchain_descriptors_.at(swapchain_image_index), context->acceleration_structure_descriptor_}, extent.width, extent.height, 1);
 	epilogue_barrier.record(command_buffer);
     });
 

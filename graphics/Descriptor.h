@@ -76,6 +76,7 @@ public:
 
     std::shared_ptr<DescriptorSet> build();
     void update(std::shared_ptr<DescriptorSet> set);
+    std::shared_ptr<DescriptorSetLayout> get_layout();
 private:
     std::vector<VkWriteDescriptorSet> writes_;
 

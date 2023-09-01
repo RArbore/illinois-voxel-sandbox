@@ -237,6 +237,7 @@ DescriptorSetBuilder &DescriptorSetBuilder::bind_acceleration_structure(uint32_t
     write.pImageInfo = NULL;
     write.pBufferInfo = NULL;
     write.pTexelBufferView = NULL;
+    write.dstBinding = binding;
     writes_.push_back(write);
 
     return *this;
@@ -254,4 +255,9 @@ void DescriptorSetBuilder::update(std::shared_ptr<DescriptorSet> set) {
 	write.dstSet = set->get_set();
     }
     vkUpdateDescriptorSets(allocator_->get_device()->get_device(), writes_.size(), writes_.data(), 0, nullptr);
+}
+
+
+std::shared_ptr<DescriptorSetLayout> DescriptorSetBuilder::get_layout() {
+    return layout_;
 }
