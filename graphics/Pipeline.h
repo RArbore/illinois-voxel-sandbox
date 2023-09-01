@@ -28,7 +28,7 @@ public:
     RayTracePipeline(std::shared_ptr<GPUAllocator> allocator, std::vector<std::vector<std::shared_ptr<Shader>>> shader_groups, std::vector<VkDescriptorSetLayout> descriptor_layouts);
     ~RayTracePipeline();
 
-    void record(VkCommandBuffer command, std::vector<std::shared_ptr<DescriptorSet>> descriptor_sets, uint32_t width, uint32_t height, uint32_t depth);
+    void record(VkCommandBuffer command, std::vector<std::shared_ptr<DescriptorSet>> descriptor_sets, std::span<std::byte> push_constants, uint32_t width, uint32_t height, uint32_t depth);
 private:
     VkPipeline pipeline_ = VK_NULL_HANDLE;
     VkPipelineLayout layout_ = VK_NULL_HANDLE;

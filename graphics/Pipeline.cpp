@@ -119,10 +119,15 @@ RayTracePipeline::RayTracePipeline(std::shared_ptr<GPUAllocator> allocator, std:
 	}
     }
 
+    VkPushConstantRange push_constant_range {};
+    push_constant_range.stageFlags = VK_SHADER_STAGE_ALL;
+    push_constant_range.offset = 0;
+    push_constant_range.size = 128;
+
     VkPipelineLayoutCreateInfo pipeline_layout_create_info {};
     pipeline_layout_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-    pipeline_layout_create_info.pushConstantRangeCount = 0;
-    pipeline_layout_create_info.pPushConstantRanges = nullptr;
+    pipeline_layout_create_info.pushConstantRangeCount = 1;
+    pipeline_layout_create_info.pPushConstantRanges = &push_constant_range;
     pipeline_layout_create_info.setLayoutCount = static_cast<uint32_t>(descriptor_layouts.size());
     pipeline_layout_create_info.pSetLayouts = descriptor_layouts.data();
     ASSERT(vkCreatePipelineLayout(device_->get_device(), &pipeline_layout_create_info, nullptr, &layout_), "Unable to create ray trace pipeline layout.");
@@ -199,7 +204,9 @@ RayTracePipeline::~RayTracePipeline() {
     vkDestroyPipelineLayout(device_->get_device(), layout_, nullptr);
 }
 
-void RayTracePipeline::record(VkCommandBuffer command, std::vector<std::shared_ptr<DescriptorSet>> descriptor_sets, uint32_t width, uint32_t height, uint32_t depth) {
+void RayTracePipeline::record(VkCommandBuffer command, std::vector<std::shared_ptr<DescriptorSet>> descriptor_sets, std::span<std::byte> push_constants, uint32_t width, uint32_t height, uint32_t depth) {
+    ASSERT(push_constants.size() == 128, "Push constants must take exactly 128 bytes.");
+    
     std::vector<VkDescriptorSet> vk_descriptor_sets;
     for (auto set : descriptor_sets) {
 	vk_descriptor_sets.push_back(set->get_set());
@@ -207,5 +214,6 @@ void RayTracePipeline::record(VkCommandBuffer command, std::vector<std::shared_p
     
     vkCmdBindPipeline(command, VK_PIPELINE_BIND_POINT_RAY_TRACING_KHR, pipeline_);
     vkCmdBindDescriptorSets(command, VK_PIPELINE_BIND_POINT_RAY_TRACING_KHR, layout_, 0, static_cast<uint32_t>(vk_descriptor_sets.size()), vk_descriptor_sets.data(), 0, nullptr);
+    vkCmdPushConstants(command, layout_, VK_SHADER_STAGE_ALL, 0, 128, push_constants.data());
     vkCmdTraceRays(command, &rgen_sbt_region_, &miss_sbt_region_, &hit_sbt_region_, &call_sbt_region_, width, height, depth);
 }

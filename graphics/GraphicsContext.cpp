@@ -179,11 +179,15 @@ void render_frame(std::shared_ptr<GraphicsContext> context, std::shared_ptr<Grap
     
     context->frame_fence_->reset();
 
+    std::vector<std::byte> push_constants(128);
+    memcpy(push_constants.data(), &context->frame_index_, sizeof(uint64_t));
+    std::span<std::byte> push_constants_span(push_constants.data(), push_constants.size());
+
     context->render_command_buffer_->record([&](VkCommandBuffer command_buffer) {
 	VkExtent2D extent = context->swapchain_->get_extent();
 	
 	prologue_barrier.record(command_buffer);
-	context->ray_trace_pipeline_->record(command_buffer, {context->swapchain_descriptors_.at(swapchain_image_index), context->scene_descriptor_}, extent.width, extent.height, 1);
+	context->ray_trace_pipeline_->record(command_buffer, {context->swapchain_descriptors_.at(swapchain_image_index), context->scene_descriptor_}, push_constants_span, extent.width, extent.height, 1);
 	epilogue_barrier.record(command_buffer);
     });
 
