@@ -2,7 +2,12 @@ cmake_minimum_required(VERSION 3.0)
 
 add_custom_target(shaders)
 
-set(GLSL_SHADER_FILES dumb_rgen.glsl)
+set(GLSL_SHADER_FILES
+  dumb_rgen.glsl
+  dumb_rmiss.glsl
+  dumb_rchit.glsl
+  dumb_rint.glsl
+)
 
 foreach(FILE ${GLSL_SHADER_FILES})
   get_filename_component(FILE_WE ${FILE} NAME_WE)

@@ -101,8 +101,11 @@ GraphicsContext::GraphicsContext() {
     DescriptorSetBuilder builder(descriptor_allocator_);
     builder.bind_acceleration_structure(0, {}, VK_SHADER_STAGE_RAYGEN_BIT_KHR);
 
-    auto shader = std::make_shared<Shader>(device_, "dumb_rgen");
-    std::vector<std::vector<std::shared_ptr<Shader>>> shader_groups = {{shader}};
+    auto rgen = std::make_shared<Shader>(device_, "dumb_rgen");
+    auto rmiss = std::make_shared<Shader>(device_, "dumb_rmiss");
+    auto rchit = std::make_shared<Shader>(device_, "dumb_rchit");
+    auto rint = std::make_shared<Shader>(device_, "dumb_rint");
+    std::vector<std::vector<std::shared_ptr<Shader>>> shader_groups = {{rgen}, {rmiss}, {rchit, rint}};
     std::vector<VkDescriptorSetLayout> layouts = {swapchain_descriptors_.at(0)->get_layout(), builder.get_layout()->get_layout()};
 
     ray_trace_pipeline_ = std::make_shared<RayTracePipeline>(gpu_allocator_, shader_groups, layouts);
@@ -123,6 +126,7 @@ std::shared_ptr<GraphicsContext> create_graphics_context() {
 
 void render_frame(std::shared_ptr<GraphicsContext> context, std::shared_ptr<GraphicsScene> scene) {
     if (context->frame_index_ == 0) {
+	vkDeviceWaitIdle(context->device_->get_device());
 	VkAccelerationStructureKHR tlas = scene->tlas_->get_tlas();
 	DescriptorSetBuilder builder(context->descriptor_allocator_);
 	builder.bind_acceleration_structure(0, {

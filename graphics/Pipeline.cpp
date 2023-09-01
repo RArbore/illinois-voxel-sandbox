@@ -98,7 +98,7 @@ RayTracePipeline::RayTracePipeline(std::shared_ptr<GPUAllocator> allocator, std:
 		groups_.back().closestHitShader = shader_idx;
 	    } else if ((stage == VK_SHADER_STAGE_ANY_HIT_BIT_KHR) && (groups_.back().type == VK_RAY_TRACING_SHADER_GROUP_TYPE_TRIANGLES_HIT_GROUP_KHR || groups_.back().type == VK_RAY_TRACING_SHADER_GROUP_TYPE_PROCEDURAL_HIT_GROUP_KHR)) {
 		groups_.back().anyHitShader = shader_idx;
-	    } else if ((stage == VK_SHADER_STAGE_INTERSECTION_BIT_KHR) && (first_shader || groups_.back().type == VK_RAY_TRACING_SHADER_GROUP_TYPE_PROCEDURAL_HIT_GROUP_KHR)) {
+	    } else if ((stage == VK_SHADER_STAGE_INTERSECTION_BIT_KHR) && (groups_.back().type == VK_RAY_TRACING_SHADER_GROUP_TYPE_TRIANGLES_HIT_GROUP_KHR || groups_.back().type == VK_RAY_TRACING_SHADER_GROUP_TYPE_PROCEDURAL_HIT_GROUP_KHR)) {
 		groups_.back().type = VK_RAY_TRACING_SHADER_GROUP_TYPE_PROCEDURAL_HIT_GROUP_KHR;
 		groups_.back().intersectionShader = shader_idx;
 	    } else {
