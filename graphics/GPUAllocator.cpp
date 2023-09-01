@@ -140,6 +140,14 @@ VkImage GPUImage::get_image() {
     return image_;
 }
 
+VkImageView GPUImage::get_view() {
+    return view_;
+}
+
+VkExtent2D GPUImage::get_extent() {
+    return extent_;
+}
+
 GPUVolume::GPUVolume(std::shared_ptr<GPUAllocator> allocator, VkExtent3D extent, VkFormat format, VkImageCreateFlags create_flags, VkImageUsageFlags usage_flags, VkMemoryPropertyFlags memory_flags, VmaAllocationCreateFlags vma_flags, uint32_t mip_levels, uint32_t array_layers) {
     VkImageCreateInfo image_create_info {};
     image_create_info.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
@@ -148,7 +156,7 @@ GPUVolume::GPUVolume(std::shared_ptr<GPUAllocator> allocator, VkExtent3D extent,
     image_create_info.format = format;
     image_create_info.extent.width = extent.width;
     image_create_info.extent.height = extent.height;
-    image_create_info.extent.depth = 1;
+    image_create_info.extent.depth = extent.depth;
     image_create_info.mipLevels = mip_levels;
     image_create_info.arrayLayers = array_layers;
     image_create_info.samples = VK_SAMPLE_COUNT_1_BIT;
@@ -199,4 +207,12 @@ GPUVolume::~GPUVolume() {
 
 VkImage GPUVolume::get_image() {
     return image_;
+}
+
+VkImageView GPUVolume::get_view() {
+    return view_;
+}
+
+VkExtent3D GPUVolume::get_extent() {
+    return extent_;
 }

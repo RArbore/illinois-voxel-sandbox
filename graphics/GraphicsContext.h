@@ -4,7 +4,7 @@
 #include <memory>
 #include <vector>
 
-#include <voxels/VoxelChunk.h>
+#include <voxels/RawVoxelChunk.h>
 
 #include <external/glm/glm/glm.hpp>
 
@@ -19,7 +19,7 @@ void render_frame(std::shared_ptr<GraphicsContext> context, std::shared_ptr<Grap
 
 bool should_exit(std::shared_ptr<GraphicsContext> context);
 
-std::shared_ptr<GraphicsModel> build_model(std::shared_ptr<GraphicsContext> context, const VoxelChunk &chunk);
+std::shared_ptr<GraphicsModel> build_model(std::shared_ptr<GraphicsContext> context, const RawVoxelChunk &chunk);
 
 std::shared_ptr<GraphicsObject> build_object(std::shared_ptr<GraphicsContext> context, std::shared_ptr<GraphicsModel> model, const glm::mat3x4 &transform);
 

@@ -12,6 +12,8 @@
 #include "RingBuffer.h"
 #include "Geometry.h"
 
+#include "voxels/RawVoxelChunk.h"
+
 class GraphicsContext {
 public:
     GraphicsContext();
@@ -27,32 +29,35 @@ private:
     std::shared_ptr<RingBuffer> ring_buffer_ = nullptr;
 
     std::vector<std::shared_ptr<DescriptorSet>> swapchain_descriptors_;
-    std::shared_ptr<DescriptorSet> acceleration_structure_descriptor_ = nullptr;
+    std::shared_ptr<DescriptorSet> scene_descriptor_ = nullptr;
     std::shared_ptr<Fence> frame_fence_ = nullptr;
     std::shared_ptr<Semaphore> acquire_semaphore_ = nullptr;
     std::shared_ptr<Semaphore> render_semaphore_ = nullptr;
     std::shared_ptr<Command> render_command_buffer_ = nullptr;
+
+    std::shared_ptr<GraphicsScene> current_scene_ = nullptr;
 
     uint64_t frame_index_ = 0;
 
     friend std::shared_ptr<GraphicsContext> create_graphics_context();
     friend void render_frame(std::shared_ptr<GraphicsContext> context, std::shared_ptr<GraphicsScene> scene);
     friend bool should_exit(std::shared_ptr<GraphicsContext> context);
-    friend std::shared_ptr<GraphicsModel> build_model(std::shared_ptr<GraphicsContext> context, const VoxelChunk &chunk);
+    friend std::shared_ptr<GraphicsModel> build_model(std::shared_ptr<GraphicsContext> context, const RawVoxelChunk &chunk);
     friend std::shared_ptr<GraphicsObject> build_object(std::shared_ptr<GraphicsContext> context, std::shared_ptr<GraphicsModel> model, const glm::mat3x4 &transform);
     friend std::shared_ptr<GraphicsScene> build_scene(std::shared_ptr<GraphicsContext> context, const std::vector<std::shared_ptr<GraphicsObject>> &objects);
 };
 
 class GraphicsModel {
 public:
-    GraphicsModel(std::shared_ptr<BLAS> blas): blas_(blas) {}
+    GraphicsModel(std::shared_ptr<BLAS> blas, std::shared_ptr<GPUVolume> raw_data): blas_(blas), raw_data_(raw_data) {}
 private:
     std::shared_ptr<BLAS> blas_;
+    std::shared_ptr<GPUVolume> raw_data_;
     
     friend std::shared_ptr<GraphicsContext> create_graphics_context();
     friend void render_frame(std::shared_ptr<GraphicsContext> context, std::shared_ptr<GraphicsScene> scene);
     friend bool should_exit(std::shared_ptr<GraphicsContext> context);
-    friend std::shared_ptr<GraphicsModel> build_model(std::shared_ptr<GraphicsContext> context, const VoxelChunk &chunk);
+    friend std::shared_ptr<GraphicsModel> build_model(std::shared_ptr<GraphicsContext> context, const RawVoxelChunk &chunk);
     friend std::shared_ptr<GraphicsObject> build_object(std::shared_ptr<GraphicsContext> context, std::shared_ptr<GraphicsModel> model, const glm::mat3x4 &transform);
     friend std::shared_ptr<GraphicsScene> build_scene(std::shared_ptr<GraphicsContext> context, const std::vector<std::shared_ptr<GraphicsObject>> &objects);
 };
@@ -67,7 +72,7 @@ private:
     friend std::shared_ptr<GraphicsContext> create_graphics_context();
     friend void render_frame(std::shared_ptr<GraphicsContext> context, std::shared_ptr<GraphicsScene> scene);
     friend bool should_exit(std::shared_ptr<GraphicsContext> context);
-    friend std::shared_ptr<GraphicsModel> build_model(std::shared_ptr<GraphicsContext> context, const VoxelChunk &chunk);
+    friend std::shared_ptr<GraphicsModel> build_model(std::shared_ptr<GraphicsContext> context, const RawVoxelChunk &chunk);
     friend std::shared_ptr<GraphicsObject> build_object(std::shared_ptr<GraphicsContext> context, std::shared_ptr<GraphicsModel> model, const glm::mat3x4 &transform);
     friend std::shared_ptr<GraphicsScene> build_scene(std::shared_ptr<GraphicsContext> context, const std::vector<std::shared_ptr<GraphicsObject>> &objects);
 };
@@ -82,7 +87,7 @@ private:
     friend std::shared_ptr<GraphicsContext> create_graphics_context();
     friend void render_frame(std::shared_ptr<GraphicsContext> context, std::shared_ptr<GraphicsScene> scene);
     friend bool should_exit(std::shared_ptr<GraphicsContext> context);
-    friend std::shared_ptr<GraphicsModel> build_model(std::shared_ptr<GraphicsContext> context, const VoxelChunk &chunk);
+    friend std::shared_ptr<GraphicsModel> build_model(std::shared_ptr<GraphicsContext> context, const RawVoxelChunk &chunk);
     friend std::shared_ptr<GraphicsObject> build_object(std::shared_ptr<GraphicsContext> context, std::shared_ptr<GraphicsModel> model, const glm::mat3x4 &transform);
     friend std::shared_ptr<GraphicsScene> build_scene(std::shared_ptr<GraphicsContext> context, const std::vector<std::shared_ptr<GraphicsObject>> &objects);
 };
@@ -100,6 +105,7 @@ GraphicsContext::GraphicsContext() {
 
     DescriptorSetBuilder builder(descriptor_allocator_);
     builder.bind_acceleration_structure(0, {}, VK_SHADER_STAGE_RAYGEN_BIT_KHR);
+    builder.bind_image(1, {}, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, VK_SHADER_STAGE_INTERSECTION_BIT_KHR);
 
     auto rgen = std::make_shared<Shader>(device_, "dumb_rgen");
     auto rmiss = std::make_shared<Shader>(device_, "dumb_rmiss");
@@ -125,7 +131,7 @@ std::shared_ptr<GraphicsContext> create_graphics_context() {
 }
 
 void render_frame(std::shared_ptr<GraphicsContext> context, std::shared_ptr<GraphicsScene> scene) {
-    if (context->frame_index_ == 0) {
+    if (context->current_scene_ != scene) {
 	vkDeviceWaitIdle(context->device_->get_device());
 	VkAccelerationStructureKHR tlas = scene->tlas_->get_tlas();
 	DescriptorSetBuilder builder(context->descriptor_allocator_);
@@ -133,7 +139,16 @@ void render_frame(std::shared_ptr<GraphicsContext> context, std::shared_ptr<Grap
 		.accelerationStructureCount = 1,
 		.pAccelerationStructures = &tlas,
 	    }, VK_SHADER_STAGE_RAYGEN_BIT_KHR);
-	context->acceleration_structure_descriptor_ = builder.build();
+
+	auto volume = scene->objects_.at(0)->model_->raw_data_;
+	builder.bind_image(1, {
+		.sampler = VK_NULL_HANDLE,
+		.imageView = volume->get_view(),
+		.imageLayout = VK_IMAGE_LAYOUT_GENERAL,
+	    }, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, VK_SHADER_STAGE_INTERSECTION_BIT_KHR);
+	
+	context->scene_descriptor_ = builder.build();
+	context->current_scene_ = scene;
     }
     
     context->window_->pollEvents();
@@ -168,7 +183,7 @@ void render_frame(std::shared_ptr<GraphicsContext> context, std::shared_ptr<Grap
 	VkExtent2D extent = context->swapchain_->get_extent();
 	
 	prologue_barrier.record(command_buffer);
-	context->ray_trace_pipeline_->record(command_buffer, {context->swapchain_descriptors_.at(swapchain_image_index), context->acceleration_structure_descriptor_}, extent.width, extent.height, 1);
+	context->ray_trace_pipeline_->record(command_buffer, {context->swapchain_descriptors_.at(swapchain_image_index), context->scene_descriptor_}, extent.width, extent.height, 1);
 	epilogue_barrier.record(command_buffer);
     });
 
@@ -183,10 +198,15 @@ bool should_exit(std::shared_ptr<GraphicsContext> context) {
     return context->window_->shouldClose();
 }
 
-std::shared_ptr<GraphicsModel> build_model(std::shared_ptr<GraphicsContext> context, const VoxelChunk &chunk) {
+std::shared_ptr<GraphicsModel> build_model(std::shared_ptr<GraphicsContext> context, const RawVoxelChunk &chunk) {
     std::vector<VkAabbPositionsKHR> aabbs = {{0.0F, 0.0F, 0.0F, 1.0F, 1.0F, 1.0F}};
     std::shared_ptr<BLAS> blas = std::make_shared<BLAS>(context->gpu_allocator_, context->command_pool_, context->ring_buffer_, aabbs);
-    return std::make_shared<GraphicsModel>(blas);
+    VkExtent3D extent = {8, 8, 8};
+    std::shared_ptr<GPUVolume> volume = std::make_shared<GPUVolume>(context->gpu_allocator_, extent, VK_FORMAT_R8G8B8A8_UNORM, 0, VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_STORAGE_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, 0, 1, 1);
+    std::vector<RawVoxel> voxels(chunk.voxels_.begin(), chunk.voxels_.end());
+    std::span<RawVoxel> span(voxels.data(), voxels.size());
+    context->ring_buffer_->copy_to_device(volume, VK_IMAGE_LAYOUT_GENERAL, std::as_bytes(span), {}, {});
+    return std::make_shared<GraphicsModel>(blas, volume);
 }
 
 std::shared_ptr<GraphicsObject> build_object(std::shared_ptr<GraphicsContext> context, std::shared_ptr<GraphicsModel> model, const glm::mat3x4 &transform) {

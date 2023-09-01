@@ -6,11 +6,10 @@ VoxelManager::~VoxelManager() {
 	}
 }
 
-VoxelChunk* VoxelManager::generate_test_cube(const glm::vec3& position) {
+RawVoxelChunk* VoxelManager::generate_test_cube(const glm::vec3& position) {
 	RawVoxelChunk* new_chunk = new RawVoxelChunk(position);
 	RawVoxel voxel = RawVoxel{
-		.color_ = glm::vec3(1.0f, 1.0f, 1.0f),
-		.visible_ = true
+	    .color_ = glm::vec4(1.0f, 1.0f, 1.0f, 1.0f),
 	};
 
 	// The corners will be written to multiple times, but this shouldn't affect anything

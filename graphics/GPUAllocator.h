@@ -62,6 +62,8 @@ public:
     ~GPUImage();
 
     VkImage get_image();
+    VkImageView get_view();
+    VkExtent2D get_extent();
 private:
     VkImage image_ = VK_NULL_HANDLE;
     VkImageView view_ = VK_NULL_HANDLE;
@@ -85,6 +87,8 @@ public:
     ~GPUVolume();
 
     VkImage get_image();
+    VkImageView get_view();
+    VkExtent3D get_extent();
 private:
     VkImage image_ = VK_NULL_HANDLE;
     VkImageView view_ = VK_NULL_HANDLE;

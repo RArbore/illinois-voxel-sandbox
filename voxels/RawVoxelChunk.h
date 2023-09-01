@@ -5,8 +5,7 @@
 #include "VoxelChunk.h"
 
 struct RawVoxel {
-	glm::vec3 color_;
-	bool visible_;
+	glm::vec4 color_;
 };
 
 class RawVoxelChunk : public VoxelChunk {
@@ -15,6 +14,6 @@ public:
 
 	void write_voxel(int x, int y, int z, const RawVoxel& voxel);
 
-private:
+    //private:
 	std::array<RawVoxel, 512> voxels_;
 };
