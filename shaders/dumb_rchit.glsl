@@ -6,9 +6,5 @@
 layout(location = 0) rayPayloadInEXT vec4 hit;
 
 void main() {
-    if (gl_HitKindEXT == 8) {
-	hit = vec4(1.0, 1.0, 0.0, 1.0);
-    } else {
-	hit = vec4(0.0, 1.0, 1.0, 1.0);
-    }
+    hit = vec4(1.0, 0.0, 1.0, 1.0);
 }
