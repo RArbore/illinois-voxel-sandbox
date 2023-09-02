@@ -1,28 +1,33 @@
 #include <iostream>
 
-#include <vulkan/vulkan.h>
 #include <vulkan/vk_enum_string_helper.h>
+#include <vulkan/vulkan.h>
 
-void assert_impl(VkResult result, const std::string_view msg, const std::string_view file, uint32_t line) {
+void assert_impl(VkResult result, const std::string_view msg,
+                 const std::string_view file, uint32_t line) {
     if (result != VK_SUCCESS) {
-	std::cerr << "PANIC: " << msg << "\nFound Vulkan error code: " << string_VkResult(result) << "\nOccurred in " << file << " at line " << line << ".\n";
+        std::cerr << "PANIC: " << msg
+                  << "\nFound Vulkan error code: " << string_VkResult(result)
+                  << "\nOccurred in " << file << " at line " << line << ".\n";
 #if defined(WIN32)
-  __debugbreak();
+        __debugbreak();
 #else
-	__builtin_trap();
+        __builtin_trap();
 #endif
-	exit(-1);
+        exit(-1);
     }
 }
 
-void assert_impl(bool result, const std::string_view msg, const std::string_view file, uint32_t line) {
+void assert_impl(bool result, const std::string_view msg,
+                 const std::string_view file, uint32_t line) {
     if (!result) {
-	std::cerr << "PANIC: " << msg << "\nOccurred in " << file << " at line " << line << ".\n";
+        std::cerr << "PANIC: " << msg << "\nOccurred in " << file << " at line "
+                  << line << ".\n";
 #if defined(WIN32)
-  __debugbreak();
+        __debugbreak();
 #else
-	__builtin_trap();
+        __builtin_trap();
 #endif
-	exit(-1);
+        exit(-1);
     }
 }

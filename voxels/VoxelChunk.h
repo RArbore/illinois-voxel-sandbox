@@ -8,15 +8,16 @@ enum class VoxelFormat {
 };
 
 class VoxelChunk {
-public:
+  public:
     VoxelChunk() = delete;
-    VoxelChunk(VoxelFormat format, const glm::vec3& position = glm::vec3(0.0f, 0.0f, 0.0f));
+    VoxelChunk(VoxelFormat format,
+               const glm::vec3 &position = glm::vec3(0.0f, 0.0f, 0.0f));
 
     VoxelFormat get_chunk_format() const { return format_; };
 
-private:
+  private:
     glm::vec3 position_;
     VoxelFormat format_;
-    
+
     size_t calculate_size(int w, int d, int h);
 };

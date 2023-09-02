@@ -13,21 +13,25 @@ class GPUImage;
 class GPUVolume;
 
 class GPUAllocator {
-public:
+  public:
     GPUAllocator(std::shared_ptr<Device> device);
     ~GPUAllocator();
 
     VmaAllocator get_vma();
     std::shared_ptr<Device> get_device();
-private:
+
+  private:
     VmaAllocator allocator_;
 
     std::shared_ptr<Device> device_ = nullptr;
 };
 
 class GPUBuffer {
-public:
-    GPUBuffer(std::shared_ptr<GPUAllocator> allocator, VkDeviceSize size, VkDeviceSize alignment, VkBufferUsageFlags usage, VkMemoryPropertyFlags memory_flags, VmaAllocationCreateFlags vma_flags);
+  public:
+    GPUBuffer(std::shared_ptr<GPUAllocator> allocator, VkDeviceSize size,
+              VkDeviceSize alignment, VkBufferUsageFlags usage,
+              VkMemoryPropertyFlags memory_flags,
+              VmaAllocationCreateFlags vma_flags);
     ~GPUBuffer();
 
     VkBuffer get_buffer();
@@ -35,7 +39,8 @@ public:
     VkDeviceSize get_size();
 
     std::shared_ptr<GPUAllocator> get_allocator();
-private:
+
+  private:
     VkBuffer buffer_ = VK_NULL_HANDLE;
     VmaAllocation allocation_ = VK_NULL_HANDLE;
     VkDeviceSize size_;
@@ -44,12 +49,14 @@ private:
     VmaAllocationCreateFlags vma_flags_;
 
     std::shared_ptr<GPUAllocator> allocator_ = nullptr;
-public:
+
+  public:
     void cpu_map(auto F) {
-	char *buffer_data;
-	vmaMapMemory(allocator_->get_vma(), allocation_, reinterpret_cast<void **>(&buffer_data));
-	F(buffer_data);
-	vmaUnmapMemory(allocator_->get_vma(), allocation_);
+        char *buffer_data;
+        vmaMapMemory(allocator_->get_vma(), allocation_,
+                     reinterpret_cast<void **>(&buffer_data));
+        F(buffer_data);
+        vmaUnmapMemory(allocator_->get_vma(), allocation_);
     }
 
     std::span<std::byte> cpu_map();
@@ -57,14 +64,19 @@ public:
 };
 
 class GPUImage {
-public:
-    GPUImage(std::shared_ptr<GPUAllocator> allocator, VkExtent2D extent, VkFormat format, VkImageCreateFlags create_flags, VkImageUsageFlags usage_flags, VkMemoryPropertyFlags memory_flags, VmaAllocationCreateFlags vma_flags, uint32_t mip_levels, uint32_t array_layers);
+  public:
+    GPUImage(std::shared_ptr<GPUAllocator> allocator, VkExtent2D extent,
+             VkFormat format, VkImageCreateFlags create_flags,
+             VkImageUsageFlags usage_flags, VkMemoryPropertyFlags memory_flags,
+             VmaAllocationCreateFlags vma_flags, uint32_t mip_levels,
+             uint32_t array_layers);
     ~GPUImage();
 
     VkImage get_image();
     VkImageView get_view();
     VkExtent2D get_extent();
-private:
+
+  private:
     VkImage image_ = VK_NULL_HANDLE;
     VkImageView view_ = VK_NULL_HANDLE;
     VmaAllocation allocation_ = VK_NULL_HANDLE;
@@ -82,14 +94,19 @@ private:
 };
 
 class GPUVolume {
-public:
-    GPUVolume(std::shared_ptr<GPUAllocator> allocator, VkExtent3D extent, VkFormat format, VkImageCreateFlags create_flags, VkImageUsageFlags usage_flags, VkMemoryPropertyFlags memory_flags, VmaAllocationCreateFlags vma_flags, uint32_t mip_levels, uint32_t array_layers);
+  public:
+    GPUVolume(std::shared_ptr<GPUAllocator> allocator, VkExtent3D extent,
+              VkFormat format, VkImageCreateFlags create_flags,
+              VkImageUsageFlags usage_flags, VkMemoryPropertyFlags memory_flags,
+              VmaAllocationCreateFlags vma_flags, uint32_t mip_levels,
+              uint32_t array_layers);
     ~GPUVolume();
 
     VkImage get_image();
     VkImageView get_view();
     VkExtent3D get_extent();
-private:
+
+  private:
     VkImage image_ = VK_NULL_HANDLE;
     VkImageView view_ = VK_NULL_HANDLE;
     VmaAllocation allocation_ = VK_NULL_HANDLE;

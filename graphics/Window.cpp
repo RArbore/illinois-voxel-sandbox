@@ -3,7 +3,8 @@
 Window::Window() {
     glfwInit();
     glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
-    window_ = glfwCreateWindow(1400, 1400, "Illinois Voxel Sandbox", nullptr, nullptr);
+    window_ = glfwCreateWindow(1400, 1400, "Illinois Voxel Sandbox", nullptr,
+                               nullptr);
 }
 
 Window::~Window() {
@@ -11,14 +12,8 @@ Window::~Window() {
     glfwTerminate();
 }
 
-GLFWwindow *Window::get_window() {
-    return window_;
-}
+GLFWwindow *Window::get_window() { return window_; }
 
-bool Window::shouldClose() {
-    return glfwWindowShouldClose(window_);
-}
+bool Window::shouldClose() { return glfwWindowShouldClose(window_); }
 
-void Window::pollEvents() {
-    glfwPollEvents();
-}
+void Window::pollEvents() { glfwPollEvents(); }

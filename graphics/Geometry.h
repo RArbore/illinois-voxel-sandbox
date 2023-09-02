@@ -4,8 +4,11 @@
 #include "RingBuffer.h"
 
 class BLAS {
-public:
-    BLAS(std::shared_ptr<GPUAllocator> allocator, std::shared_ptr<CommandPool> command_pool, std::shared_ptr<RingBuffer> ring_buffer, std::vector<VkAabbPositionsKHR> aabbs);
+  public:
+    BLAS(std::shared_ptr<GPUAllocator> allocator,
+         std::shared_ptr<CommandPool> command_pool,
+         std::shared_ptr<RingBuffer> ring_buffer,
+         std::vector<VkAabbPositionsKHR> aabbs);
     ~BLAS();
 
     VkAccelerationStructureKHR get_blas();
@@ -16,9 +19,10 @@ public:
 
     static const uint64_t GEOMETRY_BUFFER_TIMELINE = 1;
     static const uint64_t BLAS_BUILD_TIMELINE = 2;
-private:
+
+  private:
     VkAccelerationStructureKHR blas_ = VK_NULL_HANDLE;
-    
+
     std::shared_ptr<GPUBuffer> geometry_buffer_ = nullptr;
     std::shared_ptr<Semaphore> timeline_ = nullptr;
     std::shared_ptr<GPUBuffer> scratch_buffer_ = nullptr;
@@ -26,8 +30,12 @@ private:
 };
 
 class TLAS {
-public:
-    TLAS(std::shared_ptr<GPUAllocator> allocator, std::shared_ptr<CommandPool> command_pool, std::shared_ptr<RingBuffer> ring_buffer, std::vector<std::shared_ptr<BLAS>> bottom_structures, std::vector<VkAccelerationStructureInstanceKHR> instances);
+  public:
+    TLAS(std::shared_ptr<GPUAllocator> allocator,
+         std::shared_ptr<CommandPool> command_pool,
+         std::shared_ptr<RingBuffer> ring_buffer,
+         std::vector<std::shared_ptr<BLAS>> bottom_structures,
+         std::vector<VkAccelerationStructureInstanceKHR> instances);
     ~TLAS();
 
     VkAccelerationStructureKHR get_tlas();
@@ -38,7 +46,8 @@ public:
 
     static const uint64_t INSTANCES_BUFFER_TIMELINE = 1;
     static const uint64_t TLAS_BUILD_TIMELINE = 2;
-private:
+
+  private:
     VkAccelerationStructureKHR tlas_ = VK_NULL_HANDLE;
 
     std::vector<std::shared_ptr<BLAS>> contained_structures_;

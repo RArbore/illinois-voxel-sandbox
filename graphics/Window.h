@@ -4,7 +4,7 @@
 #include <GLFW/glfw3.h>
 
 class Window {
-public:
+  public:
     Window();
     ~Window();
 
@@ -12,6 +12,7 @@ public:
 
     bool shouldClose();
     void pollEvents();
-private:
+
+  private:
     GLFWwindow *window_;
 };

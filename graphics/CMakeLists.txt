@@ -8,6 +8,6 @@ find_package(Vulkan REQUIRED)
 target_link_libraries(graphics PRIVATE Vulkan::Vulkan)
 
 if (UNIX)
-  find_package(glfw3 REQUIRED)
-endif()
+    find_package(glfw3 REQUIRED)
+endif ()
 target_link_libraries(graphics PRIVATE glfw)
