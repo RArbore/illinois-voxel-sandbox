@@ -1,5 +1,5 @@
-#include <cstring>
 #include <chrono>
+#include <cstring>
 
 #include "Command.h"
 #include "Descriptor.h"
@@ -143,7 +143,8 @@ GraphicsContext::GraphicsContext() {
     gpu_allocator_ = std::make_shared<GPUAllocator>(device_);
     command_pool_ = std::make_shared<CommandPool>(device_);
     descriptor_allocator_ = std::make_shared<DescriptorAllocator>(device_);
-    swapchain_ = std::make_shared<Swapchain>(device_, window_, descriptor_allocator_);
+    swapchain_ =
+        std::make_shared<Swapchain>(device_, window_, descriptor_allocator_);
     ring_buffer_ =
         std::make_shared<RingBuffer>(gpu_allocator_, command_pool_, 1 << 24);
 
@@ -240,7 +241,8 @@ void render_frame(std::shared_ptr<GraphicsContext> context,
             prologue_barrier.record(command_buffer);
             context->ray_trace_pipeline_->record(
                 command_buffer,
-                {context->swapchain_->get_image_descriptor(swapchain_image_index),
+                {context->swapchain_->get_image_descriptor(
+                     swapchain_image_index),
                  context->scene_descriptor_},
                 push_constants_span, extent.width, extent.height, 1);
             epilogue_barrier.record(command_buffer);
@@ -255,15 +257,16 @@ void render_frame(std::shared_ptr<GraphicsContext> context,
 
     const auto current_time = std::chrono::system_clock::now();
     if (context->frame_index_ == 0) {
-	context->start_time_ = current_time;
-	context->start_frame_ = 0;
+        context->start_time_ = current_time;
+        context->start_frame_ = 0;
     } else if ((current_time - context->start_time_).count() >= 1000000000) {
-	const uint64_t num_frames = context->frame_index_ - context->start_frame_;
-	context->dt_ = static_cast<double>(num_frames);
-	std::cout << "INFO: " << num_frames << " FPS\n";
-	
-	context->start_time_ = current_time;
-	context->start_frame_ = context->frame_index_;
+        const uint64_t num_frames =
+            context->frame_index_ - context->start_frame_;
+        context->dt_ = static_cast<double>(num_frames);
+        std::cout << "INFO: " << num_frames << " FPS\n";
+
+        context->start_time_ = current_time;
+        context->start_frame_ = context->frame_index_;
     }
 
     ++context->frame_index_;

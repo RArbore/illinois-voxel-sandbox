@@ -9,7 +9,8 @@ choose_swapchain_options(VkPhysicalDevice physical_device,
                          GLFWwindow *window);
 
 Swapchain::Swapchain(std::shared_ptr<Device> device,
-                     std::shared_ptr<Window> window, std::shared_ptr<DescriptorAllocator> allocator) {
+                     std::shared_ptr<Window> window,
+                     std::shared_ptr<DescriptorAllocator> allocator) {
     uint32_t num_formats, num_present_modes;
     vkGetPhysicalDeviceSurfaceFormatsKHR(device->get_physical_device(),
                                          device->get_surface(), &num_formats,
@@ -120,8 +121,8 @@ uint32_t Swapchain::acquire_next_image(std::shared_ptr<Semaphore> notify) {
         vkAcquireNextImageKHR(device_->get_device(), swapchain_, UINT64_MAX,
                               notify->get_semaphore(), VK_NULL_HANDLE, &index);
     if (result == VK_ERROR_OUT_OF_DATE_KHR) {
-	recreate();
-	return acquire_next_image(notify);
+        recreate();
+        return acquire_next_image(notify);
     }
     ASSERT(result == VK_SUCCESS || result == VK_SUBOPTIMAL_KHR,
            "Unable to acquire next swapchain image.");
@@ -143,13 +144,14 @@ void Swapchain::present_image(uint32_t image_index,
     const VkResult result =
         vkQueuePresentKHR(device_->get_queue(), &present_info);
     if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR) {
-	recreate();
+        recreate();
     } else {
-	ASSERT(result == VK_SUCCESS, "Unable to present swapchain image.");
+        ASSERT(result == VK_SUCCESS, "Unable to present swapchain image.");
     }
 }
 
-std::shared_ptr<DescriptorSet> Swapchain::get_image_descriptor(uint32_t image_index) {
+std::shared_ptr<DescriptorSet>
+Swapchain::get_image_descriptor(uint32_t image_index) {
     return descriptors_.at(image_index);
 }
 

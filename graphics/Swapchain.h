@@ -10,7 +10,8 @@
 
 class Swapchain {
   public:
-    Swapchain(std::shared_ptr<Device> device, std::shared_ptr<Window> window, std::shared_ptr<DescriptorAllocator> allocator);
+    Swapchain(std::shared_ptr<Device> device, std::shared_ptr<Window> window,
+              std::shared_ptr<DescriptorAllocator> allocator);
     ~Swapchain();
 
     VkImage get_image(uint32_t image_index);
@@ -22,7 +23,7 @@ class Swapchain {
   private:
     void make_image_descriptors(std::shared_ptr<DescriptorAllocator> allocator);
     void recreate();
-    
+
     VkSwapchainKHR swapchain_;
     VkFormat swapchain_format_;
     VkExtent2D swapchain_extent_;
