@@ -9,7 +9,7 @@ choose_swapchain_options(VkPhysicalDevice physical_device,
                          GLFWwindow *window);
 
 Swapchain::Swapchain(std::shared_ptr<Device> device,
-                     std::shared_ptr<Window> window) {
+                     std::shared_ptr<Window> window, std::shared_ptr<DescriptorAllocator> allocator) {
     uint32_t num_formats, num_present_modes;
     vkGetPhysicalDeviceSurfaceFormatsKHR(device->get_physical_device(),
                                          device->get_surface(), &num_formats,
@@ -96,6 +96,9 @@ Swapchain::Swapchain(std::shared_ptr<Device> device,
 
     device_ = device;
     window_ = window;
+    allocator_ = allocator;
+
+    make_image_descriptors(allocator);
 }
 
 Swapchain::~Swapchain() {
@@ -111,32 +114,15 @@ VkImage Swapchain::get_image(uint32_t image_index) {
 
 VkExtent2D Swapchain::get_extent() { return swapchain_extent_; }
 
-std::vector<std::shared_ptr<DescriptorSet>> Swapchain::make_image_descriptors(
-    std::shared_ptr<DescriptorAllocator> allocator) {
-    ASSERT(swapchain_images_.size() == swapchain_image_views_.size(),
-           "Swapchain has differing numbers of images and image views.");
-    std::vector<std::shared_ptr<DescriptorSet>> sets;
-    for (std::size_t i = 0; i < swapchain_images_.size(); ++i) {
-        VkImageView view = swapchain_image_views_.at(i);
-        DescriptorSetBuilder builder(allocator);
-        builder.bind_image(0,
-                           {
-                               .sampler = VK_NULL_HANDLE,
-                               .imageView = view,
-                               .imageLayout = VK_IMAGE_LAYOUT_GENERAL,
-                           },
-                           VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,
-                           VK_SHADER_STAGE_RAYGEN_BIT_KHR);
-        sets.emplace_back(builder.build());
-    }
-    return sets;
-}
-
 uint32_t Swapchain::acquire_next_image(std::shared_ptr<Semaphore> notify) {
     uint32_t index = 0;
     const VkResult result =
         vkAcquireNextImageKHR(device_->get_device(), swapchain_, UINT64_MAX,
                               notify->get_semaphore(), VK_NULL_HANDLE, &index);
+    if (result == VK_ERROR_OUT_OF_DATE_KHR) {
+	recreate();
+	return acquire_next_image(notify);
+    }
     ASSERT(result == VK_SUCCESS || result == VK_SUBOPTIMAL_KHR,
            "Unable to acquire next swapchain image.");
     return index;
@@ -156,8 +142,43 @@ void Swapchain::present_image(uint32_t image_index,
 
     const VkResult result =
         vkQueuePresentKHR(device_->get_queue(), &present_info);
-    ASSERT(result == VK_SUCCESS || result == VK_SUBOPTIMAL_KHR,
-           "Unable to present swapchain image.");
+    if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR) {
+	recreate();
+    } else {
+	ASSERT(result == VK_SUCCESS, "Unable to present swapchain image.");
+    }
+}
+
+std::shared_ptr<DescriptorSet> Swapchain::get_image_descriptor(uint32_t image_index) {
+    return descriptors_.at(image_index);
+}
+
+void Swapchain::make_image_descriptors(
+    std::shared_ptr<DescriptorAllocator> allocator) {
+    ASSERT(swapchain_images_.size() == swapchain_image_views_.size(),
+           "Swapchain has differing numbers of images and image views.");
+    for (std::size_t i = 0; i < swapchain_images_.size(); ++i) {
+        VkImageView view = swapchain_image_views_.at(i);
+        DescriptorSetBuilder builder(allocator);
+        builder.bind_image(0,
+                           {
+                               .sampler = VK_NULL_HANDLE,
+                               .imageView = view,
+                               .imageLayout = VK_IMAGE_LAYOUT_GENERAL,
+                           },
+                           VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,
+                           VK_SHADER_STAGE_RAYGEN_BIT_KHR);
+        descriptors_.emplace_back(builder.build());
+    }
+}
+
+void Swapchain::recreate() {
+    vkDeviceWaitIdle(device_->get_device());
+    auto device = device_;
+    auto window = window_;
+    auto allocator = allocator_;
+    this->~Swapchain();
+    new (this) Swapchain(device, window, allocator);
 }
 
 std::tuple<VkSurfaceFormatKHR, VkPresentModeKHR, VkExtent2D>

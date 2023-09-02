@@ -30,7 +30,6 @@ class GraphicsContext {
     std::shared_ptr<DescriptorAllocator> descriptor_allocator_ = nullptr;
     std::shared_ptr<RingBuffer> ring_buffer_ = nullptr;
 
-    std::vector<std::shared_ptr<DescriptorSet>> swapchain_descriptors_;
     std::shared_ptr<DescriptorSet> scene_descriptor_ = nullptr;
     std::shared_ptr<Fence> frame_fence_ = nullptr;
     std::shared_ptr<Semaphore> acquire_semaphore_ = nullptr;
@@ -142,14 +141,11 @@ GraphicsContext::GraphicsContext() {
     window_ = std::make_shared<Window>();
     device_ = std::make_shared<Device>(window_);
     gpu_allocator_ = std::make_shared<GPUAllocator>(device_);
-    swapchain_ = std::make_shared<Swapchain>(device_, window_);
     command_pool_ = std::make_shared<CommandPool>(device_);
     descriptor_allocator_ = std::make_shared<DescriptorAllocator>(device_);
+    swapchain_ = std::make_shared<Swapchain>(device_, window_, descriptor_allocator_);
     ring_buffer_ =
         std::make_shared<RingBuffer>(gpu_allocator_, command_pool_, 1 << 24);
-
-    swapchain_descriptors_ =
-        swapchain_->make_image_descriptors(descriptor_allocator_);
 
     DescriptorSetBuilder builder(descriptor_allocator_);
     builder.bind_acceleration_structure(0, {}, VK_SHADER_STAGE_RAYGEN_BIT_KHR);
@@ -163,7 +159,7 @@ GraphicsContext::GraphicsContext() {
     std::vector<std::vector<std::shared_ptr<Shader>>> shader_groups = {
         {rgen}, {rmiss}, {rchit, rint}};
     std::vector<VkDescriptorSetLayout> layouts = {
-        swapchain_descriptors_.at(0)->get_layout(),
+        swapchain_->get_image_descriptor(0)->get_layout(),
         builder.get_layout()->get_layout()};
 
     ray_trace_pipeline_ = std::make_shared<RayTracePipeline>(
@@ -244,7 +240,7 @@ void render_frame(std::shared_ptr<GraphicsContext> context,
             prologue_barrier.record(command_buffer);
             context->ray_trace_pipeline_->record(
                 command_buffer,
-                {context->swapchain_descriptors_.at(swapchain_image_index),
+                {context->swapchain_->get_image_descriptor(swapchain_image_index),
                  context->scene_descriptor_},
                 push_constants_span, extent.width, extent.height, 1);
             epilogue_barrier.record(command_buffer);
