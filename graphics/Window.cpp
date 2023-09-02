@@ -3,7 +3,7 @@
 Window::Window() {
     glfwInit();
     glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
-    window_ = glfwCreateWindow(1400, 1400, "Illinois Voxel Sandbox", nullptr,
+    window_ = glfwCreateWindow(800, 800, "Illinois Voxel Sandbox", nullptr,
                                nullptr);
 }
 

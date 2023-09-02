@@ -1,4 +1,5 @@
 #include <cstring>
+#include <chrono>
 
 #include "Command.h"
 #include "Descriptor.h"
@@ -39,6 +40,10 @@ class GraphicsContext {
     std::shared_ptr<GraphicsScene> current_scene_ = nullptr;
 
     uint64_t frame_index_ = 0;
+
+    std::chrono::time_point<std::chrono::system_clock> start_time_;
+    uint64_t start_frame_ = 0;
+    double dt_ = 0.0;
 
     friend std::shared_ptr<GraphicsContext> create_graphics_context();
     friend void render_frame(std::shared_ptr<GraphicsContext> context,
@@ -251,6 +256,19 @@ void render_frame(std::shared_ptr<GraphicsContext> context,
 
     context->swapchain_->present_image(swapchain_image_index,
                                        context->render_semaphore_);
+
+    const auto current_time = std::chrono::system_clock::now();
+    if (context->frame_index_ == 0) {
+	context->start_time_ = current_time;
+	context->start_frame_ = 0;
+    } else if ((current_time - context->start_time_).count() >= 1000000000) {
+	const uint64_t num_frames = context->frame_index_ - context->start_frame_;
+	context->dt_ = static_cast<double>(num_frames);
+	std::cout << "INFO: " << num_frames << " FPS\n";
+	
+	context->start_time_ = current_time;
+	context->start_frame_ = context->frame_index_;
+    }
 
     ++context->frame_index_;
 }
