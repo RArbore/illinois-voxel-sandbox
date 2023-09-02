@@ -4,7 +4,10 @@ RawVoxelChunk::RawVoxelChunk(const glm::vec3& position) :
 	VoxelChunk(VoxelFormat::Raw, position)
 {
 	voxels_.fill(RawVoxel{
-		.color_ = glm::vec4(0.0f, 0.0f, 0.0f, 0.0f),
+		.red_ = 0,
+		.green_ = 0,
+		.blue_ = 0,
+		.alpha_ = 0
 	});
 }
 

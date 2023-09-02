@@ -5,7 +5,10 @@
 #include "VoxelChunk.h"
 
 struct RawVoxel {
-	glm::vec4 color_;
+	uint8_t red_;
+	uint8_t green_;
+	uint8_t blue_;
+	uint8_t alpha_;
 };
 
 class RawVoxelChunk : public VoxelChunk {
