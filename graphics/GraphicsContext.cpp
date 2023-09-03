@@ -42,7 +42,9 @@ class GraphicsContext {
 
     std::chrono::time_point<std::chrono::system_clock> start_time_;
     uint64_t start_frame_ = 0;
-    double dt_ = 0.0;
+
+    std::chrono::time_point<std::chrono::system_clock> first_time_;
+    uint64_t elapsed_ms_;
 
     friend std::shared_ptr<GraphicsContext> create_graphics_context();
     friend void render_frame(std::shared_ptr<GraphicsContext> context,
@@ -230,7 +232,7 @@ void render_frame(std::shared_ptr<GraphicsContext> context,
     context->frame_fence_->reset();
 
     std::vector<std::byte> push_constants(128);
-    memcpy(push_constants.data(), &context->frame_index_, sizeof(uint64_t));
+    memcpy(push_constants.data(), &context->elapsed_ms_, sizeof(double));
     std::span<std::byte> push_constants_span(push_constants.data(),
                                              push_constants.size());
 
@@ -259,16 +261,16 @@ void render_frame(std::shared_ptr<GraphicsContext> context,
     if (context->frame_index_ == 0) {
         context->start_time_ = current_time;
         context->start_frame_ = 0;
+	context->first_time_ = current_time;
     } else if ((current_time - context->start_time_).count() >= 1000000000) {
         const uint64_t num_frames =
             context->frame_index_ - context->start_frame_;
-        context->dt_ = static_cast<double>(num_frames);
         std::cout << "INFO: " << num_frames << " FPS\n";
 
         context->start_time_ = current_time;
         context->start_frame_ = context->frame_index_;
     }
-
+    context->elapsed_ms_ = (current_time - context->first_time_).count() / 1000000;
     ++context->frame_index_;
 }
 
