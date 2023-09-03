@@ -9,7 +9,7 @@ VoxelManager::~VoxelManager() {
 RawVoxelChunk *VoxelManager::generate_test_cube(const glm::vec3 &position) {
     RawVoxelChunk *new_chunk = new RawVoxelChunk(position);
     RawVoxel voxel =
-        RawVoxel{.red_ = 255, .green_ = 255, .blue_ = 255, .alpha_ = 255};
+        RawVoxel{.red_ = 255, .green_ = 0, .blue_ = 255, .alpha_ = 255};
 
     // The corners will be written to multiple times, but this shouldn't affect
     // anything
@@ -20,6 +20,7 @@ RawVoxelChunk *VoxelManager::generate_test_cube(const glm::vec3 &position) {
         new_chunk->write_voxel(7, 7, z, voxel);
     }
 
+    voxel = RawVoxel{.red_ = 0, .green_ = 255, .blue_ = 255, .alpha_ = 255};
     for (int y = 0; y < 8; y++) {
         new_chunk->write_voxel(0, y, 0, voxel);
         new_chunk->write_voxel(0, y, 7, voxel);
@@ -27,6 +28,7 @@ RawVoxelChunk *VoxelManager::generate_test_cube(const glm::vec3 &position) {
         new_chunk->write_voxel(7, y, 7, voxel);
     }
 
+    voxel = RawVoxel{.red_ = 255, .green_ = 255, .blue_ = 0, .alpha_ = 255};
     for (int x = 0; x < 8; x++) {
         new_chunk->write_voxel(x, 0, 0, voxel);
         new_chunk->write_voxel(x, 0, 7, voxel);

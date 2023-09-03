@@ -17,7 +17,7 @@ class DescriptorAllocator {
 
     VkDescriptorSetLayout
     grab_layout(const std::vector<VkDescriptorSetLayoutBinding> &bindings,
-                VkDescriptorSetLayoutCreateFlagBits flags);
+                VkDescriptorSetLayoutCreateFlags flags);
 
     void reset_pools();
 
@@ -28,9 +28,9 @@ class DescriptorAllocator {
     std::vector<VkDescriptorPool> free_pools_;
 
     struct LayoutHasher {
-        std::size_t operator()(
-            const std::pair<std::vector<VkDescriptorSetLayoutBinding>,
-                            VkDescriptorSetLayoutCreateFlagBits> &k) const {
+        std::size_t
+        operator()(const std::pair<std::vector<VkDescriptorSetLayoutBinding>,
+                                   VkDescriptorSetLayoutCreateFlags> &k) const {
             std::size_t result = std::hash<std::size_t>()(k.first.size());
             for (const auto &b : k.first) {
                 std::size_t bits =
@@ -45,7 +45,7 @@ class DescriptorAllocator {
     };
 
     std::unordered_map<std::pair<std::vector<VkDescriptorSetLayoutBinding>,
-                                 VkDescriptorSetLayoutCreateFlagBits>,
+                                 VkDescriptorSetLayoutCreateFlags>,
                        VkDescriptorSetLayout, LayoutHasher>
         layout_cache_;
 
@@ -55,14 +55,14 @@ class DescriptorAllocator {
 class DescriptorSetLayout {
   public:
     DescriptorSetLayout(std::shared_ptr<DescriptorAllocator> allocator,
-                        VkDescriptorSetLayoutCreateFlagBits flags = {});
+                        VkDescriptorSetLayoutCreateFlags flags = {});
 
     void add_binding(VkDescriptorSetLayoutBinding binding);
     VkDescriptorSetLayout get_layout();
 
   private:
     std::shared_ptr<DescriptorAllocator> allocator_ = nullptr;
-    VkDescriptorSetLayoutCreateFlagBits flags_ = {};
+    VkDescriptorSetLayoutCreateFlags flags_ = {};
 
     std::vector<VkDescriptorSetLayoutBinding> bindings_;
 };
@@ -85,21 +85,21 @@ class DescriptorSet {
 class DescriptorSetBuilder {
   public:
     DescriptorSetBuilder(std::shared_ptr<DescriptorAllocator> allocator,
-                         VkDescriptorSetLayoutCreateFlagBits layout_flags = {});
+                         VkDescriptorSetLayoutCreateFlags layout_flags = {});
 
     DescriptorSetBuilder &bind_buffer(uint32_t binding,
                                       VkDescriptorBufferInfo buffer_info,
                                       VkDescriptorType type,
-                                      VkShaderStageFlagBits stages);
+                                      VkShaderStageFlags stages);
     DescriptorSetBuilder &bind_image(uint32_t binding,
                                      VkDescriptorImageInfo image_info,
                                      VkDescriptorType type,
-                                     VkShaderStageFlagBits stages);
+                                     VkShaderStageFlags stages);
     DescriptorSetBuilder &
     bind_acceleration_structure(uint32_t binding,
                                 VkWriteDescriptorSetAccelerationStructureKHR
                                     acceleration_structure_info,
-                                VkShaderStageFlagBits stages);
+                                VkShaderStageFlags stages);
 
     std::shared_ptr<DescriptorSet> build();
     void update(std::shared_ptr<DescriptorSet> set);

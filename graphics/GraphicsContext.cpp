@@ -153,7 +153,8 @@ GraphicsContext::GraphicsContext() {
     DescriptorSetBuilder builder(descriptor_allocator_);
     builder.bind_acceleration_structure(0, {}, VK_SHADER_STAGE_RAYGEN_BIT_KHR);
     builder.bind_image(1, {}, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,
-                       VK_SHADER_STAGE_INTERSECTION_BIT_KHR);
+                       VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR |
+                           VK_SHADER_STAGE_INTERSECTION_BIT_KHR);
 
     auto rgen = std::make_shared<Shader>(device_, "dumb_rgen");
     auto rmiss = std::make_shared<Shader>(device_, "dumb_rmiss");
@@ -202,7 +203,8 @@ void render_frame(std::shared_ptr<GraphicsContext> context,
                                .imageLayout = VK_IMAGE_LAYOUT_GENERAL,
                            },
                            VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,
-                           VK_SHADER_STAGE_INTERSECTION_BIT_KHR);
+                           VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR |
+                               VK_SHADER_STAGE_INTERSECTION_BIT_KHR);
 
         context->scene_descriptor_ = builder.build();
         context->current_scene_ = scene;
@@ -261,7 +263,7 @@ void render_frame(std::shared_ptr<GraphicsContext> context,
     if (context->frame_index_ == 0) {
         context->start_time_ = current_time;
         context->start_frame_ = 0;
-	context->first_time_ = current_time;
+        context->first_time_ = current_time;
     } else if ((current_time - context->start_time_).count() >= 1000000000) {
         const uint64_t num_frames =
             context->frame_index_ - context->start_frame_;
@@ -270,7 +272,8 @@ void render_frame(std::shared_ptr<GraphicsContext> context,
         context->start_time_ = current_time;
         context->start_frame_ = context->frame_index_;
     }
-    context->elapsed_ms_ = (current_time - context->first_time_).count() / 1000000;
+    context->elapsed_ms_ =
+        (current_time - context->first_time_).count() / 1000000;
     ++context->frame_index_;
 }
 

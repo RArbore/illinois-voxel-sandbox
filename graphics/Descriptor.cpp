@@ -67,9 +67,9 @@ VkDescriptorPool DescriptorAllocator::grab_new_pool() {
 
 static bool
 operator==(const std::pair<std::vector<VkDescriptorSetLayoutBinding>,
-                           VkDescriptorSetLayoutCreateFlagBits> &a,
+                           VkDescriptorSetLayoutCreateFlags> &a,
            const std::pair<std::vector<VkDescriptorSetLayoutBinding>,
-                           VkDescriptorSetLayoutCreateFlagBits> &b) {
+                           VkDescriptorSetLayoutCreateFlags> &b) {
     if (a.first.size() != b.first.size() || a.second != b.second) {
         return false;
     }
@@ -92,7 +92,7 @@ operator==(const std::pair<std::vector<VkDescriptorSetLayoutBinding>,
 
 VkDescriptorSetLayout DescriptorAllocator::grab_layout(
     const std::vector<VkDescriptorSetLayoutBinding> &bindings,
-    VkDescriptorSetLayoutCreateFlagBits flags) {
+    VkDescriptorSetLayoutCreateFlags flags) {
     auto it = layout_cache_.find({bindings, flags});
     if (it != layout_cache_.end()) {
         return it->second;
@@ -125,7 +125,7 @@ std::shared_ptr<Device> DescriptorAllocator::get_device() { return device_; }
 
 DescriptorSetLayout::DescriptorSetLayout(
     std::shared_ptr<DescriptorAllocator> allocator,
-    VkDescriptorSetLayoutCreateFlagBits flags) {
+    VkDescriptorSetLayoutCreateFlags flags) {
     allocator_ = allocator;
     flags_ = flags;
 }
@@ -177,14 +177,14 @@ VkDescriptorSetLayout DescriptorSet::get_layout() { return layout_; }
 
 DescriptorSetBuilder::DescriptorSetBuilder(
     std::shared_ptr<DescriptorAllocator> allocator,
-    VkDescriptorSetLayoutCreateFlagBits layout_flags) {
+    VkDescriptorSetLayoutCreateFlags layout_flags) {
     allocator_ = allocator;
     layout_ = std::make_shared<DescriptorSetLayout>(allocator_, layout_flags);
 }
 
 DescriptorSetBuilder &DescriptorSetBuilder::bind_buffer(
     uint32_t binding, VkDescriptorBufferInfo buffer_info, VkDescriptorType type,
-    VkShaderStageFlagBits stages) {
+    VkShaderStageFlags stages) {
     VkDescriptorSetLayoutBinding layout_binding{};
     layout_binding.descriptorCount = 1;
     layout_binding.descriptorType = type;
@@ -209,7 +209,7 @@ DescriptorSetBuilder &DescriptorSetBuilder::bind_buffer(
 
 DescriptorSetBuilder &DescriptorSetBuilder::bind_image(
     uint32_t binding, VkDescriptorImageInfo image_info, VkDescriptorType type,
-    VkShaderStageFlagBits stages) {
+    VkShaderStageFlags stages) {
     VkDescriptorSetLayoutBinding layout_binding{};
     layout_binding.descriptorCount = 1;
     layout_binding.descriptorType = type;
@@ -235,7 +235,7 @@ DescriptorSetBuilder &DescriptorSetBuilder::bind_image(
 DescriptorSetBuilder &DescriptorSetBuilder::bind_acceleration_structure(
     uint32_t binding,
     VkWriteDescriptorSetAccelerationStructureKHR acceleration_structure_info,
-    VkShaderStageFlagBits stages) {
+    VkShaderStageFlags stages) {
     VkDescriptorSetLayoutBinding layout_binding{};
     layout_binding.descriptorCount = 1;
     layout_binding.descriptorType =
