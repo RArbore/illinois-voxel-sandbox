@@ -1,6 +1,6 @@
 #pragma once
 
-#include <array>
+#include <vector>
 
 #include "VoxelChunk.h"
 
@@ -13,10 +13,10 @@ struct RawVoxel {
 
 class RawVoxelChunk : public VoxelChunk {
   public:
-    RawVoxelChunk(const glm::vec3 &position);
+    RawVoxelChunk(const glm::vec3 &position, int w, int h, int d);
 
     void write_voxel(int x, int y, int z, const RawVoxel &voxel);
 
-    // private:
-    std::array<RawVoxel, 512> voxels_;
+    std::vector<RawVoxel> voxels_;
+    int w_, h_, d_;
 };

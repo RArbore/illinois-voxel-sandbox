@@ -289,7 +289,7 @@ build_model(std::shared_ptr<GraphicsContext> context,
     std::shared_ptr<BLAS> blas =
         std::make_shared<BLAS>(context->gpu_allocator_, context->command_pool_,
                                context->ring_buffer_, aabbs);
-    VkExtent3D extent = {8, 8, 8};
+    VkExtent3D extent = {chunk.w_, chunk.h_, chunk.d_};
     std::shared_ptr<GPUVolume> volume = std::make_shared<GPUVolume>(
         context->gpu_allocator_, extent, VK_FORMAT_R8G8B8A8_UNORM, 0,
         VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_STORAGE_BIT,
