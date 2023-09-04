@@ -4,7 +4,7 @@
 int main(int argc, char *argv[]) {
     VoxelManager voxel_manager;
     RawVoxelChunk *test_cube =
-        voxel_manager.generate_sphere_chunk({0.0F, 0.0F, 0.0F}, {32, 32, 32}, 10);
+        voxel_manager.generate_procedural_chunk({0.0F, 0.0F, 0.0F}, {64, 64, 64});
 
     auto context = create_graphics_context();
 
