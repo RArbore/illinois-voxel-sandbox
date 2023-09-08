@@ -30,7 +30,6 @@ class GraphicsContext {
     std::shared_ptr<DescriptorAllocator> descriptor_allocator_ = nullptr;
     std::shared_ptr<RingBuffer> ring_buffer_ = nullptr;
 
-    std::shared_ptr<DescriptorSet> scene_descriptor_ = nullptr;
     std::shared_ptr<Fence> frame_fence_ = nullptr;
     std::shared_ptr<Semaphore> acquire_semaphore_ = nullptr;
     std::shared_ptr<Semaphore> render_semaphore_ = nullptr;
@@ -116,12 +115,14 @@ class GraphicsObject {
 class GraphicsScene {
   public:
     GraphicsScene(std::shared_ptr<TLAS> tlas,
-                  std::vector<std::shared_ptr<GraphicsObject>> objects)
-        : tlas_(tlas), objects_(objects) {}
+                  std::vector<std::shared_ptr<GraphicsObject>> objects,
+		  std::shared_ptr<DescriptorSet> scene_descriptor)
+        : tlas_(tlas), objects_(objects), scene_descriptor_(scene_descriptor) {}
 
   private:
     std::shared_ptr<TLAS> tlas_;
     std::vector<std::shared_ptr<GraphicsObject>> objects_;
+    std::shared_ptr<DescriptorSet> scene_descriptor_ = nullptr;
 
     friend std::shared_ptr<GraphicsContext> create_graphics_context();
     friend void render_frame(std::shared_ptr<GraphicsContext> context,
@@ -152,9 +153,9 @@ GraphicsContext::GraphicsContext() {
 
     DescriptorSetBuilder builder(descriptor_allocator_);
     builder.bind_acceleration_structure(0, {}, VK_SHADER_STAGE_RAYGEN_BIT_KHR);
-    builder.bind_image(1, {}, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,
+    builder.bind_images(1, {}, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,
                        VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR |
-                           VK_SHADER_STAGE_INTERSECTION_BIT_KHR);
+			VK_SHADER_STAGE_INTERSECTION_BIT_KHR, 0);
 
     auto rgen = std::make_shared<Shader>(device_, "dumb_rgen");
     auto rmiss = std::make_shared<Shader>(device_, "dumb_rmiss");
@@ -185,28 +186,6 @@ void render_frame(std::shared_ptr<GraphicsContext> context,
                   std::shared_ptr<GraphicsScene> scene) {
     if (context->current_scene_ != scene) {
         vkDeviceWaitIdle(context->device_->get_device());
-        VkAccelerationStructureKHR tlas = scene->tlas_->get_tlas();
-        DescriptorSetBuilder builder(context->descriptor_allocator_);
-        builder.bind_acceleration_structure(
-            0,
-            {
-                .accelerationStructureCount = 1,
-                .pAccelerationStructures = &tlas,
-            },
-            VK_SHADER_STAGE_RAYGEN_BIT_KHR);
-
-        auto volume = scene->objects_.at(0)->model_->raw_data_;
-        builder.bind_image(1,
-                           {
-                               .sampler = VK_NULL_HANDLE,
-                               .imageView = volume->get_view(),
-                               .imageLayout = VK_IMAGE_LAYOUT_GENERAL,
-                           },
-                           VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,
-                           VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR |
-                               VK_SHADER_STAGE_INTERSECTION_BIT_KHR);
-
-        context->scene_descriptor_ = builder.build();
         context->current_scene_ = scene;
     }
 
@@ -247,7 +226,7 @@ void render_frame(std::shared_ptr<GraphicsContext> context,
                 command_buffer,
                 {context->swapchain_->get_image_descriptor(
                      swapchain_image_index),
-                 context->scene_descriptor_},
+                 scene->scene_descriptor_},
                 push_constants_span, extent.width, extent.height, 1);
             epilogue_barrier.record(command_buffer);
         });
@@ -313,18 +292,45 @@ std::shared_ptr<GraphicsScene>
 build_scene(std::shared_ptr<GraphicsContext> context,
             const std::vector<std::shared_ptr<GraphicsObject>> &objects) {
     std::vector<std::shared_ptr<BLAS>> bottom_structures;
+    std::unordered_map<std::shared_ptr<GraphicsModel>, size_t> referenced_models;
     for (const auto object : objects) {
         bottom_structures.emplace_back(object->model_->blas_);
+	referenced_models.emplace(object->model_, referenced_models.size());
     }
     std::vector<VkAccelerationStructureInstanceKHR> instances;
     for (const auto object : objects) {
         VkTransformMatrixKHR transform{};
         memcpy(&transform, &object->transform_, sizeof(VkTransformMatrixKHR));
-        instances.emplace_back(transform, 0, 0xFF, 0, 0,
+        instances.emplace_back(transform, referenced_models.at(object->model_), 0xFF, 0, 0,
                                object->model_->blas_->get_device_address());
     }
     std::shared_ptr<TLAS> tlas = std::make_shared<TLAS>(
         context->gpu_allocator_, context->command_pool_, context->ring_buffer_,
         bottom_structures, instances);
-    return std::make_shared<GraphicsScene>(tlas, objects);
+    VkAccelerationStructureKHR vk_tlas = tlas->get_tlas();
+    DescriptorSetBuilder builder(context->descriptor_allocator_);
+    builder.bind_acceleration_structure(
+					0,
+					{
+					    .accelerationStructureCount = 1,
+					    .pAccelerationStructures = &vk_tlas,
+					},
+					VK_SHADER_STAGE_RAYGEN_BIT_KHR);
+    
+    std::vector<VkDescriptorImageInfo> image_infos(referenced_models.size());
+    for (auto [model, idx] : referenced_models) {
+	image_infos.at(idx).sampler = VK_NULL_HANDLE;
+	image_infos.at(idx).imageView = model->raw_data_->get_view();
+	image_infos.at(idx).imageLayout = VK_IMAGE_LAYOUT_GENERAL;
+    }
+    auto volume = objects.at(0)->model_->raw_data_;
+    builder.bind_images(1,
+			image_infos,
+			VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,
+			VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR |
+			VK_SHADER_STAGE_INTERSECTION_BIT_KHR,
+			static_cast<uint32_t>(image_infos.size()));
+    
+    auto scene_descriptor = builder.build();
+    return std::make_shared<GraphicsScene>(tlas, objects, scene_descriptor);
 }

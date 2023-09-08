@@ -1,9 +1,10 @@
 #version 460
 #pragma shader_stage(intersect)
 #extension GL_EXT_ray_tracing : enable
+#extension GL_EXT_nonuniform_qualifier : enable
 #extension GL_GOOGLE_include_directive : enable
 
-layout(set = 1, binding = 1, rgba8) uniform readonly image3D volume;
+layout(set = 1, binding = 1, rgba8) uniform readonly image3D volumes[];
 
 const float FAR_AWAY = 1000.0;
 
@@ -35,13 +36,15 @@ aabb_intersect_result hit_aabb(const vec3 minimum, const vec3 maximum, const vec
 }
 
 void main() {
+    uint volume_id = gl_InstanceCustomIndexEXT;
+
     vec3 obj_ray_pos = gl_WorldToObjectEXT * vec4(gl_WorldRayOriginEXT, 1.0);
     vec3 obj_ray_dir = gl_WorldToObjectEXT * vec4(gl_WorldRayDirectionEXT, 0.0);
 
     aabb_intersect_result r = hit_aabb(vec3(0.0), vec3(1.0), obj_ray_pos, obj_ray_dir);
 
     if (r.front_t != -FAR_AWAY) {
-	ivec3 volume_size = imageSize(volume);
+	ivec3 volume_size = imageSize(volumes[volume_id]);
 	vec3 obj_ray_intersect_point = (obj_ray_pos + obj_ray_dir * max(r.front_t, 0.0)) * volume_size;
 	ivec3 obj_ray_voxel = ivec3(min(obj_ray_intersect_point, volume_size - 1));
 	ivec3 obj_ray_step = ivec3(sign(obj_ray_dir));
@@ -51,7 +54,7 @@ void main() {
 	uint steps = 0;
 	uint max_steps = uint(volume_size.x) + uint(volume_size.y) + uint(volume_size.z);
 	while (steps < max_steps && all(greaterThanEqual(obj_ray_voxel, ivec3(0))) && all(lessThan(obj_ray_voxel, volume_size))) {
-	    float palette = imageLoad(volume, obj_ray_voxel).a;
+	    float palette = imageLoad(volumes[volume_id], obj_ray_voxel).a;
 	    
 	    if (palette > 0.0) {
 		r = hit_aabb(vec3(obj_ray_voxel) / volume_size, vec3(obj_ray_voxel + 1) / volume_size, obj_ray_pos, obj_ray_dir);

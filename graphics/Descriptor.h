@@ -1,6 +1,7 @@
 #pragma once
 
 #include <unordered_map>
+#include <unordered_set>
 #include <vector>
 
 #include <vulkan/vulkan.h>
@@ -17,7 +18,8 @@ class DescriptorAllocator {
 
     VkDescriptorSetLayout
     grab_layout(const std::vector<VkDescriptorSetLayoutBinding> &bindings,
-                VkDescriptorSetLayoutCreateFlags flags);
+                VkDescriptorSetLayoutCreateFlags flags,
+		std::unordered_set<uint32_t> bindless_indices = {});
 
     void reset_pools();
 
@@ -57,7 +59,7 @@ class DescriptorSetLayout {
     DescriptorSetLayout(std::shared_ptr<DescriptorAllocator> allocator,
                         VkDescriptorSetLayoutCreateFlags flags = {});
 
-    void add_binding(VkDescriptorSetLayoutBinding binding);
+    void add_binding(VkDescriptorSetLayoutBinding binding, bool bindless = false);
     VkDescriptorSetLayout get_layout();
 
   private:
@@ -65,6 +67,7 @@ class DescriptorSetLayout {
     VkDescriptorSetLayoutCreateFlags flags_ = {};
 
     std::vector<VkDescriptorSetLayoutBinding> bindings_;
+    std::unordered_set<uint32_t> bindless_indices_;
 };
 
 class DescriptorSet {
@@ -95,6 +98,11 @@ class DescriptorSetBuilder {
                                      VkDescriptorImageInfo image_info,
                                      VkDescriptorType type,
                                      VkShaderStageFlags stages);
+    DescriptorSetBuilder &bind_images(uint32_t binding,
+				      std::vector<VkDescriptorImageInfo> image_infos,
+				      VkDescriptorType type,
+				      VkShaderStageFlags stages,
+				      uint32_t count);
     DescriptorSetBuilder &
     bind_acceleration_structure(uint32_t binding,
                                 VkWriteDescriptorSetAccelerationStructureKHR

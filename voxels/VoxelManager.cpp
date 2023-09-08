@@ -53,8 +53,10 @@ RawVoxelChunk *VoxelManager::generate_sphere_chunk(const glm::vec3 &position, co
         for (int y = 0; y < size.y; y++) {
             for (int z = 0; z < size.z; z++) {
                 if (std::pow(x - size.x/2, 2) + std::pow(y - size.y/2, 2) + std::pow(z - size.z/2, 2) < std::pow(radius, 2)) {
-                    uint8_t color = (x + y) * 10;
-                    voxel = RawVoxel{.red_ = color, .green_ = color, .blue_ = color, .alpha_ = 255};
+                    uint8_t red = x * 4;
+		    uint8_t green = y * 4;
+		    uint8_t blue = z * 4;
+                    voxel = RawVoxel{.red_ = red, .green_ = green, .blue_ = blue, .alpha_ = 255};
                     new_chunk->write_voxel(x, y, z, voxel);
                 }
             }

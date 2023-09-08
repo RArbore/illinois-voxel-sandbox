@@ -3,6 +3,7 @@
 #include "Descriptor.h"
 #include "utils/Assert.h"
 
+static const uint32_t MAX_MODELS = 256;
 static const uint32_t SETS_PER_POOL = 1000;
 static const std::vector<VkDescriptorPoolSize> POOL_SIZES = {
     {VK_DESCRIPTOR_TYPE_SAMPLER, SETS_PER_POOL},
@@ -52,7 +53,7 @@ VkDescriptorPool DescriptorAllocator::grab_new_pool() {
     } else {
         VkDescriptorPoolCreateInfo pool_info = {};
         pool_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
-        pool_info.flags = 0;
+        pool_info.flags = VK_DESCRIPTOR_POOL_CREATE_UPDATE_AFTER_BIND_BIT;
         pool_info.maxSets = SETS_PER_POOL;
         pool_info.poolSizeCount = static_cast<uint32_t>(POOL_SIZES.size());
         pool_info.pPoolSizes = POOL_SIZES.data();
@@ -92,15 +93,27 @@ operator==(const std::pair<std::vector<VkDescriptorSetLayoutBinding>,
 
 VkDescriptorSetLayout DescriptorAllocator::grab_layout(
     const std::vector<VkDescriptorSetLayoutBinding> &bindings,
-    VkDescriptorSetLayoutCreateFlags flags) {
+    VkDescriptorSetLayoutCreateFlags flags,
+    std::unordered_set<uint32_t> bindless_indices) {
     auto it = layout_cache_.find({bindings, flags});
     if (it != layout_cache_.end()) {
         return it->second;
     }
 
+    VkDescriptorBindingFlags bindless_flags = VK_DESCRIPTOR_BINDING_PARTIALLY_BOUND_BIT;
+    std::vector<VkDescriptorBindingFlags> tiled_bindless_flags(bindings.size(), 0);
+    for (auto idx : bindless_indices) {
+	tiled_bindless_flags.at(idx) = bindless_flags;
+    }
+
+    VkDescriptorSetLayoutBindingFlagsCreateInfo layout_binding_flags_create_info {};
+    layout_binding_flags_create_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_BINDING_FLAGS_CREATE_INFO;
+    layout_binding_flags_create_info.bindingCount = static_cast<uint32_t>(tiled_bindless_flags.size());
+    layout_binding_flags_create_info.pBindingFlags = tiled_bindless_flags.data();
+
     VkDescriptorSetLayoutCreateInfo create_info{};
     create_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-    create_info.pNext = nullptr;
+    create_info.pNext = &layout_binding_flags_create_info;
     create_info.flags = flags;
     create_info.bindingCount = static_cast<uint32_t>(bindings.size());
     create_info.pBindings = bindings.data();
@@ -130,8 +143,11 @@ DescriptorSetLayout::DescriptorSetLayout(
     flags_ = flags;
 }
 
-void DescriptorSetLayout::add_binding(VkDescriptorSetLayoutBinding binding) {
+void DescriptorSetLayout::add_binding(VkDescriptorSetLayoutBinding binding, bool bindless) {
     bindings_.push_back(binding);
+    if (bindless) {
+	bindless_indices_.insert(binding.binding);
+    }
 }
 
 VkDescriptorSetLayout DescriptorSetLayout::get_layout() {
@@ -140,7 +156,7 @@ VkDescriptorSetLayout DescriptorSetLayout::get_layout() {
         [](VkDescriptorSetLayoutBinding &a, VkDescriptorSetLayoutBinding &b) {
             return a.binding < b.binding;
         });
-    return allocator_->grab_layout(bindings_, flags_);
+    return allocator_->grab_layout(bindings_, flags_, bindless_indices_);
 }
 
 DescriptorSet::DescriptorSet(std::shared_ptr<DescriptorAllocator> allocator,
@@ -226,6 +242,35 @@ DescriptorSetBuilder &DescriptorSetBuilder::bind_image(
     write.descriptorCount = 1;
     write.descriptorType = type;
     write.pImageInfo = &image_infos_.back();
+    write.dstBinding = binding;
+    writes_.push_back(write);
+
+    return *this;
+}
+
+DescriptorSetBuilder &DescriptorSetBuilder::bind_images(uint32_t binding,
+							std::vector<VkDescriptorImageInfo> image_infos,
+							VkDescriptorType type,
+							VkShaderStageFlags stages,
+							uint32_t count) {
+    VkDescriptorSetLayoutBinding layout_binding{};
+    layout_binding.descriptorCount = MAX_MODELS;
+    layout_binding.descriptorType = type;
+    layout_binding.pImmutableSamplers = nullptr;
+    layout_binding.stageFlags = stages;
+    layout_binding.binding = binding;
+    layout_->add_binding(layout_binding, true);
+
+    for (auto image_info : image_infos) {
+	image_infos_.push_back(image_info);
+    }
+
+    VkWriteDescriptorSet write{};
+    write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+    write.pNext = nullptr;
+    write.descriptorCount = count;
+    write.descriptorType = type;
+    write.pImageInfo = &image_infos_.back() - image_infos.size() + 1;
     write.dstBinding = binding;
     writes_.push_back(write);
 
