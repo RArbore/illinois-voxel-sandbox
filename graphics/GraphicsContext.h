@@ -24,8 +24,7 @@ void render_frame(std::shared_ptr<GraphicsContext> context,
 bool should_exit(std::shared_ptr<GraphicsContext> context);
 
 std::shared_ptr<GraphicsModel>
-build_model(std::shared_ptr<GraphicsContext> context,
-            VoxelChunkPtr chunk);
+build_model(std::shared_ptr<GraphicsContext> context, VoxelChunkPtr chunk);
 
 std::shared_ptr<GraphicsObject>
 build_object(std::shared_ptr<GraphicsContext> context,

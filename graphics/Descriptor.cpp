@@ -100,16 +100,22 @@ VkDescriptorSetLayout DescriptorAllocator::grab_layout(
         return it->second;
     }
 
-    VkDescriptorBindingFlags bindless_flags = VK_DESCRIPTOR_BINDING_PARTIALLY_BOUND_BIT;
-    std::vector<VkDescriptorBindingFlags> tiled_bindless_flags(bindings.size(), 0);
+    VkDescriptorBindingFlags bindless_flags =
+        VK_DESCRIPTOR_BINDING_PARTIALLY_BOUND_BIT;
+    std::vector<VkDescriptorBindingFlags> tiled_bindless_flags(bindings.size(),
+                                                               0);
     for (auto idx : bindless_indices) {
-	tiled_bindless_flags.at(idx) = bindless_flags;
+        tiled_bindless_flags.at(idx) = bindless_flags;
     }
 
-    VkDescriptorSetLayoutBindingFlagsCreateInfo layout_binding_flags_create_info {};
-    layout_binding_flags_create_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_BINDING_FLAGS_CREATE_INFO;
-    layout_binding_flags_create_info.bindingCount = static_cast<uint32_t>(tiled_bindless_flags.size());
-    layout_binding_flags_create_info.pBindingFlags = tiled_bindless_flags.data();
+    VkDescriptorSetLayoutBindingFlagsCreateInfo
+        layout_binding_flags_create_info{};
+    layout_binding_flags_create_info.sType =
+        VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_BINDING_FLAGS_CREATE_INFO;
+    layout_binding_flags_create_info.bindingCount =
+        static_cast<uint32_t>(tiled_bindless_flags.size());
+    layout_binding_flags_create_info.pBindingFlags =
+        tiled_bindless_flags.data();
 
     VkDescriptorSetLayoutCreateInfo create_info{};
     create_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
@@ -143,10 +149,11 @@ DescriptorSetLayout::DescriptorSetLayout(
     flags_ = flags;
 }
 
-void DescriptorSetLayout::add_binding(VkDescriptorSetLayoutBinding binding, bool bindless) {
+void DescriptorSetLayout::add_binding(VkDescriptorSetLayoutBinding binding,
+                                      bool bindless) {
     bindings_.push_back(binding);
     if (bindless) {
-	bindless_indices_.insert(binding.binding);
+        bindless_indices_.insert(binding.binding);
     }
 }
 
@@ -248,11 +255,9 @@ DescriptorSetBuilder &DescriptorSetBuilder::bind_image(
     return *this;
 }
 
-DescriptorSetBuilder &DescriptorSetBuilder::bind_images(uint32_t binding,
-							std::vector<VkDescriptorImageInfo> image_infos,
-							VkDescriptorType type,
-							VkShaderStageFlags stages,
-							uint32_t count) {
+DescriptorSetBuilder &DescriptorSetBuilder::bind_images(
+    uint32_t binding, std::vector<VkDescriptorImageInfo> image_infos,
+    VkDescriptorType type, VkShaderStageFlags stages, uint32_t count) {
     VkDescriptorSetLayoutBinding layout_binding{};
     layout_binding.descriptorCount = MAX_MODELS;
     layout_binding.descriptorType = type;
@@ -262,7 +267,7 @@ DescriptorSetBuilder &DescriptorSetBuilder::bind_images(uint32_t binding,
     layout_->add_binding(layout_binding, true);
 
     for (auto image_info : image_infos) {
-	image_infos_.push_back(image_info);
+        image_infos_.push_back(image_info);
     }
 
     VkWriteDescriptorSet write{};
@@ -270,8 +275,9 @@ DescriptorSetBuilder &DescriptorSetBuilder::bind_images(uint32_t binding,
     write.pNext = nullptr;
     write.descriptorCount = count;
     write.descriptorType = type;
-    write.pImageInfo =
-        image_infos.empty() ? nullptr : &image_infos_.back() - image_infos.size() + 1;
+    write.pImageInfo = image_infos.empty()
+                           ? nullptr
+                           : &image_infos_.back() - image_infos.size() + 1;
     write.dstBinding = binding;
     writes_.push_back(write);
 

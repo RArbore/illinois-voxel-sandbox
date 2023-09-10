@@ -48,8 +48,7 @@ class GraphicsContext {
                              std::shared_ptr<GraphicsScene> scene);
     friend bool should_exit(std::shared_ptr<GraphicsContext> context);
     friend std::shared_ptr<GraphicsModel>
-    build_model(std::shared_ptr<GraphicsContext> context,
-                VoxelChunkPtr chunk);
+    build_model(std::shared_ptr<GraphicsContext> context, VoxelChunkPtr chunk);
     friend std::shared_ptr<GraphicsObject>
     build_object(std::shared_ptr<GraphicsContext> context,
                  std::shared_ptr<GraphicsModel> model,
@@ -74,8 +73,7 @@ class GraphicsModel {
                              std::shared_ptr<GraphicsScene> scene);
     friend bool should_exit(std::shared_ptr<GraphicsContext> context);
     friend std::shared_ptr<GraphicsModel>
-    build_model(std::shared_ptr<GraphicsContext> context,
-                VoxelChunkPtr chunk);
+    build_model(std::shared_ptr<GraphicsContext> context, VoxelChunkPtr chunk);
     friend std::shared_ptr<GraphicsObject>
     build_object(std::shared_ptr<GraphicsContext> context,
                  std::shared_ptr<GraphicsModel> model,
@@ -99,8 +97,7 @@ class GraphicsObject {
                              std::shared_ptr<GraphicsScene> scene);
     friend bool should_exit(std::shared_ptr<GraphicsContext> context);
     friend std::shared_ptr<GraphicsModel>
-    build_model(std::shared_ptr<GraphicsContext> context,
-                VoxelChunkPtr chunk);
+    build_model(std::shared_ptr<GraphicsContext> context, VoxelChunkPtr chunk);
     friend std::shared_ptr<GraphicsObject>
     build_object(std::shared_ptr<GraphicsContext> context,
                  std::shared_ptr<GraphicsModel> model,
@@ -114,7 +111,7 @@ class GraphicsScene {
   public:
     GraphicsScene(std::shared_ptr<TLAS> tlas,
                   std::vector<std::shared_ptr<GraphicsObject>> objects,
-		  std::shared_ptr<DescriptorSet> scene_descriptor)
+                  std::shared_ptr<DescriptorSet> scene_descriptor)
         : tlas_(tlas), objects_(objects), scene_descriptor_(scene_descriptor) {}
 
   private:
@@ -127,8 +124,7 @@ class GraphicsScene {
                              std::shared_ptr<GraphicsScene> scene);
     friend bool should_exit(std::shared_ptr<GraphicsContext> context);
     friend std::shared_ptr<GraphicsModel>
-    build_model(std::shared_ptr<GraphicsContext> context,
-                VoxelChunkPtr chunk);
+    build_model(std::shared_ptr<GraphicsContext> context, VoxelChunkPtr chunk);
     friend std::shared_ptr<GraphicsObject>
     build_object(std::shared_ptr<GraphicsContext> context,
                  std::shared_ptr<GraphicsModel> model,
@@ -152,8 +148,9 @@ GraphicsContext::GraphicsContext() {
     DescriptorSetBuilder builder(descriptor_allocator_);
     builder.bind_acceleration_structure(0, {}, VK_SHADER_STAGE_RAYGEN_BIT_KHR);
     builder.bind_images(1, {}, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,
-                       VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR |
-			VK_SHADER_STAGE_INTERSECTION_BIT_KHR, 0);
+                        VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR |
+                            VK_SHADER_STAGE_INTERSECTION_BIT_KHR,
+                        0);
 
     auto rgen = std::make_shared<Shader>(device_, "rgen");
     auto rmiss = std::make_shared<Shader>(device_, "rmiss");
@@ -185,7 +182,7 @@ void render_frame(std::shared_ptr<GraphicsContext> context,
     std::shared_ptr<Semaphore> scene_semaphore = nullptr;
     if (context->current_scene_ != scene) {
         scene_semaphore = scene->tlas_->get_timeline();
-	scene_semaphore->set_wait_value(TLAS::TLAS_BUILD_TIMELINE);
+        scene_semaphore->set_wait_value(TLAS::TLAS_BUILD_TIMELINE);
         context->current_scene_ = scene;
     }
 
@@ -232,13 +229,14 @@ void render_frame(std::shared_ptr<GraphicsContext> context,
         });
 
     if (scene_semaphore) {
-	context->device_->submit_command(
-					 context->render_command_buffer_, {context->acquire_semaphore_, scene_semaphore},
-					 {context->render_semaphore_}, context->frame_fence_);
+        context->device_->submit_command(
+            context->render_command_buffer_,
+            {context->acquire_semaphore_, scene_semaphore},
+            {context->render_semaphore_}, context->frame_fence_);
     } else {
-	context->device_->submit_command(
-					 context->render_command_buffer_, {context->acquire_semaphore_},
-					 {context->render_semaphore_}, context->frame_fence_);
+        context->device_->submit_command(
+            context->render_command_buffer_, {context->acquire_semaphore_},
+            {context->render_semaphore_}, context->frame_fence_);
     }
 
     context->swapchain_->present_image(swapchain_image_index,
@@ -261,7 +259,8 @@ void render_frame(std::shared_ptr<GraphicsContext> context,
     }
     context->elapsed_ms_ = std::chrono::duration_cast<std::chrono::nanoseconds>(
                                current_time - context->first_time_)
-                               .count() / 1000000;
+                               .count() /
+                           1000000;
     ++context->frame_index_;
 }
 
@@ -270,14 +269,14 @@ bool should_exit(std::shared_ptr<GraphicsContext> context) {
 }
 
 std::shared_ptr<GraphicsModel>
-build_model(std::shared_ptr<GraphicsContext> context,
-            VoxelChunkPtr chunk) {
+build_model(std::shared_ptr<GraphicsContext> context, VoxelChunkPtr chunk) {
     std::vector<VkAabbPositionsKHR> aabbs = {
         {0.0F, 0.0F, 0.0F, 1.0F, 1.0F, 1.0F}};
     std::shared_ptr<BLAS> blas =
         std::make_shared<BLAS>(context->gpu_allocator_, context->command_pool_,
                                context->ring_buffer_, aabbs);
-    VkExtent3D extent = {chunk->get_width(), chunk->get_height(), chunk->get_depth()};
+    VkExtent3D extent = {chunk->get_width(), chunk->get_height(),
+                         chunk->get_depth()};
     std::shared_ptr<GPUVolume> volume = std::make_shared<GPUVolume>(
         context->gpu_allocator_, extent, VK_FORMAT_R8G8B8A8_UNORM, 0,
         VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_STORAGE_BIT,
@@ -299,16 +298,18 @@ std::shared_ptr<GraphicsScene>
 build_scene(std::shared_ptr<GraphicsContext> context,
             const std::vector<std::shared_ptr<GraphicsObject>> &objects) {
     std::vector<std::shared_ptr<BLAS>> bottom_structures;
-    std::unordered_map<std::shared_ptr<GraphicsModel>, size_t> referenced_models;
+    std::unordered_map<std::shared_ptr<GraphicsModel>, size_t>
+        referenced_models;
     for (const auto object : objects) {
         bottom_structures.emplace_back(object->model_->blas_);
-	referenced_models.emplace(object->model_, referenced_models.size());
+        referenced_models.emplace(object->model_, referenced_models.size());
     }
     std::vector<VkAccelerationStructureInstanceKHR> instances;
     for (const auto object : objects) {
         VkTransformMatrixKHR transform{};
         memcpy(&transform, &object->transform_, sizeof(VkTransformMatrixKHR));
-        instances.emplace_back(transform, referenced_models.at(object->model_), 0xFF, 0, 0,
+        instances.emplace_back(transform, referenced_models.at(object->model_),
+                               0xFF, 0, 0,
                                object->model_->blas_->get_device_address());
     }
     std::shared_ptr<TLAS> tlas = std::make_shared<TLAS>(
@@ -316,28 +317,25 @@ build_scene(std::shared_ptr<GraphicsContext> context,
         bottom_structures, instances);
     VkAccelerationStructureKHR vk_tlas = tlas->get_tlas();
     DescriptorSetBuilder builder(context->descriptor_allocator_);
-    builder.bind_acceleration_structure(
-					0,
-					{
-					    .accelerationStructureCount = 1,
-					    .pAccelerationStructures = &vk_tlas,
-					},
-					VK_SHADER_STAGE_RAYGEN_BIT_KHR);
-    
+    builder.bind_acceleration_structure(0,
+                                        {
+                                            .accelerationStructureCount = 1,
+                                            .pAccelerationStructures = &vk_tlas,
+                                        },
+                                        VK_SHADER_STAGE_RAYGEN_BIT_KHR);
+
     std::vector<VkDescriptorImageInfo> image_infos(referenced_models.size());
     for (auto [model, idx] : referenced_models) {
-	image_infos.at(idx).sampler = VK_NULL_HANDLE;
-	image_infos.at(idx).imageView = model->raw_data_->get_view();
-	image_infos.at(idx).imageLayout = VK_IMAGE_LAYOUT_GENERAL;
+        image_infos.at(idx).sampler = VK_NULL_HANDLE;
+        image_infos.at(idx).imageView = model->raw_data_->get_view();
+        image_infos.at(idx).imageLayout = VK_IMAGE_LAYOUT_GENERAL;
     }
     auto volume = objects.at(0)->model_->raw_data_;
-    builder.bind_images(1,
-			image_infos,
-			VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,
-			VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR |
-			VK_SHADER_STAGE_INTERSECTION_BIT_KHR,
-			static_cast<uint32_t>(image_infos.size()));
-    
+    builder.bind_images(1, image_infos, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,
+                        VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR |
+                            VK_SHADER_STAGE_INTERSECTION_BIT_KHR,
+                        static_cast<uint32_t>(image_infos.size()));
+
     auto scene_descriptor = builder.build();
     return std::make_shared<GraphicsScene>(tlas, objects, scene_descriptor);
 }
