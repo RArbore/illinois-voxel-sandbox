@@ -270,7 +270,8 @@ DescriptorSetBuilder &DescriptorSetBuilder::bind_images(uint32_t binding,
     write.pNext = nullptr;
     write.descriptorCount = count;
     write.descriptorType = type;
-    write.pImageInfo = &image_infos_.back() - image_infos.size() + 1;
+    write.pImageInfo =
+        image_infos.empty() ? nullptr : &image_infos_.back() - image_infos.size() + 1;
     write.dstBinding = binding;
     writes_.push_back(write);
 

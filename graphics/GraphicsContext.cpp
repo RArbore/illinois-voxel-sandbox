@@ -251,7 +251,9 @@ void render_frame(std::shared_ptr<GraphicsContext> context,
         context->start_time_ = current_time;
         context->start_frame_ = 0;
         context->first_time_ = current_time;
-    } else if ((current_time - context->start_time_).count() >= 1000000000) {
+    } else if (std::chrono::duration_cast<std::chrono::nanoseconds>(
+                   current_time - context->start_time_)
+                   .count() >= 1000000000) {
         const uint64_t num_frames =
             context->frame_index_ - context->start_frame_;
         std::cout << "INFO: " << num_frames << " FPS\n";
@@ -259,8 +261,9 @@ void render_frame(std::shared_ptr<GraphicsContext> context,
         context->start_time_ = current_time;
         context->start_frame_ = context->frame_index_;
     }
-    context->elapsed_ms_ =
-        (current_time - context->first_time_).count() / 1000000;
+    context->elapsed_ms_ = std::chrono::duration_cast<std::chrono::nanoseconds>(
+                               current_time - context->first_time_)
+                               .count() / 1000000;
     ++context->frame_index_;
 }
 
