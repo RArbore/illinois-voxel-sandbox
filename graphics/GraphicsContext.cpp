@@ -184,8 +184,10 @@ std::shared_ptr<GraphicsContext> create_graphics_context() {
 
 void render_frame(std::shared_ptr<GraphicsContext> context,
                   std::shared_ptr<GraphicsScene> scene) {
+    std::shared_ptr<Semaphore> scene_semaphore = nullptr;
     if (context->current_scene_ != scene) {
-        vkDeviceWaitIdle(context->device_->get_device());
+        scene_semaphore = scene->tlas_->get_timeline();
+	scene_semaphore->set_wait_value(TLAS::TLAS_BUILD_TIMELINE);
         context->current_scene_ = scene;
     }
 
@@ -231,9 +233,15 @@ void render_frame(std::shared_ptr<GraphicsContext> context,
             epilogue_barrier.record(command_buffer);
         });
 
-    context->device_->submit_command(
-        context->render_command_buffer_, {context->acquire_semaphore_},
-        {context->render_semaphore_}, context->frame_fence_);
+    if (scene_semaphore) {
+	context->device_->submit_command(
+					 context->render_command_buffer_, {context->acquire_semaphore_, scene_semaphore},
+					 {context->render_semaphore_}, context->frame_fence_);
+    } else {
+	context->device_->submit_command(
+					 context->render_command_buffer_, {context->acquire_semaphore_},
+					 {context->render_semaphore_}, context->frame_fence_);
+    }
 
     context->swapchain_->present_image(swapchain_image_index,
                                        context->render_semaphore_);

@@ -228,13 +228,17 @@ void Device::submit_command(
     for (const auto semaphore : wait_semaphores) {
         if (semaphore->is_timeline()) {
             timeline_wait_values.push_back(semaphore->get_wait_value());
-        }
+        } else {
+	    timeline_wait_values.push_back(0);
+	}
     }
     std::vector<uint64_t> timeline_signal_values;
     for (const auto semaphore : signal_semaphores) {
         if (semaphore->is_timeline()) {
             timeline_signal_values.push_back(semaphore->get_signal_value());
-        }
+        } else {
+	    timeline_signal_values.push_back(0);
+	}
     }
 
     VkTimelineSemaphoreSubmitInfo timeline_semaphore_info{};
