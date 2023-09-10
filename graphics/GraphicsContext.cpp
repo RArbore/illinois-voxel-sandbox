@@ -155,10 +155,10 @@ GraphicsContext::GraphicsContext() {
                        VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR |
 			VK_SHADER_STAGE_INTERSECTION_BIT_KHR, 0);
 
-    auto rgen = std::make_shared<Shader>(device_, "dumb_rgen");
-    auto rmiss = std::make_shared<Shader>(device_, "dumb_rmiss");
-    auto rchit = std::make_shared<Shader>(device_, "dumb_rchit");
-    auto rint = std::make_shared<Shader>(device_, "dumb_rint");
+    auto rgen = std::make_shared<Shader>(device_, "rgen");
+    auto rmiss = std::make_shared<Shader>(device_, "rmiss");
+    auto rchit = std::make_shared<Shader>(device_, "Raw_Color_rchit");
+    auto rint = std::make_shared<Shader>(device_, "Raw_Color_rint");
     std::vector<std::vector<std::shared_ptr<Shader>>> shader_groups = {
         {rgen}, {rmiss}, {rchit, rint}};
     std::vector<VkDescriptorSetLayout> layouts = {
