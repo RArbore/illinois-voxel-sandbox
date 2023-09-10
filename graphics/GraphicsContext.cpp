@@ -13,8 +13,6 @@
 #include "Synchronization.h"
 #include "Window.h"
 
-#include "voxels/RawVoxelChunk.h"
-
 class GraphicsContext {
   public:
     GraphicsContext();
@@ -51,7 +49,7 @@ class GraphicsContext {
     friend bool should_exit(std::shared_ptr<GraphicsContext> context);
     friend std::shared_ptr<GraphicsModel>
     build_model(std::shared_ptr<GraphicsContext> context,
-                const RawVoxelChunk &chunk);
+                VoxelChunkPtr chunk);
     friend std::shared_ptr<GraphicsObject>
     build_object(std::shared_ptr<GraphicsContext> context,
                  std::shared_ptr<GraphicsModel> model,
@@ -77,7 +75,7 @@ class GraphicsModel {
     friend bool should_exit(std::shared_ptr<GraphicsContext> context);
     friend std::shared_ptr<GraphicsModel>
     build_model(std::shared_ptr<GraphicsContext> context,
-                const RawVoxelChunk &chunk);
+                VoxelChunkPtr chunk);
     friend std::shared_ptr<GraphicsObject>
     build_object(std::shared_ptr<GraphicsContext> context,
                  std::shared_ptr<GraphicsModel> model,
@@ -102,7 +100,7 @@ class GraphicsObject {
     friend bool should_exit(std::shared_ptr<GraphicsContext> context);
     friend std::shared_ptr<GraphicsModel>
     build_model(std::shared_ptr<GraphicsContext> context,
-                const RawVoxelChunk &chunk);
+                VoxelChunkPtr chunk);
     friend std::shared_ptr<GraphicsObject>
     build_object(std::shared_ptr<GraphicsContext> context,
                  std::shared_ptr<GraphicsModel> model,
@@ -130,7 +128,7 @@ class GraphicsScene {
     friend bool should_exit(std::shared_ptr<GraphicsContext> context);
     friend std::shared_ptr<GraphicsModel>
     build_model(std::shared_ptr<GraphicsContext> context,
-                const RawVoxelChunk &chunk);
+                VoxelChunkPtr chunk);
     friend std::shared_ptr<GraphicsObject>
     build_object(std::shared_ptr<GraphicsContext> context,
                  std::shared_ptr<GraphicsModel> model,
@@ -273,21 +271,19 @@ bool should_exit(std::shared_ptr<GraphicsContext> context) {
 
 std::shared_ptr<GraphicsModel>
 build_model(std::shared_ptr<GraphicsContext> context,
-            const RawVoxelChunk &chunk) {
+            VoxelChunkPtr chunk) {
     std::vector<VkAabbPositionsKHR> aabbs = {
         {0.0F, 0.0F, 0.0F, 1.0F, 1.0F, 1.0F}};
     std::shared_ptr<BLAS> blas =
         std::make_shared<BLAS>(context->gpu_allocator_, context->command_pool_,
                                context->ring_buffer_, aabbs);
-    VkExtent3D extent = {chunk.w_, chunk.h_, chunk.d_};
+    VkExtent3D extent = {chunk->get_width(), chunk->get_height(), chunk->get_depth()};
     std::shared_ptr<GPUVolume> volume = std::make_shared<GPUVolume>(
         context->gpu_allocator_, extent, VK_FORMAT_R8G8B8A8_UNORM, 0,
         VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_STORAGE_BIT,
         VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, 0, 1, 1);
-    std::vector<RawVoxel> voxels(chunk.voxels_.begin(), chunk.voxels_.end());
-    std::span<RawVoxel> span(voxels.data(), voxels.size());
     context->ring_buffer_->copy_to_device(volume, VK_IMAGE_LAYOUT_GENERAL,
-                                          std::as_bytes(span), {}, {});
+                                          chunk->get_cpu_data(), {}, {});
     return std::make_shared<GraphicsModel>(blas, volume);
 }
 

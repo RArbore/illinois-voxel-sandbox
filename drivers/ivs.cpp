@@ -1,18 +1,18 @@
 #include <graphics/GraphicsContext.h>
-#include <voxels/VoxelManager.h>
+#include <voxels/Voxel.h>
 
 int main(int argc, char *argv[]) {
-    VoxelManager voxel_manager;
-    RawVoxelChunk *test_cube1 =
-        voxel_manager.generate_sphere_chunk({0.0F, 0.0F, 0.0F}, {64, 64, 64}, 32);
-    RawVoxelChunk *test_cube2 =
-        voxel_manager.generate_sphere_chunk({0.0F, 0.0F, 0.0F}, {64, 64, 64}, 20);
-
+    ChunkManager chunk_manager;
+    auto test_cube_data1 = generate_basic_sphere_chunk(64, 64, 64, 32);
+    auto test_cube_data2 = generate_basic_sphere_chunk(64, 64, 64, 20);
+    VoxelChunkPtr test_cube1 = chunk_manager.add_chunk(std::move(test_cube_data1), 64, 64, 64, VoxelChunk::Format::Raw, VoxelChunk::AttributeSet::Color);
+    VoxelChunkPtr test_cube2 = chunk_manager.add_chunk(std::move(test_cube_data2), 64, 64, 64, VoxelChunk::Format::Raw, VoxelChunk::AttributeSet::Color);
+    
     auto context = create_graphics_context();
 
-    auto model1 = build_model(context, *test_cube1);
-    auto model2 = build_model(context, *test_cube2);
-    auto model3 = build_model(context, *test_cube2);
+    auto model1 = build_model(context, test_cube1);
+    auto model2 = build_model(context, test_cube2);
+    auto model3 = build_model(context, test_cube2);
     glm::mat3x4 transform1 = {1.0F, 0.0F, 0.0F, 0.0F,
 			      0.0F, 1.0F, 0.0F, 0.0F,
 			      0.0F, 0.0F, 1.0F, 0.0F};
