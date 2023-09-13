@@ -6,6 +6,8 @@
 #include <set>
 
 #include <graphics/GPUAllocator.h>
+#include <graphics/Command.h>
+#include <graphics/RingBuffer.h>
 
 class GraphicsModel;
 class ChunkManager;
@@ -37,15 +39,20 @@ public:
 	       );
 
     std::span<const std::byte> get_cpu_data() const;
+    std::shared_ptr<GPUVolume> get_gpu_volume() const;
     uint32_t get_width() const;
     uint32_t get_height() const;
     uint32_t get_depth() const;
     Format get_format() const;
     AttributeSet get_attribute_set() const;
-
+    void queue_gpu_upload(std::shared_ptr<Device> device,
+			  std::shared_ptr<GPUAllocator> allocator,
+			  std::shared_ptr<RingBuffer> ring_buffer);
+    
 private:
     std::vector<std::byte> cpu_data_;
     std::shared_ptr<GPUVolume> volume_data_;
+    std::shared_ptr<Semaphore> timeline_ = nullptr;
     uint32_t width_;
     uint32_t height_;
     uint32_t depth_;

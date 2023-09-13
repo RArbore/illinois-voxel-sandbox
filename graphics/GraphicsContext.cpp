@@ -67,13 +67,13 @@ class GraphicsContext {
 class GraphicsModel {
   public:
     GraphicsModel(std::shared_ptr<BLAS> blas,
-                  std::shared_ptr<GPUVolume> raw_data,
+                  VoxelChunkPtr chunk,
 		  uint32_t sbt_offset)
-        : blas_(blas), raw_data_(raw_data), sbt_offset_(sbt_offset) {}
+        : blas_(blas), chunk_(chunk), sbt_offset_(sbt_offset) {}
 
   private:
     std::shared_ptr<BLAS> blas_;
-    std::shared_ptr<GPUVolume> raw_data_;
+    VoxelChunkPtr chunk_;
     uint32_t sbt_offset_;
 
     friend std::shared_ptr<GraphicsContext> create_graphics_context();
@@ -285,16 +285,9 @@ build_model(std::shared_ptr<GraphicsContext> context, VoxelChunkPtr chunk) {
     std::shared_ptr<BLAS> blas =
         std::make_shared<BLAS>(context->gpu_allocator_, context->command_pool_,
                                context->ring_buffer_, aabbs);
-    VkExtent3D extent = {chunk->get_width(), chunk->get_height(),
-                         chunk->get_depth()};
-    std::shared_ptr<GPUVolume> volume = std::make_shared<GPUVolume>(
-        context->gpu_allocator_, extent, VK_FORMAT_R8G8B8A8_UNORM, 0,
-        VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_STORAGE_BIT,
-        VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, 0, 1, 1);
-    context->ring_buffer_->copy_to_device(volume, VK_IMAGE_LAYOUT_GENERAL,
-                                          chunk->get_cpu_data(), {}, {});
+    chunk->queue_gpu_upload(context->device_, context->gpu_allocator_, context->ring_buffer_);
     uint32_t sbt_offset = FORMAT_TO_SBT_OFFSET.at({chunk->get_format(), chunk->get_attribute_set()});
-    return std::make_shared<GraphicsModel>(blas, volume, sbt_offset);
+    return std::make_shared<GraphicsModel>(blas, chunk, sbt_offset);
 }
 
 std::shared_ptr<GraphicsObject>
@@ -337,11 +330,11 @@ build_scene(std::shared_ptr<GraphicsContext> context,
 
     std::vector<VkDescriptorImageInfo> image_infos(referenced_models.size());
     for (auto [model, idx] : referenced_models) {
+	auto volume = model->chunk_->get_gpu_volume();
         image_infos.at(idx).sampler = VK_NULL_HANDLE;
-        image_infos.at(idx).imageView = model->raw_data_->get_view();
+        image_infos.at(idx).imageView = volume->get_view();
         image_infos.at(idx).imageLayout = VK_IMAGE_LAYOUT_GENERAL;
     }
-    auto volume = objects.at(0)->model_->raw_data_;
     builder.bind_images(1, image_infos, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,
                         VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR |
                             VK_SHADER_STAGE_INTERSECTION_BIT_KHR,
