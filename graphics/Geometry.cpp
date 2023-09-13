@@ -254,9 +254,16 @@ TLAS::TLAS(std::shared_ptr<GPUAllocator> allocator,
             reinterpret_cast<const VkAccelerationStructureBuildRangeInfoKHR
                                  *const *>(tlas_build_range_infos));
     });
+    std::vector<std::shared_ptr<Semaphore>> wait_semaphores;
     timeline_->set_wait_value(INSTANCES_BUFFER_TIMELINE);
     timeline_->set_signal_value(TLAS_BUILD_TIMELINE);
-    allocator->get_device()->submit_command(build_command, {timeline_},
+    wait_semaphores.push_back(timeline_);
+    for (auto blas : bottom_structures) {
+	std::shared_ptr<Semaphore> timeline = blas->get_timeline();
+	timeline->set_wait_value(BLAS::BLAS_BUILD_TIMELINE);
+	wait_semaphores.push_back(timeline);
+    }
+    allocator->get_device()->submit_command(build_command, std::move(wait_semaphores),
                                             {timeline_});
 
     contained_structures_ = bottom_structures;
