@@ -1,7 +1,6 @@
 #pragma once
 
 #include <unordered_set>
-#include <variant>
 #include <vector>
 #include <span>
 #include <set>
@@ -28,7 +27,7 @@ public:
     };
 
     VoxelChunk(
-	       std::variant<std::vector<std::byte>, std::shared_ptr<GPUVolume>> &&data,
+	       std::vector<std::byte> &&data,
 	       uint32_t width,
 	       uint32_t height,
 	       uint32_t depth,
@@ -45,7 +44,8 @@ public:
     AttributeSet get_attribute_set() const;
 
 private:
-    std::variant<std::vector<std::byte>, std::shared_ptr<GPUVolume>> data_;
+    std::vector<std::byte> cpu_data_;
+    std::shared_ptr<GPUVolume> volume_data_;
     uint32_t width_;
     uint32_t height_;
     uint32_t depth_;
@@ -78,3 +78,4 @@ private:
 
 // This should really be in procedural/ or similar...
 std::vector<std::byte> generate_basic_sphere_chunk(uint32_t width, uint32_t height, uint32_t depth, float radius);
+std::vector<std::byte> generate_basic_filled_chunk(uint32_t width, uint32_t height, uint32_t depth);

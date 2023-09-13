@@ -4,14 +4,14 @@
 #include "utils/Assert.h"
 
 VoxelChunk::VoxelChunk(
-		       std::variant<std::vector<std::byte>, std::shared_ptr<GPUVolume>> &&data,
+		       std::vector<std::byte> &&data,
 		       uint32_t width,
 		       uint32_t height,
 		       uint32_t depth,
 		       State state,
 		       Format format,
 		       AttributeSet attribute_set
-		       ): data_(data),
+		       ): cpu_data_(data),
 			  width_(width),
 			  height_(height),
 			  depth_(depth),
@@ -20,8 +20,8 @@ VoxelChunk::VoxelChunk(
 			  attribute_set_(attribute_set) {}
 
 std::span<const std::byte> VoxelChunk::get_cpu_data() const {
-    ASSERT(format_ == Format::Raw, "PANIC: Tried to get CPU data of voxel chunk without CPU data resident.");
-    return std::span {std::get<0>(data_)};
+    ASSERT(state_ == State::CPU, "PANIC: Tried to get CPU data of voxel chunk without CPU data resident.");
+    return std::span {cpu_data_};
 }
 
 uint32_t VoxelChunk::get_width() const {
@@ -56,7 +56,7 @@ VoxelChunkPtr ChunkManager::add_chunk(std::vector<std::byte> &&data, uint32_t wi
     VoxelChunkPtr ptr;
     ptr.manager_ = this;
     ptr.chunk_idx_ = chunks_.size();
-    chunks_.emplace_back(data, width, height, depth, VoxelChunk::State::CPU, format, attribute_set);
+    chunks_.emplace_back(std::move(data), width, height, depth, VoxelChunk::State::CPU, format, attribute_set);
     return ptr;
 }
 
@@ -78,6 +78,29 @@ std::vector<std::byte> generate_basic_sphere_chunk(uint32_t width, uint32_t heig
 		    data.at(voxel_idx * 4 + 2) = blue;
 		    data.at(voxel_idx * 4 + 3) = alpha;
 		}
+	    }
+	}
+    }
+
+    return data;
+}
+
+std::vector<std::byte> generate_basic_filled_chunk(uint32_t width, uint32_t height, uint32_t depth) {
+    std::vector<std::byte> data(width * height * depth * 4, static_cast<std::byte>(0));
+    
+    for (uint32_t x = 0; x < width; ++x) {
+	for (uint32_t y = 0; y < height; ++y) {
+	    for (uint32_t z = 0; z < depth; ++z) {
+		std::byte red = static_cast<std::byte>(x * 30);
+		std::byte green = static_cast<std::byte>(y * 30);
+		std::byte blue = static_cast<std::byte>(z * 30);
+		std::byte alpha = static_cast<std::byte>(255);
+		
+		size_t voxel_idx = x + y * width + z * width * height;
+		data.at(voxel_idx * 4) = red;
+		data.at(voxel_idx * 4 + 1) = green;
+		data.at(voxel_idx * 4 + 2) = blue;
+		data.at(voxel_idx * 4 + 3) = alpha;
 	    }
 	}
     }

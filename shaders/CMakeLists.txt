@@ -7,6 +7,8 @@ set(GLSL_SHADER_FILES
   rmiss.glsl
   Raw_Color_rchit.glsl
   Raw_Color_rint.glsl
+  Unloaded_rchit.glsl
+  Unloaded_rint.glsl
 )
 
 foreach(FILE ${GLSL_SHADER_FILES})

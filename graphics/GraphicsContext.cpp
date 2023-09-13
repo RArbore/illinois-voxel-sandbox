@@ -14,8 +14,9 @@
 #include "Synchronization.h"
 #include "Window.h"
 
+const uint32_t UNLOADED_SBT_OFFSET = 0;
 const std::map<std::pair<VoxelChunk::Format, VoxelChunk::AttributeSet>, uint32_t> FORMAT_TO_SBT_OFFSET = {
-    {{VoxelChunk::Format::Raw, VoxelChunk::AttributeSet::Color}, 0},
+    {{VoxelChunk::Format::Raw, VoxelChunk::AttributeSet::Color}, 1},
 };
 
 class GraphicsContext {
@@ -161,10 +162,12 @@ GraphicsContext::GraphicsContext() {
 
     auto rgen = std::make_shared<Shader>(device_, "rgen");
     auto rmiss = std::make_shared<Shader>(device_, "rmiss");
-    auto rchit = std::make_shared<Shader>(device_, "Raw_Color_rchit");
-    auto rint = std::make_shared<Shader>(device_, "Raw_Color_rint");
+    auto unloaded_rchit = std::make_shared<Shader>(device_, "Unloaded_rchit");
+    auto unloaded_rint = std::make_shared<Shader>(device_, "Unloaded_rint");
+    auto raw_color_rchit = std::make_shared<Shader>(device_, "Raw_Color_rchit");
+    auto raw_color_rint = std::make_shared<Shader>(device_, "Raw_Color_rint");
     std::vector<std::vector<std::shared_ptr<Shader>>> shader_groups = {
-        {rgen}, {rmiss}, {rchit, rint}};
+        {rgen}, {rmiss}, {unloaded_rchit, unloaded_rint}, {raw_color_rchit, raw_color_rint}};
     std::vector<VkDescriptorSetLayout> layouts = {
         swapchain_->get_image_descriptor(0)->get_layout(),
         builder.get_layout()->get_layout()};
