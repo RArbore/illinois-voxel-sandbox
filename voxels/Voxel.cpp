@@ -1,8 +1,10 @@
+#include <cmath>
+
 #include "Voxel.h"
 #include "utils/Assert.h"
 
 VoxelChunk::VoxelChunk(
-		       std::variant<std::vector<std::byte>, std::shared_ptr<GraphicsModel>> &&data,
+		       std::variant<std::vector<std::byte>, std::shared_ptr<GPUVolume>> &&data,
 		       uint32_t width,
 		       uint32_t height,
 		       uint32_t depth,
@@ -32,6 +34,14 @@ uint32_t VoxelChunk::get_height() const {
 
 uint32_t VoxelChunk::get_depth() const {
     return depth_;
+}
+
+VoxelChunk::Format VoxelChunk::get_format() const {
+    return format_;
+}
+
+VoxelChunk::AttributeSet VoxelChunk::get_attribute_set() const {
+    return attribute_set_;
 }
 
 VoxelChunk &VoxelChunkPtr::operator*() {

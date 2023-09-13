@@ -6,7 +6,7 @@
 #include <span>
 #include <set>
 
-#include <graphics/GraphicsContext.h>
+#include <graphics/GPUAllocator.h>
 
 class GraphicsModel;
 class ChunkManager;
@@ -28,7 +28,7 @@ public:
     };
 
     VoxelChunk(
-	       std::variant<std::vector<std::byte>, std::shared_ptr<GraphicsModel>> &&data,
+	       std::variant<std::vector<std::byte>, std::shared_ptr<GPUVolume>> &&data,
 	       uint32_t width,
 	       uint32_t height,
 	       uint32_t depth,
@@ -41,9 +41,11 @@ public:
     uint32_t get_width() const;
     uint32_t get_height() const;
     uint32_t get_depth() const;
+    Format get_format() const;
+    AttributeSet get_attribute_set() const;
 
 private:
-    std::variant<std::vector<std::byte>, std::shared_ptr<GraphicsModel>> data_;
+    std::variant<std::vector<std::byte>, std::shared_ptr<GPUVolume>> data_;
     uint32_t width_;
     uint32_t height_;
     uint32_t depth_;

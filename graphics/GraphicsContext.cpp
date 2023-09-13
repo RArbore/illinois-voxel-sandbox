@@ -1,5 +1,6 @@
-#include <chrono>
 #include <cstring>
+#include <chrono>
+#include <map>
 
 #include "Command.h"
 #include "Descriptor.h"
@@ -12,6 +13,10 @@
 #include "Swapchain.h"
 #include "Synchronization.h"
 #include "Window.h"
+
+const std::map<std::pair<VoxelChunk::Format, VoxelChunk::AttributeSet>, uint32_t> FORMAT_TO_SBT_OFFSET = {
+    {{VoxelChunk::Format::Raw, VoxelChunk::AttributeSet::Color}, 0},
+};
 
 class GraphicsContext {
   public:
@@ -61,12 +66,14 @@ class GraphicsContext {
 class GraphicsModel {
   public:
     GraphicsModel(std::shared_ptr<BLAS> blas,
-                  std::shared_ptr<GPUVolume> raw_data)
-        : blas_(blas), raw_data_(raw_data) {}
+                  std::shared_ptr<GPUVolume> raw_data,
+		  uint32_t sbt_offset)
+        : blas_(blas), raw_data_(raw_data), sbt_offset_(sbt_offset) {}
 
   private:
     std::shared_ptr<BLAS> blas_;
     std::shared_ptr<GPUVolume> raw_data_;
+    uint32_t sbt_offset_;
 
     friend std::shared_ptr<GraphicsContext> create_graphics_context();
     friend void render_frame(std::shared_ptr<GraphicsContext> context,
@@ -283,7 +290,8 @@ build_model(std::shared_ptr<GraphicsContext> context, VoxelChunkPtr chunk) {
         VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, 0, 1, 1);
     context->ring_buffer_->copy_to_device(volume, VK_IMAGE_LAYOUT_GENERAL,
                                           chunk->get_cpu_data(), {}, {});
-    return std::make_shared<GraphicsModel>(blas, volume);
+    uint32_t sbt_offset = FORMAT_TO_SBT_OFFSET.at({chunk->get_format(), chunk->get_attribute_set()});
+    return std::make_shared<GraphicsModel>(blas, volume, sbt_offset);
 }
 
 std::shared_ptr<GraphicsObject>
@@ -309,7 +317,7 @@ build_scene(std::shared_ptr<GraphicsContext> context,
         VkTransformMatrixKHR transform{};
         memcpy(&transform, &object->transform_, sizeof(VkTransformMatrixKHR));
         instances.emplace_back(transform, referenced_models.at(object->model_),
-                               0xFF, 0, 0,
+                               0xFF, object->model_->sbt_offset_, 0,
                                object->model_->blas_->get_device_address());
     }
     std::shared_ptr<TLAS> tlas = std::make_shared<TLAS>(
