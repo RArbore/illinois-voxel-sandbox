@@ -44,6 +44,7 @@ public:
     uint32_t get_width() const;
     uint32_t get_height() const;
     uint32_t get_depth() const;
+    State get_state() const;
     Format get_format() const;
     AttributeSet get_attribute_set() const;
     void queue_gpu_upload(std::shared_ptr<Device> device,

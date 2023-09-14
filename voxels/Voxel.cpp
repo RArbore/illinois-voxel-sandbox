@@ -20,17 +20,16 @@ VoxelChunk::VoxelChunk(
 			  attribute_set_(attribute_set) {}
 
 std::span<const std::byte> VoxelChunk::get_cpu_data() const {
-    ASSERT(state_ == State::CPU, "PANIC: Tried to get CPU data of voxel chunk without CPU data resident.");
+    ASSERT(state_ == State::CPU, "Tried to get CPU data of voxel chunk without CPU data resident.");
     return std::span {cpu_data_};
 }
 
 std::shared_ptr<GPUVolume> VoxelChunk::get_gpu_volume() const {
-    ASSERT(state_ == State::GPU, "PANIC: Tried to get CPU data of voxel chunk without CPU data resident.");
+    ASSERT(state_ == State::GPU, "Tried to get GPU volume data of voxel chunk without GPU data resident.");
     return volume_data_;
 }
 
 std::shared_ptr<Semaphore> VoxelChunk::get_timeline() const {
-    ASSERT(timeline_ != nullptr, "PANIC: Tried to get timeline semaphore of chunk that hasn't enqueued any GPU operations.");
     return timeline_;
 }
 
@@ -46,6 +45,10 @@ uint32_t VoxelChunk::get_depth() const {
     return depth_;
 }
 
+VoxelChunk::State VoxelChunk::get_state() const {
+    return state_;
+}
+
 VoxelChunk::Format VoxelChunk::get_format() const {
     return format_;
 }
@@ -57,7 +60,7 @@ VoxelChunk::AttributeSet VoxelChunk::get_attribute_set() const {
 void VoxelChunk::queue_gpu_upload(std::shared_ptr<Device> device,
 				  std::shared_ptr<GPUAllocator> allocator,
 				  std::shared_ptr<RingBuffer> ring_buffer) {
-    ASSERT(state_ == State::CPU, "PANIC: Tried to upload CPU data of voxel chunk to GPU without CPU data resident.");
+    ASSERT(state_ == State::CPU, "Tried to upload CPU data of voxel chunk to GPU without CPU data resident.");
     if (timeline_ == nullptr) {
 	timeline_ = std::make_shared<Semaphore>(device, true);
 	timeline_->set_signal_value(1);
@@ -74,7 +77,7 @@ void VoxelChunk::queue_gpu_upload(std::shared_ptr<Device> device,
 	break;
     }
     default: {
-	ASSERT(false, "PANIC: GPU upload for format is unimplemented.");
+	ASSERT(false, "GPU upload for format is unimplemented.");
     }
     }
     state_ = State::GPU;

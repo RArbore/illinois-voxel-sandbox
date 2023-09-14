@@ -256,8 +256,8 @@ DescriptorSetBuilder &DescriptorSetBuilder::bind_image(
 }
 
 DescriptorSetBuilder &DescriptorSetBuilder::bind_images(
-    uint32_t binding, std::vector<VkDescriptorImageInfo> image_infos,
-    VkDescriptorType type, VkShaderStageFlags stages, uint32_t count) {
+    uint32_t binding, std::vector<std::pair<VkDescriptorImageInfo, uint32_t>> image_infos,
+    VkDescriptorType type, VkShaderStageFlags stages) {
     VkDescriptorSetLayoutBinding layout_binding{};
     layout_binding.descriptorCount = MAX_MODELS;
     layout_binding.descriptorType = type;
@@ -266,20 +266,23 @@ DescriptorSetBuilder &DescriptorSetBuilder::bind_images(
     layout_binding.binding = binding;
     layout_->add_binding(layout_binding, true);
 
-    for (auto image_info : image_infos) {
+    for (auto [image_info, _] : image_infos) {
         image_infos_.push_back(image_info);
     }
 
-    VkWriteDescriptorSet write{};
-    write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-    write.pNext = nullptr;
-    write.descriptorCount = count;
-    write.descriptorType = type;
-    write.pImageInfo = image_infos.empty()
-                           ? nullptr
-                           : &image_infos_.back() - image_infos.size() + 1;
-    write.dstBinding = binding;
-    writes_.push_back(write);
+    for (size_t i = 0; i < image_infos.size(); ++i) {
+	VkWriteDescriptorSet write{};
+	write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+	write.pNext = nullptr;
+	write.descriptorCount = 1;
+	write.descriptorType = type;
+	write.pImageInfo = image_infos.empty()
+	    ? nullptr
+	    : &image_infos_.back() - image_infos.size() + i + 1;
+	write.dstBinding = binding;
+	write.dstArrayElement = image_infos.at(i).second;
+	writes_.push_back(write);
+    }
 
     return *this;
 }

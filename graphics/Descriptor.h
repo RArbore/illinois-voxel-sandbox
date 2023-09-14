@@ -100,8 +100,8 @@ class DescriptorSetBuilder {
                                      VkDescriptorType type,
                                      VkShaderStageFlags stages);
     DescriptorSetBuilder &bind_images(
-        uint32_t binding, std::vector<VkDescriptorImageInfo> image_infos,
-        VkDescriptorType type, VkShaderStageFlags stages, uint32_t count);
+				      uint32_t binding, std::vector<std::pair<VkDescriptorImageInfo, uint32_t>> image_infos,
+        VkDescriptorType type, VkShaderStageFlags stages);
     DescriptorSetBuilder &
     bind_acceleration_structure(uint32_t binding,
                                 VkWriteDescriptorSetAccelerationStructureKHR
