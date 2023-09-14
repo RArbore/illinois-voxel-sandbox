@@ -40,7 +40,8 @@ class TLAS {
          std::vector<VkAccelerationStructureInstanceKHR> instances);
     ~TLAS();
 
-    void update_model_sbt_offsets(std::unordered_map<uint64_t, uint32_t> models);
+    void
+    update_model_sbt_offsets(std::unordered_map<uint64_t, uint32_t> models);
 
     VkAccelerationStructureKHR get_tlas();
 

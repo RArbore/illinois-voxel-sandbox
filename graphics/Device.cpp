@@ -113,7 +113,8 @@ Device::Device(std::shared_ptr<Window> window) : window_(window) {
     queue_create_info.pQueuePriorities = &queue_priority;
 
     VkPhysicalDeviceShaderAtomicInt64Features shader_atomic_int_64_features{};
-    shader_atomic_int_64_features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SHADER_ATOMIC_INT64_FEATURES;
+    shader_atomic_int_64_features.sType =
+        VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SHADER_ATOMIC_INT64_FEATURES;
     shader_atomic_int_64_features.shaderBufferInt64Atomics = VK_TRUE;
     shader_atomic_int_64_features.pNext = nullptr;
 
@@ -352,7 +353,8 @@ int32_t physical_check_extensions(VkPhysicalDevice physical) {
 
 int32_t physical_check_features_support(VkPhysicalDevice physical) {
     VkPhysicalDeviceShaderAtomicInt64Features shader_atomic_int_64_features{};
-    shader_atomic_int_64_features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SHADER_ATOMIC_INT64_FEATURES;
+    shader_atomic_int_64_features.sType =
+        VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SHADER_ATOMIC_INT64_FEATURES;
     shader_atomic_int_64_features.pNext = nullptr;
 
     VkPhysicalDeviceTimelineSemaphoreFeatures timeline_semaphore_features{};
@@ -408,7 +410,7 @@ int32_t physical_check_features_support(VkPhysicalDevice physical) {
         buffer_device_address_features.bufferDeviceAddress &&
         synchronization_2_features.synchronization2 &&
         timeline_semaphore_features.timelineSemaphore &&
-	shader_atomic_int_64_features.shaderBufferInt64Atomics) {
+        shader_atomic_int_64_features.shaderBufferInt64Atomics) {
         return 0;
     }
     return -1;

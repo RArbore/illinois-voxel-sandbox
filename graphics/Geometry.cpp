@@ -259,12 +259,12 @@ TLAS::TLAS(std::shared_ptr<GPUAllocator> allocator,
     timeline_->set_signal_value(TLAS_BUILD_TIMELINE);
     wait_semaphores.push_back(timeline_);
     for (auto blas : bottom_structures) {
-	std::shared_ptr<Semaphore> timeline = blas->get_timeline();
-	timeline->set_wait_value(BLAS::BLAS_BUILD_TIMELINE);
-	wait_semaphores.push_back(timeline);
+        std::shared_ptr<Semaphore> timeline = blas->get_timeline();
+        timeline->set_wait_value(BLAS::BLAS_BUILD_TIMELINE);
+        wait_semaphores.push_back(timeline);
     }
-    allocator->get_device()->submit_command(build_command, std::move(wait_semaphores),
-                                            {timeline_});
+    allocator->get_device()->submit_command(
+        build_command, std::move(wait_semaphores), {timeline_});
 
     contained_structures_ = bottom_structures;
     instances_ = instances;
@@ -272,12 +272,13 @@ TLAS::TLAS(std::shared_ptr<GPUAllocator> allocator,
     ring_buffer_ = ring_buffer;
 }
 
-void TLAS::update_model_sbt_offsets(std::unordered_map<uint64_t, uint32_t> models) {
+void TLAS::update_model_sbt_offsets(
+    std::unordered_map<uint64_t, uint32_t> models) {
     for (auto &instance : instances_) {
-	auto it = models.find(instance.instanceCustomIndex);
-	if (it != models.end()) {
-	    instance.instanceShaderBindingTableRecordOffset = it->second;
-	}
+        auto it = models.find(instance.instanceCustomIndex);
+        if (it != models.end()) {
+            instance.instanceShaderBindingTableRecordOffset = it->second;
+        }
     }
     timeline_ = std::make_shared<Semaphore>(command_pool_->get_device(), true);
     timeline_->set_signal_value(INSTANCES_BUFFER_TIMELINE);
@@ -306,7 +307,7 @@ void TLAS::update_model_sbt_offsets(std::unordered_map<uint64_t, uint32_t> model
     tlas_build_range_info.transformOffset = 0;
     const VkAccelerationStructureBuildRangeInfoKHR
         *const tlas_build_range_infos[] = {&tlas_build_range_info};
-    
+
     VkAccelerationStructureBuildGeometryInfoKHR tlas_build_geometry_info{};
     tlas_build_geometry_info.sType =
         VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_GEOMETRY_INFO_KHR;
@@ -333,7 +334,8 @@ void TLAS::update_model_sbt_offsets(std::unordered_map<uint64_t, uint32_t> model
     });
     timeline_->set_wait_value(INSTANCES_BUFFER_TIMELINE);
     timeline_->set_signal_value(TLAS_BUILD_TIMELINE);
-    command_pool_->get_device()->submit_command(update_command, {timeline_}, {timeline_});
+    command_pool_->get_device()->submit_command(update_command, {timeline_},
+                                                {timeline_});
 }
 
 TLAS::~TLAS() {
