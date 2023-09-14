@@ -196,12 +196,14 @@ void render_frame(std::shared_ptr<GraphicsContext> context,
 	    }
 	}
 	if (!deduplicated_requests.empty()) {
-	    for (auto &model : scene_models) {
+	    for (auto [model_idx, _] : deduplicated_requests) {
+		auto &model = scene_models.at(model_idx);
 		if (model->chunk_->get_state() == VoxelChunk::State::CPU) {
 		    model->chunk_->queue_gpu_upload(context->device_, context->gpu_allocator_, context->ring_buffer_);
 		    render_wait_semaphores.emplace_back(model->chunk_->get_timeline());
 		} else {
 		    std::cout << "WARNING: A voxel chunk whose data is already resident in GPU memory was found as unloaded.\n";
+		    std::cout << "The chunk has width " << model->chunk_->get_width() << ", height " << model->chunk_->get_height() << ", and depth " << model->chunk_->get_depth();
 		}
 	    }
 	    scene->tlas_->update_model_sbt_offsets(std::move(deduplicated_requests));

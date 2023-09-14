@@ -61,6 +61,7 @@ void VoxelChunk::queue_gpu_upload(std::shared_ptr<Device> device,
 				  std::shared_ptr<GPUAllocator> allocator,
 				  std::shared_ptr<RingBuffer> ring_buffer) {
     ASSERT(state_ == State::CPU, "Tried to upload CPU data of voxel chunk to GPU without CPU data resident.");
+    std::cout << "INFO: Queued upload to GPU for voxel chunk " << this << ", which has the following dimensions: (" << width_ << ", " << height_ << ", " << depth_ << ").\n";
     if (timeline_ == nullptr) {
 	timeline_ = std::make_shared<Semaphore>(device, true);
 	timeline_->set_signal_value(1);
