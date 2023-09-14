@@ -6,5 +6,7 @@
 #include "common.glsl"
 
 void main() {
-    uint volume_id = gl_InstanceCustomIndexEXT;
+    uint64_t volume_id = gl_InstanceCustomIndexEXT;
+    int crb_idx = int(volume_id % MAX_NUM_CHUNKS_LOADED_PER_FRAME);
+    atomicExchange(chunk_request_buffer[crb_idx], volume_id);
 }

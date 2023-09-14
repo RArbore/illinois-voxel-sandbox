@@ -18,7 +18,7 @@ const uint32_t UNLOADED_SBT_OFFSET = 0;
 const std::map<std::pair<VoxelChunk::Format, VoxelChunk::AttributeSet>, uint32_t> FORMAT_TO_SBT_OFFSET = {
     {{VoxelChunk::Format::Raw, VoxelChunk::AttributeSet::Color}, 1},
 };
-const VkDeviceSize MAX_NUM_CHUNKS_LOADED_PER_FRAME = 32;
+const uint64_t MAX_NUM_CHUNKS_LOADED_PER_FRAME = 32;
 
 class GraphicsContext {
   public:
@@ -41,6 +41,8 @@ class GraphicsContext {
 
     std::shared_ptr<GPUBuffer> unloaded_chunks_buffer_ = nullptr;
     std::span<std::byte> unloaded_chunks_span_;
+
+    std::shared_ptr<DescriptorSet> wide_descriptor_ = nullptr;
 
     std::shared_ptr<GraphicsScene> current_scene_ = nullptr;
 
@@ -111,11 +113,22 @@ GraphicsContext::GraphicsContext() {
     ring_buffer_ =
         std::make_shared<RingBuffer>(gpu_allocator_, command_pool_, 1 << 24);
 
-    DescriptorSetBuilder builder(descriptor_allocator_);
-    builder.bind_acceleration_structure(0, {}, VK_SHADER_STAGE_RAYGEN_BIT_KHR);
-    builder.bind_images(1, {}, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,
+    DescriptorSetBuilder scene_builder(descriptor_allocator_);
+    scene_builder.bind_acceleration_structure(0, {}, VK_SHADER_STAGE_RAYGEN_BIT_KHR);
+    scene_builder.bind_images(1, {}, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,
                         VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR |
                             VK_SHADER_STAGE_INTERSECTION_BIT_KHR);
+
+    unloaded_chunks_buffer_ = std::make_shared<GPUBuffer>(gpu_allocator_, MAX_NUM_CHUNKS_LOADED_PER_FRAME * sizeof(uint64_t), sizeof(uint64_t), VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, VMA_ALLOCATION_CREATE_HOST_ACCESS_RANDOM_BIT);
+    unloaded_chunks_span_ = unloaded_chunks_buffer_->cpu_map();
+    uint64_t *crb = reinterpret_cast<uint64_t *>(unloaded_chunks_span_.data());
+    for (uint32_t i = 0; i < MAX_NUM_CHUNKS_LOADED_PER_FRAME; ++i) {
+	crb[i] = 0xFFFFFFFF;
+    }
+
+    DescriptorSetBuilder wide_builder(descriptor_allocator_);
+    wide_builder.bind_buffer(0, {unloaded_chunks_buffer_->get_buffer(), 0, unloaded_chunks_buffer_->get_size()}, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, VK_SHADER_STAGE_INTERSECTION_BIT_KHR);
+    wide_descriptor_ = wide_builder.build();
 
     auto rgen = std::make_shared<Shader>(device_, "rgen");
     auto rmiss = std::make_shared<Shader>(device_, "rmiss");
@@ -127,7 +140,8 @@ GraphicsContext::GraphicsContext() {
         {rgen}, {rmiss}, {unloaded_rchit, unloaded_rint}, {raw_color_rchit, raw_color_rint}};
     std::vector<VkDescriptorSetLayout> layouts = {
         swapchain_->get_image_descriptor(0)->get_layout(),
-        builder.get_layout()->get_layout()};
+        scene_builder.get_layout()->get_layout(),
+        wide_builder.get_layout()->get_layout()};
 
     ray_trace_pipeline_ = std::make_shared<RayTracePipeline>(
         gpu_allocator_, shader_groups, layouts);
@@ -135,9 +149,6 @@ GraphicsContext::GraphicsContext() {
     acquire_semaphore_ = std::make_shared<Semaphore>(device_);
     render_semaphore_ = std::make_shared<Semaphore>(device_);
     render_command_buffer_ = std::make_shared<Command>(command_pool_);
-    unloaded_chunks_buffer_ = std::make_shared<GPUBuffer>(gpu_allocator_, MAX_NUM_CHUNKS_LOADED_PER_FRAME, sizeof(uint32_t), VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, VMA_ALLOCATION_CREATE_HOST_ACCESS_RANDOM_BIT);
-    unloaded_chunks_span_ = unloaded_chunks_buffer_->cpu_map();
-    memset(unloaded_chunks_span_.data(), 0xFF, unloaded_chunks_span_.size());
 }
 
 GraphicsContext::~GraphicsContext() {
@@ -170,6 +181,15 @@ void render_frame(std::shared_ptr<GraphicsContext> context,
 
     context->frame_fence_->wait();
 
+    uint64_t *crb = reinterpret_cast<uint64_t *>(context->unloaded_chunks_span_.data());
+    std::unordered_set<uint64_t> deduplicated_requests;
+    for (uint32_t i = 0; i < MAX_NUM_CHUNKS_LOADED_PER_FRAME; ++i) {
+	if (crb[i] != 0xFFFFFFFF) {
+	    deduplicated_requests.insert(crb[i]);
+	    crb[i] = 0xFFFFFFFF;
+	}
+    }
+    
     context->frame_fence_->reset();
 
     const uint32_t swapchain_image_index =
@@ -203,7 +223,7 @@ void render_frame(std::shared_ptr<GraphicsContext> context,
                 command_buffer,
                 {context->swapchain_->get_image_descriptor(
                      swapchain_image_index),
-                 scene->scene_descriptor_},
+                 scene->scene_descriptor_, context->wide_descriptor_},
                 push_constants_span, extent.width, extent.height, 1);
             epilogue_barrier.record(command_buffer);
         });
