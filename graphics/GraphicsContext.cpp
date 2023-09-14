@@ -18,7 +18,7 @@ const uint32_t UNLOADED_SBT_OFFSET = 0;
 const std::map<std::pair<VoxelChunk::Format, VoxelChunk::AttributeSet>, uint32_t> FORMAT_TO_SBT_OFFSET = {
     {{VoxelChunk::Format::Raw, VoxelChunk::AttributeSet::Color}, 1},
 };
-const VkDeviceSize MAX_NUM_CHUNKS_LOADED_PER_FRAME = 1024;
+const VkDeviceSize MAX_NUM_CHUNKS_LOADED_PER_FRAME = 32;
 
 class GraphicsContext {
   public:
@@ -38,6 +38,9 @@ class GraphicsContext {
     std::shared_ptr<Semaphore> acquire_semaphore_ = nullptr;
     std::shared_ptr<Semaphore> render_semaphore_ = nullptr;
     std::shared_ptr<Command> render_command_buffer_ = nullptr;
+
+    std::shared_ptr<GPUBuffer> unloaded_chunks_buffer_ = nullptr;
+    std::span<std::byte> unloaded_chunks_span_;
 
     std::shared_ptr<GraphicsScene> current_scene_ = nullptr;
 
@@ -132,9 +135,15 @@ GraphicsContext::GraphicsContext() {
     acquire_semaphore_ = std::make_shared<Semaphore>(device_);
     render_semaphore_ = std::make_shared<Semaphore>(device_);
     render_command_buffer_ = std::make_shared<Command>(command_pool_);
+    unloaded_chunks_buffer_ = std::make_shared<GPUBuffer>(gpu_allocator_, MAX_NUM_CHUNKS_LOADED_PER_FRAME, sizeof(uint32_t), VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, VMA_ALLOCATION_CREATE_HOST_ACCESS_RANDOM_BIT);
+    unloaded_chunks_span_ = unloaded_chunks_buffer_->cpu_map();
+    memset(unloaded_chunks_span_.data(), 0xFF, unloaded_chunks_span_.size());
 }
 
-GraphicsContext::~GraphicsContext() { vkDeviceWaitIdle(device_->get_device()); }
+GraphicsContext::~GraphicsContext() {
+    vkDeviceWaitIdle(device_->get_device());
+    unloaded_chunks_buffer_->cpu_unmap();
+}
 
 std::shared_ptr<GraphicsContext> create_graphics_context() {
     auto context = std::shared_ptr<GraphicsContext>(new GraphicsContext());
@@ -161,6 +170,8 @@ void render_frame(std::shared_ptr<GraphicsContext> context,
 
     context->frame_fence_->wait();
 
+    context->frame_fence_->reset();
+
     const uint32_t swapchain_image_index =
         context->swapchain_->acquire_next_image(context->acquire_semaphore_);
 
@@ -177,8 +188,6 @@ void render_frame(std::shared_ptr<GraphicsContext> context,
         VK_ACCESS_2_MEMORY_READ_BIT,
         context->swapchain_->get_image(swapchain_image_index),
         VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
-
-    context->frame_fence_->reset();
 
     std::vector<std::byte> push_constants(128);
     memcpy(push_constants.data(), &context->elapsed_ms_, sizeof(double));
@@ -240,7 +249,7 @@ build_model(std::shared_ptr<GraphicsContext> context, VoxelChunkPtr chunk) {
     std::shared_ptr<BLAS> blas =
         std::make_shared<BLAS>(context->gpu_allocator_, context->command_pool_,
                                context->ring_buffer_, aabbs);
-    chunk->queue_gpu_upload(context->device_, context->gpu_allocator_, context->ring_buffer_);
+    //chunk->queue_gpu_upload(context->device_, context->gpu_allocator_, context->ring_buffer_);
     uint32_t sbt_offset = FORMAT_TO_SBT_OFFSET.at({chunk->get_format(), chunk->get_attribute_set()});
     return std::make_shared<GraphicsModel>(blas, chunk, sbt_offset);
 }
@@ -270,7 +279,7 @@ build_scene(std::shared_ptr<GraphicsContext> context,
         VkTransformMatrixKHR transform{};
         memcpy(&transform, &object->transform_, sizeof(VkTransformMatrixKHR));
         instances.emplace_back(transform, referenced_models.at(object->model_),
-                               0xFF, object->model_->sbt_offset_, 0,
+                               0xFF, UNLOADED_SBT_OFFSET, 0,
                                object->model_->blas_->get_device_address());
     }
     std::shared_ptr<TLAS> tlas = std::make_shared<TLAS>(
