@@ -53,6 +53,8 @@ class GraphicsContext {
 
     std::chrono::time_point<std::chrono::system_clock> first_time_;
     uint64_t elapsed_ms_;
+
+    void check_chunk_request_buffer(std::vector<std::shared_ptr<Semaphore>> &render_wait_semaphores);
 };
 
 class GraphicsModel {
@@ -183,58 +185,7 @@ void render_frame(std::shared_ptr<GraphicsContext> context,
     context->frame_fence_->wait();
 
     if (!changed_scenes) {
-	uint64_t *crb = reinterpret_cast<uint64_t *>(context->unloaded_chunks_span_.data());
-	std::unordered_map<uint64_t, uint32_t> deduplicated_requests;
-	std::vector<std::shared_ptr<GraphicsModel>> scene_models;
-	for (uint32_t i = 0; i < MAX_NUM_CHUNKS_LOADED_PER_FRAME; ++i) {
-	    if (crb[i] != 0xFFFFFFFF) {
-		if (scene_models.empty()) {
-		    scene_models = scene->assemble_models_in_order();
-		}
-		deduplicated_requests.emplace(crb[i], scene_models.at(crb[i])->sbt_offset_);
-		crb[i] = 0xFFFFFFFF;
-	    }
-	}
-	if (!deduplicated_requests.empty()) {
-	    for (auto [model_idx, _] : deduplicated_requests) {
-		auto &model = scene_models.at(model_idx);
-		if (model->chunk_->get_state() == VoxelChunk::State::CPU) {
-		    model->chunk_->queue_gpu_upload(context->device_, context->gpu_allocator_, context->ring_buffer_);
-		    render_wait_semaphores.emplace_back(model->chunk_->get_timeline());
-		} else {
-		    std::cout << "WARNING: A voxel chunk whose data is already resident in GPU memory was found as unloaded.\n";
-		    std::cout << "The chunk has width " << model->chunk_->get_width() << ", height " << model->chunk_->get_height() << ", and depth " << model->chunk_->get_depth();
-		}
-	    }
-	    scene->tlas_->update_model_sbt_offsets(std::move(deduplicated_requests));
-	    render_wait_semaphores.emplace_back(scene->tlas_->get_timeline());
-
-	    DescriptorSetBuilder builder(context->descriptor_allocator_);
-	    VkAccelerationStructureKHR vk_tlas = scene->tlas_->get_tlas();
-	    builder.bind_acceleration_structure(0,
-						{
-						    .accelerationStructureCount = 1,
-						    .pAccelerationStructures = &vk_tlas,
-						},
-						VK_SHADER_STAGE_RAYGEN_BIT_KHR);
-	    
-	    std::vector<std::pair<VkDescriptorImageInfo, uint32_t>> image_infos;
-	    for (size_t i = 0; i < scene_models.size(); ++i) {
-		const auto &model = scene_models.at(i);
-		if (model->chunk_->get_state() == VoxelChunk::State::GPU) {
-		    auto volume = model->chunk_->get_gpu_volume();
-		    VkDescriptorImageInfo image_info{};
-		    image_info.imageView = volume->get_view();
-		    image_info.sampler = VK_NULL_HANDLE;
-		    image_info.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
-		    image_infos.emplace_back(image_info, i);
-		}
-	    }
-	    builder.bind_images(1, image_infos, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,
-				VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR |
-				VK_SHADER_STAGE_INTERSECTION_BIT_KHR);
-	    builder.update(scene->scene_descriptor_);
-	}
+	context->check_chunk_request_buffer(render_wait_semaphores);
     }
     
     context->frame_fence_->reset();
@@ -377,4 +328,59 @@ build_scene(std::shared_ptr<GraphicsContext> context,
 
     auto scene_descriptor = builder.build();
     return std::make_shared<GraphicsScene>(tlas, objects, scene_descriptor);
+}
+
+void GraphicsContext::check_chunk_request_buffer(std::vector<std::shared_ptr<Semaphore>> &render_wait_semaphores) {
+	uint64_t *crb = reinterpret_cast<uint64_t *>(unloaded_chunks_span_.data());
+	std::unordered_map<uint64_t, uint32_t> deduplicated_requests;
+	std::vector<std::shared_ptr<GraphicsModel>> scene_models;
+	for (uint32_t i = 0; i < MAX_NUM_CHUNKS_LOADED_PER_FRAME; ++i) {
+	    if (crb[i] != 0xFFFFFFFF) {
+		if (scene_models.empty()) {
+		    scene_models = current_scene_->assemble_models_in_order();
+		}
+		deduplicated_requests.emplace(crb[i], scene_models.at(crb[i])->sbt_offset_);
+		crb[i] = 0xFFFFFFFF;
+	    }
+	}
+	if (!deduplicated_requests.empty()) {
+	    for (auto [model_idx, _] : deduplicated_requests) {
+		auto &model = scene_models.at(model_idx);
+		if (model->chunk_->get_state() == VoxelChunk::State::CPU) {
+		    model->chunk_->queue_gpu_upload(device_, gpu_allocator_, ring_buffer_);
+		    render_wait_semaphores.emplace_back(model->chunk_->get_timeline());
+		} else {
+		    std::cout << "WARNING: A voxel chunk whose data is already resident in GPU memory was found as unloaded.\n";
+		    std::cout << "The chunk has width " << model->chunk_->get_width() << ", height " << model->chunk_->get_height() << ", and depth " << model->chunk_->get_depth();
+		}
+	    }
+	    current_scene_->tlas_->update_model_sbt_offsets(std::move(deduplicated_requests));
+	    render_wait_semaphores.emplace_back(scene->tlas_->get_timeline());
+
+	    DescriptorSetBuilder builder(descriptor_allocator_);
+	    VkAccelerationStructureKHR vk_tlas = scene->tlas_->get_tlas();
+	    builder.bind_acceleration_structure(0,
+						{
+						    .accelerationStructureCount = 1,
+						    .pAccelerationStructures = &vk_tlas,
+						},
+						VK_SHADER_STAGE_RAYGEN_BIT_KHR);
+	    
+	    std::vector<std::pair<VkDescriptorImageInfo, uint32_t>> image_infos;
+	    for (size_t i = 0; i < scene_models.size(); ++i) {
+		const auto &model = scene_models.at(i);
+		if (model->chunk_->get_state() == VoxelChunk::State::GPU) {
+		    auto volume = model->chunk_->get_gpu_volume();
+		    VkDescriptorImageInfo image_info{};
+		    image_info.imageView = volume->get_view();
+		    image_info.sampler = VK_NULL_HANDLE;
+		    image_info.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
+		    image_infos.emplace_back(image_info, i);
+		}
+	    }
+	    builder.bind_images(1, image_infos, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,
+				VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR |
+				VK_SHADER_STAGE_INTERSECTION_BIT_KHR);
+	    builder.update(scene->scene_descriptor_);
+	}
 }
