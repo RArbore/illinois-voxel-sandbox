@@ -40,6 +40,7 @@ public:
 
     std::span<const std::byte> get_cpu_data() const;
     std::shared_ptr<GPUVolume> get_gpu_volume() const;
+    std::shared_ptr<Semaphore> get_timeline() const;
     uint32_t get_width() const;
     uint32_t get_height() const;
     uint32_t get_depth() const;

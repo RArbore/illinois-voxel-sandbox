@@ -29,6 +29,11 @@ std::shared_ptr<GPUVolume> VoxelChunk::get_gpu_volume() const {
     return volume_data_;
 }
 
+std::shared_ptr<Semaphore> VoxelChunk::get_timeline() const {
+    ASSERT(timeline_ != nullptr, "PANIC: Tried to get timeline semaphore of chunk that hasn't enqueued any GPU operations.");
+    return timeline_;
+}
+
 uint32_t VoxelChunk::get_width() const {
     return width_;
 }
@@ -73,6 +78,7 @@ void VoxelChunk::queue_gpu_upload(std::shared_ptr<Device> device,
     }
     }
     state_ = State::GPU;
+    timeline_->increment();
 }
 
 VoxelChunk &VoxelChunkPtr::operator*() {

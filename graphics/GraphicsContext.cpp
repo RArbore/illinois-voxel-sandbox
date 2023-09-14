@@ -189,10 +189,15 @@ std::shared_ptr<GraphicsContext> create_graphics_context() {
 
 void render_frame(std::shared_ptr<GraphicsContext> context,
                   std::shared_ptr<GraphicsScene> scene) {
-    std::shared_ptr<Semaphore> scene_semaphore = nullptr;
+    std::vector<std::shared_ptr<Semaphore>> render_wait_semaphores {context->acquire_semaphore_};
     if (context->current_scene_ != scene) {
-        scene_semaphore = scene->tlas_->get_timeline();
-        scene_semaphore->set_wait_value(TLAS::TLAS_BUILD_TIMELINE);
+	std::shared_ptr<Semaphore> tlas_semaphore = scene->tlas_->get_timeline();
+        tlas_semaphore->set_wait_value(TLAS::TLAS_BUILD_TIMELINE);
+	render_wait_semaphores.emplace_back(std::move(tlas_semaphore));
+	for (auto object : scene->objects_) {
+	    std::shared_ptr<Semaphore> upload_semaphore = object->model_->chunk_->get_timeline();
+	    render_wait_semaphores.emplace_back(std::move(upload_semaphore));
+	}
         context->current_scene_ = scene;
     }
 
@@ -238,17 +243,11 @@ void render_frame(std::shared_ptr<GraphicsContext> context,
             epilogue_barrier.record(command_buffer);
         });
 
-    if (scene_semaphore) {
-        context->device_->submit_command(
-            context->render_command_buffer_,
-            {context->acquire_semaphore_, scene_semaphore},
-            {context->render_semaphore_}, context->frame_fence_);
-    } else {
-        context->device_->submit_command(
-            context->render_command_buffer_, {context->acquire_semaphore_},
-            {context->render_semaphore_}, context->frame_fence_);
-    }
-
+    context->device_->submit_command(
+				     context->render_command_buffer_,
+				     render_wait_semaphores,
+				     {context->render_semaphore_}, context->frame_fence_);
+    
     context->swapchain_->present_image(swapchain_image_index,
                                        context->render_semaphore_);
 
