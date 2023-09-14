@@ -267,6 +267,73 @@ TLAS::TLAS(std::shared_ptr<GPUAllocator> allocator,
                                             {timeline_});
 
     contained_structures_ = bottom_structures;
+    instances_ = instances;
+    command_pool_ = command_pool;
+    ring_buffer_ = ring_buffer;
+}
+
+void TLAS::update_model_sbt_offsets(std::unordered_map<uint64_t, uint32_t> models) {
+    for (auto &instance : instances_) {
+	auto it = models.find(instance.instanceCustomIndex);
+	if (it != models.end()) {
+	    instance.instanceShaderBindingTableRecordOffset = it->second;
+	}
+    }
+    timeline_ = std::make_shared<Semaphore>(command_pool_->get_device(), true);
+    timeline_->set_signal_value(INSTANCES_BUFFER_TIMELINE);
+    ring_buffer_->copy_to_device(
+        instances_buffer_, 0,
+        std::as_bytes(std::span<VkAccelerationStructureInstanceKHR>(
+            instances_.data(), instances_.size())),
+        {}, {timeline_});
+
+    VkAccelerationStructureGeometryInstancesDataKHR geometry_instances_data{};
+    geometry_instances_data.sType =
+        VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_INSTANCES_DATA_KHR;
+    geometry_instances_data.data.deviceAddress =
+        instances_buffer_->get_device_address();
+
+    VkAccelerationStructureGeometryKHR tlas_geometry{};
+    tlas_geometry.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_KHR;
+    tlas_geometry.geometryType = VK_GEOMETRY_TYPE_INSTANCES_KHR;
+    tlas_geometry.geometry.instances = geometry_instances_data;
+
+    VkAccelerationStructureBuildRangeInfoKHR tlas_build_range_info{};
+    tlas_build_range_info.firstVertex = 0;
+    tlas_build_range_info.primitiveCount =
+        static_cast<uint32_t>(instances_.size());
+    tlas_build_range_info.primitiveOffset = 0;
+    tlas_build_range_info.transformOffset = 0;
+    const VkAccelerationStructureBuildRangeInfoKHR
+        *const tlas_build_range_infos[] = {&tlas_build_range_info};
+    
+    VkAccelerationStructureBuildGeometryInfoKHR tlas_build_geometry_info{};
+    tlas_build_geometry_info.sType =
+        VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_GEOMETRY_INFO_KHR;
+    tlas_build_geometry_info.type =
+        VK_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL_KHR;
+    tlas_build_geometry_info.flags =
+        VK_BUILD_ACCELERATION_STRUCTURE_PREFER_FAST_TRACE_BIT_KHR;
+    tlas_build_geometry_info.mode =
+        VK_BUILD_ACCELERATION_STRUCTURE_MODE_BUILD_KHR;
+    tlas_build_geometry_info.srcAccelerationStructure = tlas_;
+    tlas_build_geometry_info.dstAccelerationStructure = tlas_;
+    tlas_build_geometry_info.scratchData.deviceAddress =
+        scratch_buffer_->get_device_address();
+    tlas_build_geometry_info.geometryCount = 1;
+    tlas_build_geometry_info.pGeometries = &tlas_geometry;
+
+    std::shared_ptr<Command> update_command =
+        std::make_shared<Command>(command_pool_);
+    update_command->record([&](VkCommandBuffer command) {
+        vkCmdBuildAccelerationStructures(
+            command, 1, &tlas_build_geometry_info,
+            reinterpret_cast<const VkAccelerationStructureBuildRangeInfoKHR
+                                 *const *>(tlas_build_range_infos));
+    });
+    timeline_->set_wait_value(INSTANCES_BUFFER_TIMELINE);
+    timeline_->set_signal_value(TLAS_BUILD_TIMELINE);
+    command_pool_->get_device()->submit_command(update_command, {timeline_}, {timeline_});
 }
 
 TLAS::~TLAS() {

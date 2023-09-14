@@ -1,5 +1,7 @@
 #pragma once
 
+#include <unordered_map>
+
 #include "GPUAllocator.h"
 #include "RingBuffer.h"
 
@@ -38,6 +40,8 @@ class TLAS {
          std::vector<VkAccelerationStructureInstanceKHR> instances);
     ~TLAS();
 
+    void update_model_sbt_offsets(std::unordered_map<uint64_t, uint32_t> models);
+
     VkAccelerationStructureKHR get_tlas();
 
     std::shared_ptr<Semaphore> get_timeline();
@@ -51,9 +55,13 @@ class TLAS {
     VkAccelerationStructureKHR tlas_ = VK_NULL_HANDLE;
 
     std::vector<std::shared_ptr<BLAS>> contained_structures_;
+    std::vector<VkAccelerationStructureInstanceKHR> instances_;
 
     std::shared_ptr<GPUBuffer> instances_buffer_ = nullptr;
     std::shared_ptr<Semaphore> timeline_ = nullptr;
     std::shared_ptr<GPUBuffer> scratch_buffer_ = nullptr;
     std::shared_ptr<GPUBuffer> storage_buffer_ = nullptr;
+
+    std::shared_ptr<CommandPool> command_pool_;
+    std::shared_ptr<RingBuffer> ring_buffer_;
 };

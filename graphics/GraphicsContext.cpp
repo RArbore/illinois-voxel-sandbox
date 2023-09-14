@@ -164,7 +164,8 @@ std::shared_ptr<GraphicsContext> create_graphics_context() {
 void render_frame(std::shared_ptr<GraphicsContext> context,
                   std::shared_ptr<GraphicsScene> scene) {
     std::vector<std::shared_ptr<Semaphore>> render_wait_semaphores {context->acquire_semaphore_};
-    if (context->current_scene_ != scene) {
+    const bool changed_scenes = context->current_scene_ != scene;
+    if (changed_scenes) {
 	std::shared_ptr<Semaphore> tlas_semaphore = scene->tlas_->get_timeline();
         tlas_semaphore->set_wait_value(TLAS::TLAS_BUILD_TIMELINE);
 	render_wait_semaphores.emplace_back(std::move(tlas_semaphore));
@@ -181,12 +182,56 @@ void render_frame(std::shared_ptr<GraphicsContext> context,
 
     context->frame_fence_->wait();
 
-    uint64_t *crb = reinterpret_cast<uint64_t *>(context->unloaded_chunks_span_.data());
-    std::unordered_set<uint64_t> deduplicated_requests;
-    for (uint32_t i = 0; i < MAX_NUM_CHUNKS_LOADED_PER_FRAME; ++i) {
-	if (crb[i] != 0xFFFFFFFF) {
-	    deduplicated_requests.insert(crb[i]);
-	    crb[i] = 0xFFFFFFFF;
+    if (!changed_scenes) {
+	uint64_t *crb = reinterpret_cast<uint64_t *>(context->unloaded_chunks_span_.data());
+	std::unordered_map<uint64_t, uint32_t> deduplicated_requests;
+	std::vector<std::shared_ptr<GraphicsModel>> scene_models;
+	for (uint32_t i = 0; i < MAX_NUM_CHUNKS_LOADED_PER_FRAME; ++i) {
+	    if (crb[i] != 0xFFFFFFFF) {
+		if (scene_models.empty()) {
+		    scene_models = scene->assemble_models_in_order();
+		}
+		deduplicated_requests.emplace(crb[i], scene_models.at(crb[i])->sbt_offset_);
+		crb[i] = 0xFFFFFFFF;
+	    }
+	}
+	if (!deduplicated_requests.empty()) {
+	    for (auto &model : scene_models) {
+		if (model->chunk_->get_state() == VoxelChunk::State::CPU) {
+		    model->chunk_->queue_gpu_upload(context->device_, context->gpu_allocator_, context->ring_buffer_);
+		    render_wait_semaphores.emplace_back(model->chunk_->get_timeline());
+		} else {
+		    std::cout << "WARNING: A voxel chunk whose data is already resident in GPU memory was found as unloaded.\n";
+		}
+	    }
+	    scene->tlas_->update_model_sbt_offsets(std::move(deduplicated_requests));
+	    render_wait_semaphores.emplace_back(scene->tlas_->get_timeline());
+
+	    DescriptorSetBuilder builder(context->descriptor_allocator_);
+	    VkAccelerationStructureKHR vk_tlas = scene->tlas_->get_tlas();
+	    builder.bind_acceleration_structure(0,
+						{
+						    .accelerationStructureCount = 1,
+						    .pAccelerationStructures = &vk_tlas,
+						},
+						VK_SHADER_STAGE_RAYGEN_BIT_KHR);
+	    
+	    std::vector<std::pair<VkDescriptorImageInfo, uint32_t>> image_infos;
+	    for (size_t i = 0; i < scene_models.size(); ++i) {
+		const auto &model = scene_models.at(i);
+		if (model->chunk_->get_state() == VoxelChunk::State::GPU) {
+		    auto volume = model->chunk_->get_gpu_volume();
+		    VkDescriptorImageInfo image_info{};
+		    image_info.imageView = volume->get_view();
+		    image_info.sampler = VK_NULL_HANDLE;
+		    image_info.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
+		    image_infos.emplace_back(image_info, i);
+		}
+	    }
+	    builder.bind_images(1, image_infos, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,
+				VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR |
+				VK_SHADER_STAGE_INTERSECTION_BIT_KHR);
+	    builder.update(scene->scene_descriptor_);
 	}
     }
     
@@ -269,7 +314,6 @@ build_model(std::shared_ptr<GraphicsContext> context, VoxelChunkPtr chunk) {
     std::shared_ptr<BLAS> blas =
         std::make_shared<BLAS>(context->gpu_allocator_, context->command_pool_,
                                context->ring_buffer_, aabbs);
-    //chunk->queue_gpu_upload(context->device_, context->gpu_allocator_, context->ring_buffer_);
     uint32_t sbt_offset = FORMAT_TO_SBT_OFFSET.at({chunk->get_format(), chunk->get_attribute_set()});
     return std::make_shared<GraphicsModel>(blas, chunk, sbt_offset);
 }
