@@ -3,6 +3,7 @@ cmake_minimum_required(VERSION 3.0)
 set(voxel_chunks
         VoxelChunk.cpp
         RawVoxelChunk.cpp
+        VoxelChunkGeneration.cpp
         BrickmapVoxelChunk.cpp
 )
 
