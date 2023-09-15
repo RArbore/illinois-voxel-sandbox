@@ -1,12 +1,6 @@
 cmake_minimum_required(VERSION 3.0)
 
-set(voxel_chunks
-        VoxelChunk.cpp
-        RawVoxelChunk.cpp
-        VoxelChunkGeneration.cpp
-        BrickmapVoxelChunk.cpp
-)
-
-add_library(voxels ${voxel_chunks} VoxelManager.cpp)
+add_library(voxels Voxel.cpp VoxelChunkGeneration.cpp)
 
 target_include_directories(voxels PUBLIC ${CMAKE_SOURCE_DIR})
+target_link_libraries(voxels PRIVATE graphics)

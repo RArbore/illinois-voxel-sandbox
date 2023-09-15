@@ -112,11 +112,17 @@ Device::Device(std::shared_ptr<Window> window) : window_(window) {
     queue_create_info.queueCount = 1;
     queue_create_info.pQueuePriorities = &queue_priority;
 
+    VkPhysicalDeviceShaderAtomicInt64Features shader_atomic_int_64_features{};
+    shader_atomic_int_64_features.sType =
+        VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SHADER_ATOMIC_INT64_FEATURES;
+    shader_atomic_int_64_features.shaderBufferInt64Atomics = VK_TRUE;
+    shader_atomic_int_64_features.pNext = nullptr;
+
     VkPhysicalDeviceTimelineSemaphoreFeatures timeline_semaphore_features{};
     timeline_semaphore_features.sType =
         VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_TIMELINE_SEMAPHORE_FEATURES;
     timeline_semaphore_features.timelineSemaphore = VK_TRUE;
-    timeline_semaphore_features.pNext = nullptr;
+    timeline_semaphore_features.pNext = &shader_atomic_int_64_features;
 
     VkPhysicalDeviceSynchronization2Features synchronization_2_features{};
     synchronization_2_features.sType =
@@ -229,16 +235,16 @@ void Device::submit_command(
         if (semaphore->is_timeline()) {
             timeline_wait_values.push_back(semaphore->get_wait_value());
         } else {
-	    timeline_wait_values.push_back(0);
-	}
+            timeline_wait_values.push_back(0);
+        }
     }
     std::vector<uint64_t> timeline_signal_values;
     for (const auto semaphore : signal_semaphores) {
         if (semaphore->is_timeline()) {
             timeline_signal_values.push_back(semaphore->get_signal_value());
         } else {
-	    timeline_signal_values.push_back(0);
-	}
+            timeline_signal_values.push_back(0);
+        }
     }
 
     VkTimelineSemaphoreSubmitInfo timeline_semaphore_info{};
@@ -346,10 +352,15 @@ int32_t physical_check_extensions(VkPhysicalDevice physical) {
 }
 
 int32_t physical_check_features_support(VkPhysicalDevice physical) {
+    VkPhysicalDeviceShaderAtomicInt64Features shader_atomic_int_64_features{};
+    shader_atomic_int_64_features.sType =
+        VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SHADER_ATOMIC_INT64_FEATURES;
+    shader_atomic_int_64_features.pNext = nullptr;
+
     VkPhysicalDeviceTimelineSemaphoreFeatures timeline_semaphore_features{};
     timeline_semaphore_features.sType =
         VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_TIMELINE_SEMAPHORE_FEATURES;
-    timeline_semaphore_features.pNext = nullptr;
+    timeline_semaphore_features.pNext = &shader_atomic_int_64_features;
 
     VkPhysicalDeviceSynchronization2Features synchronization_2_features{};
     synchronization_2_features.sType =
@@ -398,7 +409,8 @@ int32_t physical_check_features_support(VkPhysicalDevice physical) {
             .descriptorBindingAccelerationStructureUpdateAfterBind &&
         buffer_device_address_features.bufferDeviceAddress &&
         synchronization_2_features.synchronization2 &&
-        timeline_semaphore_features.timelineSemaphore) {
+        timeline_semaphore_features.timelineSemaphore &&
+        shader_atomic_int_64_features.shaderBufferInt64Atomics) {
         return 0;
     }
     return -1;

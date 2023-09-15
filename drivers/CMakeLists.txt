@@ -1,19 +1,24 @@
 cmake_minimum_required(VERSION 3.0)
 
-add_executable(ivs ivs.cpp)
-
-target_include_directories(ivs PUBLIC ${CMAKE_SOURCE_DIR})
-target_link_libraries(ivs LINK_PUBLIC voxels)
-target_link_libraries(ivs LINK_PUBLIC graphics)
-target_link_libraries(ivs LINK_PUBLIC utils)
-add_dependencies(ivs shaders)
-
-target_link_libraries(ivs LINK_PUBLIC vma)
-
-find_package(Vulkan REQUIRED)
-target_link_libraries(ivs PRIVATE Vulkan::Vulkan)
-
 if (UNIX)
     find_package(glfw3 REQUIRED)
 endif ()
-target_link_libraries(ivs PRIVATE glfw)
+find_package(Vulkan REQUIRED)
+
+function(DEFINE_EXE NAME)
+  add_executable(${NAME} ${NAME}.cpp)
+  target_include_directories(${NAME} PUBLIC ${CMAKE_SOURCE_DIR})
+  target_link_libraries(${NAME} LINK_PUBLIC voxels)
+  target_link_libraries(${NAME} LINK_PUBLIC graphics)
+  target_link_libraries(${NAME} LINK_PUBLIC utils)
+  add_dependencies(${NAME} shaders)
+  
+  target_link_libraries(${NAME} LINK_PUBLIC vma)
+  
+  target_link_libraries(${NAME} PRIVATE Vulkan::Vulkan)
+  
+  target_link_libraries(${NAME} PRIVATE glfw)
+endfunction()
+
+define_exe(ivs)
+define_exe(benchmark_graphics)

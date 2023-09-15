@@ -1,96 +1,84 @@
-#include "VoxelChunkGeneration.h"
-#include "VoxelManager.h"
-#include "PerlinNoise.hpp"
 #include <cmath>
 
+#include <external/glm/glm/glm.hpp>
 
-RawVoxelChunk *generate_test_cube(const glm::vec3 &position) {
-    RawVoxelChunk *new_chunk = new RawVoxelChunk(position, 11, 11, 11);
-    RawVoxel voxel =
-        RawVoxel{.red_ = 255, .green_ = 0, .blue_ = 255, .alpha_ = 255};
+#include "VoxelChunkGeneration.h"
+#include "PerlinNoise.hpp"
 
-    // The corners will be written to multiple times, but this shouldn't affect
-    // anything
-    for (int z = 0; z < 11; z++) {
-        new_chunk->write_voxel(0, 0, z, voxel);
-        new_chunk->write_voxel(0, 10, z, voxel);
-        new_chunk->write_voxel(10, 0, z, voxel);
-        new_chunk->write_voxel(10, 10, z, voxel);
-    }
-
-    voxel = RawVoxel{.red_ = 0, .green_ = 255, .blue_ = 255, .alpha_ = 255};
-    for (int y = 0; y < 11; y++) {
-        new_chunk->write_voxel(0, y, 0, voxel);
-        new_chunk->write_voxel(0, y, 10, voxel);
-        new_chunk->write_voxel(10, y, 0, voxel);
-        new_chunk->write_voxel(10, y, 10, voxel);
-    }
-
-    voxel = RawVoxel{.red_ = 255, .green_ = 255, .blue_ = 0, .alpha_ = 255};
-    for (int x = 0; x < 11; x++) {
-        new_chunk->write_voxel(x, 0, 0, voxel);
-        new_chunk->write_voxel(x, 0, 10, voxel);
-        new_chunk->write_voxel(x, 10, 0, voxel);
-        new_chunk->write_voxel(x, 10, 10, voxel);
-    }
-
-    // chunks_.push_back(new_chunk);
-
-    return new_chunk;
-}
-
-RawVoxelChunk *generate_sphere_chunk(const glm::vec3 &position, const glm::vec3 &size, const int radius) {
-    RawVoxelChunk *new_chunk = new RawVoxelChunk(position, (int)size.x, (int)size.y, (int)size.z);
-    RawVoxel voxel =
-        RawVoxel{.red_ = 255, .green_ = 255, .blue_ = 255, .alpha_ = 255};
+std::vector<std::byte> generate_basic_sphere_chunk(uint32_t width, uint32_t height, uint32_t depth, float radius) {
+    std::vector<std::byte> data(width * height * depth * 4, static_cast<std::byte>(0));
     
-    for (int x = 0; x < size.x; x++) {
-        for (int y = 0; y < size.y; y++) {
-            for (int z = 0; z < size.z; z++) {
-                if (std::pow(x - size.x/2, 2) + std::pow(y - size.y/2, 2) + std::pow(z - size.z/2, 2) < std::pow(radius, 2)) {
-                    uint8_t red = x * 4;
-		    uint8_t green = y * 4;
-		    uint8_t blue = z * 4;
-                    voxel = RawVoxel{.red_ = red, .green_ = green, .blue_ = blue, .alpha_ = 255};
-                    new_chunk->write_voxel(x, y, z, voxel);
-                }
-            }
-        }
+    for (uint32_t x = 0; x < width; ++x) {
+	for (uint32_t y = 0; y < height; ++y) {
+	    for (uint32_t z = 0; z < depth; ++z) {
+                if (std::pow(static_cast<double>(x) - width / 2, 2) + std::pow(static_cast<double>(y) - height / 2, 2) + std::pow(static_cast<double>(z) - depth / 2, 2) < std::pow(radius, 2)) {
+		    std::byte red = static_cast<std::byte>(x * 4);
+		    std::byte green = static_cast<std::byte>(y * 4);
+		    std::byte blue = static_cast<std::byte>(z * 4);
+		    std::byte alpha = static_cast<std::byte>(255);
+		    
+		    size_t voxel_idx = x + y * width + z * width * height;
+		    data.at(voxel_idx * 4) = red;
+		    data.at(voxel_idx * 4 + 1) = green;
+		    data.at(voxel_idx * 4 + 2) = blue;
+		    data.at(voxel_idx * 4 + 3) = alpha;
+		}
+	    }
+	}
     }
 
-    // chunks_.push_back(new_chunk);
-
-    return new_chunk;
+    return data;
 }
 
-RawVoxelChunk *generate_procedural_chunk(const glm::vec3 &position, const glm::vec3 &size) {
-    RawVoxelChunk *new_chunk = new RawVoxelChunk(position, (int)size.x, (int)size.y, (int)size.z);
-    RawVoxel voxel = RawVoxel{.red_ = 255, .green_ = 255, .blue_ = 255, .alpha_ = 255};
-    for (int x = 0; x < size.x; x++) {
-        for (int y = 0; y < size.y; y++) {
-            for (int z = 0; z < size.z; z++) {
-                
-                if (densityfunction_({position.x + x, position.y + y, position.z + z}) > 0) {
-                    uint8_t color = (y * -7 + 188);
-                    // if (y > 40) {
-                    //     voxel = RawVoxel{.red_ = color, .green_ = color, .blue_ = color, .alpha_ = 255};
-                    // } else {
-                    //     voxel = RawVoxel{.red_ = 139, .green_ = 69, .blue_ = 19, .alpha_ = 255};
-                    // }
-                    voxel = RawVoxel{.red_ = color, .green_ = color, .blue_ = color, .alpha_ = 255};
-                    new_chunk->write_voxel(x, y, z, voxel);
-                }
-            }
-        }
+std::vector<std::byte> generate_basic_filled_chunk(uint32_t width, uint32_t height, uint32_t depth) {
+    std::vector<std::byte> data(width * height * depth * 4, static_cast<std::byte>(0));
+    
+    for (uint32_t x = 0; x < width; ++x) {
+	for (uint32_t y = 0; y < height; ++y) {
+	    for (uint32_t z = 0; z < depth; ++z) {
+		std::byte red = static_cast<std::byte>(x * 30);
+		std::byte green = static_cast<std::byte>(y * 30);
+		std::byte blue = static_cast<std::byte>(z * 30);
+		std::byte alpha = static_cast<std::byte>(255);
+		
+		size_t voxel_idx = x + y * width + z * width * height;
+		data.at(voxel_idx * 4) = red;
+		data.at(voxel_idx * 4 + 1) = green;
+		data.at(voxel_idx * 4 + 2) = blue;
+		data.at(voxel_idx * 4 + 3) = alpha;
+	    }
+	}
     }
 
-    // chunks_.push_back(new_chunk);
+    return data;
+}
 
-    return new_chunk;
+std::vector<std::byte> generate_basic_procedural_chunk(uint32_t width, uint32_t height, uint32_t depth) {
+    std::vector<std::byte> data(width * height * depth * 4, static_cast<std::byte>(0));
+
+    for (uint32_t x = 0; x < width; ++x) {
+	for (uint32_t y = 0; y < height; ++y) {
+	    for (uint32_t z = 0; z < depth; ++z) {
+		if (densityfunction_({x, y, z}) > -30.0) {
+		    std::byte red = static_cast<std::byte>(x * 15);
+		    std::byte green = static_cast<std::byte>(y * 15);
+		    std::byte blue = static_cast<std::byte>(z * 15);
+		    std::byte alpha = static_cast<std::byte>(255);
+		    
+		    size_t voxel_idx = x + y * width + z * width * height;
+		    data.at(voxel_idx * 4) = red;
+		    data.at(voxel_idx * 4 + 1) = green;
+		    data.at(voxel_idx * 4 + 2) = blue;
+		    data.at(voxel_idx * 4 + 3) = alpha;
+		}
+	    }
+	}
+    }
+
+    return data;
 }
 
 double densityfunction_(const glm::vec3 &position) {
-
     const siv::PerlinNoise::seed_type seed = 123456u;
     const siv::PerlinNoise perlin1{ seed };
     const siv::PerlinNoise perlin2{ seed + 1 };

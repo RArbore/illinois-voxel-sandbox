@@ -1,12 +1,8 @@
 #pragma once
 
-#include <vector>
+#include "Voxel.h"
 
-#include "RawVoxelChunk.h"
-#include "VoxelChunk.h"
-
-
-    RawVoxelChunk *generate_test_cube(const glm::vec3 &position);
-    RawVoxelChunk *generate_sphere_chunk(const glm::vec3 &position, const glm::vec3 &size, const int radius);
-    RawVoxelChunk *generate_procedural_chunk(const glm::vec3 &position, const glm::vec3 &size);
-    double densityfunction_(const glm::vec3 &position);
+std::vector<std::byte> generate_basic_sphere_chunk(uint32_t width, uint32_t height, uint32_t depth, float radius);
+std::vector<std::byte> generate_basic_filled_chunk(uint32_t width, uint32_t height, uint32_t depth);
+std::vector<std::byte> generate_basic_procedural_chunk(uint32_t width, uint32_t height, uint32_t depth);
+double densityfunction_(const glm::vec3 &position);
