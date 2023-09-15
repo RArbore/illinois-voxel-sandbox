@@ -1,5 +1,6 @@
 #include <graphics/GraphicsContext.h>
 #include <voxels/Voxel.h>
+#include <voxels/VoxelChunkGeneration.h>
 
 int main(int argc, char *argv[]) {
     ChunkManager chunk_manager;

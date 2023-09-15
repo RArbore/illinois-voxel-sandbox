@@ -84,7 +84,3 @@ private:
     friend class VoxelChunk;
     friend class VoxelChunkPtr;
 };
-
-// This should really be in procedural/ or similar...
-std::vector<std::byte> generate_basic_sphere_chunk(uint32_t width, uint32_t height, uint32_t depth, float radius);
-std::vector<std::byte> generate_basic_filled_chunk(uint32_t width, uint32_t height, uint32_t depth);

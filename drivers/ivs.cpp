@@ -1,15 +1,17 @@
 #include <graphics/GraphicsContext.h>
 #include <voxels/Voxel.h>
+#include <voxels/VoxelChunkGeneration.h>
 
 int main(int argc, char *argv[]) {
     ChunkManager chunk_manager;
     auto test_sphere_data1 = generate_basic_sphere_chunk(64, 64, 64, 32);
     auto test_sphere_data2 = generate_basic_sphere_chunk(64, 64, 64, 20);
     auto test_cube_data1 = generate_basic_filled_chunk(8, 8, 8);
+
     VoxelChunkPtr test_sphere1 = chunk_manager.add_chunk(std::move(test_sphere_data1), 64, 64, 64, VoxelChunk::Format::Raw, VoxelChunk::AttributeSet::Color);
     VoxelChunkPtr test_sphere2 = chunk_manager.add_chunk(std::move(test_sphere_data2), 64, 64, 64, VoxelChunk::Format::Raw, VoxelChunk::AttributeSet::Color);
     VoxelChunkPtr test_cube1 = chunk_manager.add_chunk(std::move(test_cube_data1), 8, 8, 8, VoxelChunk::Format::Raw, VoxelChunk::AttributeSet::Color);
-    
+
     auto context = create_graphics_context();
 
     auto model1 = build_model(context, test_sphere1);
