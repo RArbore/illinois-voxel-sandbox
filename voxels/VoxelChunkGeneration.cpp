@@ -1,3 +1,4 @@
+#include "VoxelChunkGeneration.h"
 #include "VoxelManager.h"
 #include "PerlinNoise.hpp"
 #include <cmath>
@@ -33,7 +34,7 @@ RawVoxelChunk *generate_test_cube(const glm::vec3 &position) {
         new_chunk->write_voxel(x, 10, 10, voxel);
     }
 
-    chunks_.push_back(new_chunk);
+    // chunks_.push_back(new_chunk);
 
     return new_chunk;
 }
@@ -57,7 +58,7 @@ RawVoxelChunk *generate_sphere_chunk(const glm::vec3 &position, const glm::vec3 
         }
     }
 
-    chunks_.push_back(new_chunk);
+    // chunks_.push_back(new_chunk);
 
     return new_chunk;
 }
@@ -83,7 +84,7 @@ RawVoxelChunk *generate_procedural_chunk(const glm::vec3 &position, const glm::v
         }
     }
 
-    chunks_.push_back(new_chunk);
+    // chunks_.push_back(new_chunk);
 
     return new_chunk;
 }

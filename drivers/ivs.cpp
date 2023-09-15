@@ -1,12 +1,13 @@
 #include <graphics/GraphicsContext.h>
 #include <voxels/VoxelManager.h>
+#include <voxels/VoxelChunkGeneration.h>
 
 int main(int argc, char *argv[]) {
     VoxelManager voxel_manager;
     RawVoxelChunk *test_cube1 =
-        voxel_manager.generate_sphere_chunk({0.0F, 0.0F, 0.0F}, {64, 64, 64}, 32);
+        generate_sphere_chunk({0.0F, 0.0F, 0.0F}, {64, 64, 64}, 32);
     RawVoxelChunk *test_cube2 =
-        voxel_manager.generate_sphere_chunk({0.0F, 0.0F, 0.0F}, {64, 64, 64}, 20);
+        generate_sphere_chunk({0.0F, 0.0F, 0.0F}, {64, 64, 64}, 20);
 
     auto context = create_graphics_context();
 
