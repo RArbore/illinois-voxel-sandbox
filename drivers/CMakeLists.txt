@@ -12,13 +12,13 @@ function(DEFINE_EXE NAME)
   target_link_libraries(${NAME} LINK_PUBLIC graphics)
   target_link_libraries(${NAME} LINK_PUBLIC utils)
   add_dependencies(${NAME} shaders)
-  
+
   target_link_libraries(${NAME} LINK_PUBLIC vma)
-  
+
   target_link_libraries(${NAME} PRIVATE Vulkan::Vulkan)
-  
+
   target_link_libraries(${NAME} PRIVATE glfw)
 endfunction()
 
-define_exe(ivs)
-define_exe(benchmark_graphics)
+DEFINE_EXE(ivs)
+DEFINE_EXE(benchmark_graphics)
