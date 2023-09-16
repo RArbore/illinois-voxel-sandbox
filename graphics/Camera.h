@@ -22,14 +22,14 @@ class Camera {
     void handle_keys(float delta_t);
     void handle_mouse(float x, float y, bool left_mouse_held);
 
-    glm::vec3 get_right_vector() const;
-    glm::mat4 get_view_matrix() const;
+    void recompute_vectors();
+
     glm::mat4 get_view_inverse() const;
     CameraUB get_uniform_buffer() const;
 
   private:
     std::shared_ptr<Window> window_;
-    glm::vec3 origin_, up_, front_;
+    glm::vec3 origin_, world_up_, front_, right_;
     float pitch_, yaw_;
     float last_x, last_y;
 };

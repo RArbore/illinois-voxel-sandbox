@@ -16,7 +16,7 @@ int main(int argc, char *argv[]) {
     auto window = create_window();
     auto context = create_graphics_context(window);
 
-    glm::vec3 camera_pos = glm::vec3(-3.0f, 0.0f, 3.0f);
+    glm::vec3 camera_pos = glm::vec3(0.0f, 0.0f, -5.0f);
     auto camera = create_camera(window, camera_pos, 0.0f, 0.0f, 10.0f, 0.05f);
 
     auto model1 = build_model(context, test_sphere1);
@@ -38,7 +38,8 @@ int main(int argc, char *argv[]) {
     auto object2 = build_object(context, model2, transform2);
     auto object3 = build_object(context, model2, transform3);
     auto object4 = build_object(context, model3, transform4);
-    auto scene = build_scene(context, {object1, object2, object3, object4});
+    // auto scene = build_scene(context, {object1, object2, object3, object4});
+    auto scene = build_scene(context, {object1});
 
     while (!window->should_close()) {
         window->poll_events();

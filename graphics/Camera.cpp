@@ -24,14 +24,8 @@ Camera::Camera(std::shared_ptr<Window> window, const glm::vec3 &initial_pos,
     glfwSetWindowUserPointer(glfw_window, reinterpret_cast<void *>(this));
     glfwSetCursorPosCallback(glfw_window, mouse_callback);
 
-    up_ = glm::vec3(0.0f, 0.0f, 1.0f);
-
-    float sin_pitch = sin(glm::radians(pitch_));
-    float cos_pitch = cos(glm::radians(pitch_));
-    float sin_yaw = sin(glm::radians(yaw_));
-    float cos_yaw = cos(glm::radians(yaw_));
-    front_ = glm::normalize(
-        glm::vec3(cos_pitch * cos_yaw, cos_pitch * sin_yaw, sin_pitch));
+    world_up_ = glm::vec3(0.0f, 1.0f, 0.0f);
+    recompute_vectors();
 }
 
 std::shared_ptr<Camera>
@@ -43,8 +37,15 @@ create_camera(std::shared_ptr<Window> window, const glm::vec3 &initial_pos,
     return camera;
 }
 
-glm::vec3 Camera::get_right_vector() const {
-    return glm::normalize(glm::cross(front_, up_));
+void Camera::recompute_vectors() {
+    float sin_pitch = sin(glm::radians(pitch_));
+    float cos_pitch = cos(glm::radians(pitch_));
+    float sin_yaw = sin(glm::radians(yaw_));
+    float cos_yaw = cos(glm::radians(yaw_));
+    front_ = glm::normalize(
+        glm::vec3(cos_pitch * sin_yaw, sin_pitch, cos_pitch * cos_yaw));
+
+    right_ = glm::normalize(glm::cross(front_, world_up_));
 }
 
 void Camera::handle_keys(float delta_t) {
@@ -60,22 +61,22 @@ void Camera::handle_keys(float delta_t) {
     }
 
     if (glfwGetKey(glfw_window, GLFW_KEY_A) == GLFW_PRESS) {
-        origin_ -= delta_t * speed_ * get_right_vector();
+        origin_ -= delta_t * speed_ * right_;
         updated_since_last_frame = true;
     }
 
     if (glfwGetKey(glfw_window, GLFW_KEY_D) == GLFW_PRESS) {
-        origin_ += delta_t * speed_ * get_right_vector();
+        origin_ += delta_t * speed_ * right_;
         updated_since_last_frame = true;
     }
 
     if (glfwGetKey(glfw_window, GLFW_KEY_Q) == GLFW_PRESS) {
-        origin_ += delta_t * speed_ * up_;
+        origin_ += delta_t * speed_ * world_up_;
         updated_since_last_frame = true;
     }
 
     if (glfwGetKey(glfw_window, GLFW_KEY_E) == GLFW_PRESS) {
-        origin_ -= delta_t * speed_ * up_;
+        origin_ -= delta_t * speed_ * world_up_;
         updated_since_last_frame = true;
     }
 }
@@ -96,12 +97,7 @@ void Camera::handle_mouse(float x, float y, bool left_mouse_held) {
         yaw_ += delta_x * sensitivity_;
         pitch_ = std::clamp(pitch_ + delta_y * sensitivity_, -89.0f, 89.0f);
 
-        float sin_pitch = sin(glm::radians(pitch_));
-        float cos_pitch = cos(glm::radians(pitch_));
-        float sin_yaw = sin(glm::radians(yaw_));
-        float cos_yaw = cos(glm::radians(yaw_));
-        front_ = glm::normalize(
-            glm::vec3(cos_pitch * cos_yaw, cos_pitch * sin_yaw, sin_pitch));
+        recompute_vectors();
 
         updated_since_last_frame = true;
     }
@@ -110,12 +106,29 @@ void Camera::handle_mouse(float x, float y, bool left_mouse_held) {
     last_y = y;
 }
 
-glm::mat4 Camera::get_view_matrix() const {
-    return glm::lookAt(origin_, origin_ + front_, up_);
-}
-
 glm::mat4 Camera::get_view_inverse() const {
-    return glm::inverse(get_view_matrix());
+    const glm::vec3 up = glm::normalize(glm::cross(right_, front_));
+
+    glm::mat4 view_inverse{0};
+
+    view_inverse[0][0] = right_[0];
+    view_inverse[0][1] = right_[1];
+    view_inverse[0][2] = right_[2];
+
+    view_inverse[1][0] = up[0];
+    view_inverse[1][1] = up[1];
+    view_inverse[1][2] = up[2];
+
+    view_inverse[2][0] = front_[0];
+    view_inverse[2][1] = front_[1];
+    view_inverse[2][2] = front_[2];
+
+    view_inverse[3][0] = origin_[0];
+    view_inverse[3][1] = origin_[1];
+    view_inverse[3][2] = origin_[2];
+    view_inverse[3][3] = 1.0f;
+
+    return view_inverse;
 }
 
 CameraUB Camera::get_uniform_buffer() const { 
