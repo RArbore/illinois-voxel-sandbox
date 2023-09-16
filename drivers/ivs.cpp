@@ -17,7 +17,7 @@ int main(int argc, char *argv[]) {
     auto context = create_graphics_context(window);
 
     glm::vec3 camera_pos = glm::vec3(-3.0f, 0.0f, 3.0f);
-    auto camera = create_camera(window, camera_pos, 0.0f, 0.0f, 10.0f, 1.0f);
+    auto camera = create_camera(window, camera_pos, 0.0f, 0.0f, 10.0f, 0.05f);
 
     auto model1 = build_model(context, test_sphere1);
     auto model2 = build_model(context, test_sphere2);
@@ -42,7 +42,7 @@ int main(int argc, char *argv[]) {
 
     while (!window->should_close()) {
         window->poll_events();
-        camera->handle_keys(1.0f);
+        camera->handle_keys(0.0001f);
 
         auto camera_info = camera->get_uniform_buffer();
 

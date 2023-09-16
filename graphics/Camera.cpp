@@ -1,6 +1,8 @@
-#include <algorithm> 
+#include <algorithm>
+#include <iostream> 
 
 #include <external/glm/glm/gtc/matrix_transform.hpp>
+#include <external/glm/glm/gtx/string_cast.hpp>>
 
 #include "Camera.h"
 
@@ -23,6 +25,13 @@ Camera::Camera(std::shared_ptr<Window> window, const glm::vec3 &initial_pos,
     glfwSetCursorPosCallback(glfw_window, mouse_callback);
 
     up_ = glm::vec3(0.0f, 0.0f, 1.0f);
+
+    float sin_pitch = sin(glm::radians(pitch_));
+    float cos_pitch = cos(glm::radians(pitch_));
+    float sin_yaw = sin(glm::radians(yaw_));
+    float cos_yaw = cos(glm::radians(yaw_));
+    front_ = glm::normalize(
+        glm::vec3(cos_pitch * cos_yaw, cos_pitch * sin_yaw, sin_pitch));
 }
 
 std::shared_ptr<Camera>
@@ -56,7 +65,7 @@ void Camera::handle_keys(float delta_t) {
     }
 
     if (glfwGetKey(glfw_window, GLFW_KEY_D) == GLFW_PRESS) {
-        origin_ -= delta_t * speed_ * get_right_vector();
+        origin_ += delta_t * speed_ * get_right_vector();
         updated_since_last_frame = true;
     }
 
@@ -72,28 +81,27 @@ void Camera::handle_keys(float delta_t) {
 }
 
 void Camera::handle_mouse(float x, float y, bool left_mouse_held) {
-    static bool first_mouse_press = true;
+    static bool first_mouse = true;
 
-    if (first_mouse_press) {
+    if (first_mouse) {
         last_x = x;
         last_y = y;
-        first_mouse_press = false;
+        first_mouse = false;
     }
 
     if (left_mouse_held) {
-        float delta_x = x - last_x;
-        float delta_y = last_y - y; // Moving up results in a negative value
+        float delta_x = last_x - x;
+        float delta_y = y - last_y;
 
         yaw_ += delta_x * sensitivity_;
         pitch_ = std::clamp(pitch_ + delta_y * sensitivity_, -89.0f, 89.0f);
 
-        float SinPitch = sin(glm::radians(pitch_));
-        float CosPitch = cos(glm::radians(pitch_));
-        float SinYaw = sin(glm::radians(yaw_));
-        float CosYaw = cos(glm::radians(yaw_));
-
+        float sin_pitch = sin(glm::radians(pitch_));
+        float cos_pitch = cos(glm::radians(pitch_));
+        float sin_yaw = sin(glm::radians(yaw_));
+        float cos_yaw = cos(glm::radians(yaw_));
         front_ = glm::normalize(
-            glm::vec3(CosPitch * CosYaw, SinPitch, CosPitch * SinYaw));
+            glm::vec3(cos_pitch * cos_yaw, cos_pitch * sin_yaw, sin_pitch));
 
         updated_since_last_frame = true;
     }
