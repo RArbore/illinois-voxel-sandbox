@@ -41,6 +41,9 @@ class GraphicsContext {
     std::shared_ptr<Semaphore> render_semaphore_ = nullptr;
     std::shared_ptr<Command> render_command_buffer_ = nullptr;
 
+    std::shared_ptr<GPUBuffer> camera_buffer_ = nullptr;
+    std::span<std::byte> camera_span_;
+
     std::shared_ptr<GPUBuffer> unloaded_chunks_buffer_ = nullptr;
     std::span<std::byte> unloaded_chunks_span_;
 
@@ -138,12 +141,25 @@ GraphicsContext::GraphicsContext(std::shared_ptr<Window> window) {
         crb[i] = 0xFFFFFFFF;
     }
 
+    camera_buffer_ = std::make_shared<GPUBuffer>(
+        gpu_allocator_, sizeof(CameraUB), sizeof(glm::vec4),
+        VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+        VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
+            VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+        VMA_ALLOCATION_CREATE_HOST_ACCESS_RANDOM_BIT);
+    camera_span_ = camera_buffer_->cpu_map();
+
     DescriptorSetBuilder wide_builder(descriptor_allocator_);
     wide_builder.bind_buffer(0,
                              {unloaded_chunks_buffer_->get_buffer(), 0,
                               unloaded_chunks_buffer_->get_size()},
                              VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
                              VK_SHADER_STAGE_INTERSECTION_BIT_KHR);
+    wide_builder.bind_buffer(1,
+                             {camera_buffer_->get_buffer(), 0,
+                              camera_buffer_->get_size()},
+                             VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+                             VK_SHADER_STAGE_RAYGEN_BIT_KHR);
     wide_descriptor_ = wide_builder.build();
 
     auto rgen = std::make_shared<Shader>(device_, "rgen");
@@ -173,6 +189,7 @@ GraphicsContext::GraphicsContext(std::shared_ptr<Window> window) {
 GraphicsContext::~GraphicsContext() {
     vkDeviceWaitIdle(device_->get_device());
     unloaded_chunks_buffer_->cpu_unmap();
+    camera_buffer_->cpu_unmap();
 }
 
 std::shared_ptr<GraphicsContext> create_graphics_context(std::shared_ptr<Window> window) {
@@ -181,7 +198,8 @@ std::shared_ptr<GraphicsContext> create_graphics_context(std::shared_ptr<Window>
 }
 
 void render_frame(std::shared_ptr<GraphicsContext> context,
-                  std::shared_ptr<GraphicsScene> scene) {
+                  std::shared_ptr<GraphicsScene> scene,
+                  CameraUB camera_info) {
     std::vector<std::shared_ptr<Semaphore>> render_wait_semaphores{
         context->acquire_semaphore_};
     const bool changed_scenes = context->current_scene_ != scene;
@@ -230,6 +248,8 @@ void render_frame(std::shared_ptr<GraphicsContext> context,
     memcpy(push_constants.data(), &context->elapsed_ms_, sizeof(double));
     std::span<std::byte> push_constants_span(push_constants.data(),
                                              push_constants.size());
+
+    memcpy(context->camera_span_.data(), &camera_info, sizeof(CameraUB));
 
     context->render_command_buffer_->record(
         [&](VkCommandBuffer command_buffer) {

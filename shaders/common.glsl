@@ -19,4 +19,10 @@ layout(set = 2, binding = 0) buffer chunk_request_buffer_ {
     uint64_t chunk_request_buffer[];
 };
 
+struct Camera {
+    mat4 view_inv; // view space to world space
+}
+
+layout(set = 2, binding = 1) uniform Camera camera;
+
 const float FAR_AWAY = 1000.0;
