@@ -5,7 +5,8 @@
 int main(int argc, char *argv[]) {
     ChunkManager chunk_manager;
     std::vector<std::shared_ptr<GraphicsObject>> objects;
-    auto context = create_graphics_context();
+    auto window = create_window();
+    auto context = create_graphics_context(window);
     const size_t num_objects = 50;
     for (size_t i = 0; i < num_objects; ++i) {
         const float linear =
@@ -26,7 +27,10 @@ int main(int argc, char *argv[]) {
     }
     auto scene = build_scene(context, std::move(objects));
 
-    while (!should_exit(context)) {
+    while (!window->should_close()) {
+        window->poll_events();
         render_frame(context, scene);
     }
+
+
 }

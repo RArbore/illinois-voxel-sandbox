@@ -12,7 +12,8 @@ int main(int argc, char *argv[]) {
     VoxelChunkPtr test_sphere2 = chunk_manager.add_chunk(std::move(test_sphere_data2), 64, 64, 64, VoxelChunk::Format::Raw, VoxelChunk::AttributeSet::Color);
     VoxelChunkPtr test_proc1 = chunk_manager.add_chunk(std::move(test_proc_data1), 16, 16, 16, VoxelChunk::Format::Raw, VoxelChunk::AttributeSet::Color);
 
-    auto context = create_graphics_context();
+    auto window = create_window();
+    auto context = create_graphics_context(window);
 
     auto model1 = build_model(context, test_sphere1);
     auto model2 = build_model(context, test_sphere2);
@@ -35,7 +36,8 @@ int main(int argc, char *argv[]) {
     auto object4 = build_object(context, model3, transform4);
     auto scene = build_scene(context, {object1, object2, object3, object4});
 
-    while (!should_exit(context)) {
+    while (!window->should_close()) {
+        window->poll_events();
         render_frame(context, scene);
     }
 }

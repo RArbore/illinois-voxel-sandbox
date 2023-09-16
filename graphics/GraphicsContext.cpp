@@ -24,10 +24,10 @@ const uint64_t MAX_NUM_CHUNKS_LOADED_PER_FRAME = 32;
 
 class GraphicsContext {
   public:
-    GraphicsContext();
+    GraphicsContext() = delete;
+    GraphicsContext(std::shared_ptr<Window> window);
     ~GraphicsContext();
 
-    std::shared_ptr<Window> window_ = nullptr;
     std::shared_ptr<Device> device_ = nullptr;
     std::shared_ptr<GPUAllocator> gpu_allocator_ = nullptr;
     std::shared_ptr<Swapchain> swapchain_ = nullptr;
@@ -109,14 +109,13 @@ class GraphicsScene {
     }
 };
 
-GraphicsContext::GraphicsContext() {
-    window_ = std::make_shared<Window>();
-    device_ = std::make_shared<Device>(window_);
+GraphicsContext::GraphicsContext(std::shared_ptr<Window> window) {
+    device_ = std::make_shared<Device>(window);
     gpu_allocator_ = std::make_shared<GPUAllocator>(device_);
     command_pool_ = std::make_shared<CommandPool>(device_);
     descriptor_allocator_ = std::make_shared<DescriptorAllocator>(device_);
     swapchain_ =
-        std::make_shared<Swapchain>(device_, window_, descriptor_allocator_);
+        std::make_shared<Swapchain>(device_, window, descriptor_allocator_);
     ring_buffer_ =
         std::make_shared<RingBuffer>(gpu_allocator_, command_pool_, 1 << 24);
 
@@ -176,8 +175,8 @@ GraphicsContext::~GraphicsContext() {
     unloaded_chunks_buffer_->cpu_unmap();
 }
 
-std::shared_ptr<GraphicsContext> create_graphics_context() {
-    auto context = std::shared_ptr<GraphicsContext>(new GraphicsContext());
+std::shared_ptr<GraphicsContext> create_graphics_context(std::shared_ptr<Window> window) {
+    auto context = std::shared_ptr<GraphicsContext>(new GraphicsContext(window));
     return context;
 }
 
@@ -201,8 +200,6 @@ void render_frame(std::shared_ptr<GraphicsContext> context,
         }
         context->current_scene_ = scene;
     }
-
-    context->window_->pollEvents();
 
     context->frame_fence_->wait();
 
@@ -275,10 +272,6 @@ void render_frame(std::shared_ptr<GraphicsContext> context,
                                .count() /
                            1000000;
     ++context->frame_index_;
-}
-
-bool should_exit(std::shared_ptr<GraphicsContext> context) {
-    return context->window_->shouldClose();
 }
 
 std::shared_ptr<GraphicsModel>
