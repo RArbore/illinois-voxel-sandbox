@@ -203,6 +203,9 @@ DescriptorSetBuilder::DescriptorSetBuilder(
     VkDescriptorSetLayoutCreateFlags layout_flags) {
     allocator_ = allocator;
     layout_ = std::make_shared<DescriptorSetLayout>(allocator_, layout_flags);
+    buffer_infos_.reserve(128);
+    image_infos_.reserve(128);
+    acceleration_structure_infos_.reserve(128);
 }
 
 DescriptorSetBuilder &DescriptorSetBuilder::bind_buffer(

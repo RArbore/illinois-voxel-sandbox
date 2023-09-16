@@ -146,18 +146,20 @@ GraphicsContext::GraphicsContext(std::shared_ptr<Window> window) {
         VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
         VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
             VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
-        VMA_ALLOCATION_CREATE_HOST_ACCESS_RANDOM_BIT);
+        VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT);
     camera_span_ = camera_buffer_->cpu_map();
 
     DescriptorSetBuilder wide_builder(descriptor_allocator_);
     wide_builder.bind_buffer(0,
-                             {unloaded_chunks_buffer_->get_buffer(), 0,
-                              unloaded_chunks_buffer_->get_size()},
+                             {.buffer = unloaded_chunks_buffer_->get_buffer(),
+			      .offset = 0,
+                              .range = unloaded_chunks_buffer_->get_size()},
                              VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
                              VK_SHADER_STAGE_INTERSECTION_BIT_KHR);
     wide_builder.bind_buffer(1,
-                             {camera_buffer_->get_buffer(), 0,
-                              camera_buffer_->get_size()},
+                             {.buffer = camera_buffer_->get_buffer(),
+			      .offset = 0,
+                              .range = camera_buffer_->get_size()},
                              VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
                              VK_SHADER_STAGE_RAYGEN_BIT_KHR);
     wide_descriptor_ = wide_builder.build();

@@ -17,5 +17,5 @@ void main() {
     traceRayEXT(tlas, gl_RayFlagsOpaqueEXT, 0xFF, 0, 0, 0, origin, 0.001f, direction, 10000.0f, 0);
 
     // To-do: add accumulation if the camera hasn't moved
-    imageStore(image, ivec2(gl_LaunchIDEXT), hit)
+    //imageStore(image, ivec2(gl_LaunchIDEXT), hit)
 }
