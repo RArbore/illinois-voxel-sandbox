@@ -69,8 +69,8 @@ Swapchain::Swapchain(std::shared_ptr<Device> device,
     swapchain_image_views_.resize(image_count);
     vkGetSwapchainImagesKHR(device->get_device(), swapchain_, &image_count,
                             &swapchain_images_.at(0));
-    VkFormat swapchain_format = surface_format.format;
-    VkExtent2D swapchain_extent = swap_extent;
+    swapchain_format_ = surface_format.format;
+    swapchain_extent_ = swap_extent;
 
     VkImageSubresourceRange subresource_range{};
     subresource_range.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
@@ -83,7 +83,7 @@ Swapchain::Swapchain(std::shared_ptr<Device> device,
         create_info.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
         create_info.image = swapchain_images_.at(image_index);
         create_info.viewType = VK_IMAGE_VIEW_TYPE_2D;
-        create_info.format = swapchain_format;
+        create_info.format = swapchain_format_;
         create_info.components.r = VK_COMPONENT_SWIZZLE_IDENTITY;
         create_info.components.g = VK_COMPONENT_SWIZZLE_IDENTITY;
         create_info.components.b = VK_COMPONENT_SWIZZLE_IDENTITY;
@@ -114,6 +114,8 @@ VkImage Swapchain::get_image(uint32_t image_index) {
 }
 
 VkExtent2D Swapchain::get_extent() { return swapchain_extent_; }
+
+VkFormat Swapchain::get_format() { return swapchain_format_; }
 
 uint32_t Swapchain::acquire_next_image(std::shared_ptr<Semaphore> notify) {
     uint32_t index = 0;
