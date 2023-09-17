@@ -52,32 +52,32 @@ void Camera::handle_keys(float delta_t) {
     auto glfw_window = window_->get_window();
     if (glfwGetKey(glfw_window, GLFW_KEY_W) == GLFW_PRESS) {
         origin_ += delta_t * speed_ * front_;
-        updated_since_last_frame = true;
+        frames_since_update_ = 0;
     }
 
     if (glfwGetKey(glfw_window, GLFW_KEY_S) == GLFW_PRESS) {
         origin_ -= delta_t * speed_ * front_;
-        updated_since_last_frame = true;
+        frames_since_update_ = 0;
     }
 
     if (glfwGetKey(glfw_window, GLFW_KEY_A) == GLFW_PRESS) {
         origin_ -= delta_t * speed_ * right_;
-        updated_since_last_frame = true;
+        frames_since_update_ = 0;
     }
 
     if (glfwGetKey(glfw_window, GLFW_KEY_D) == GLFW_PRESS) {
         origin_ += delta_t * speed_ * right_;
-        updated_since_last_frame = true;
+        frames_since_update_ = 0;
     }
 
     if (glfwGetKey(glfw_window, GLFW_KEY_Q) == GLFW_PRESS) {
         origin_ += delta_t * speed_ * world_up_;
-        updated_since_last_frame = true;
+        frames_since_update_ = 0;
     }
 
     if (glfwGetKey(glfw_window, GLFW_KEY_E) == GLFW_PRESS) {
         origin_ -= delta_t * speed_ * world_up_;
-        updated_since_last_frame = true;
+        frames_since_update_ = 0;
     }
 }
 
@@ -99,7 +99,7 @@ void Camera::handle_mouse(float x, float y, bool left_mouse_held) {
 
         recompute_vectors();
 
-        updated_since_last_frame = true;
+        frames_since_update_ = 0;
     }
 
     last_x = x;
@@ -134,5 +134,6 @@ glm::mat4 Camera::get_view_inverse() const {
 CameraUB Camera::get_uniform_buffer() const { 
     CameraUB uniform;
     uniform.view_inv = get_view_inverse();
+    uniform.frames_since_update = frames_since_update_;
     return uniform;
 }

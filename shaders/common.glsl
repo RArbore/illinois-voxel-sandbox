@@ -21,10 +21,13 @@ layout(set = 2, binding = 0) buffer chunk_request_buffer_ {
 
 struct Camera {
     mat4 view_inv; // view space to world space
+    int frames_since_update; // accumulated frames since the camera hasn't moved
 };
 
 layout(set = 2, binding = 1) uniform camera_ {
 	Camera camera;
 };
+
+layout(set = 2, binding = 2, rgba8) uniform image2D image_history;
 
 const float FAR_AWAY = 1000.0;

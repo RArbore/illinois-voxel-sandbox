@@ -15,10 +15,16 @@ void main() {
     const vec2 pixel_ndc = 2.0f * pixel_uv - 1.0f;
 
     vec3 origin = (camera.view_inv * vec4(0.0f, 0.0f, 0.0f, 1.0f)).xyz;
-    vec3 direction = normalize(camera.view_inv * vec4(pixel_ndc.xy, 1.0f, 0.0)).xyz);
+    vec3 direction = normalize((camera.view_inv * vec4(pixel_ndc.xy, 1.0f, 0.0)).xyz);
 
     traceRayEXT(tlas, gl_RayFlagsOpaqueEXT, 0xFF, 0, 0, 0, origin, 0.001f, direction, 10000.0f, 0);
 
-    // To-do: add accumulation if the camera hasn't moved
-    imageStore(output_image, ivec2(gl_LaunchIDEXT), hit);
+    if (camera.frames_since_update == 0) {
+        imageStore(image_history, ivec2(gl_LaunchIDEXT), hit);
+    } else {
+        // temporary operation to test accumulation
+        vec4 history = imageLoad(image_history, ivec2(gl_LaunchIDEXT));
+        history = 0.99 * history;
+        imageStore(image_history, ivec2(gl_LaunchIDEXT), history);
+    }
 }

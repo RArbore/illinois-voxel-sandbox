@@ -49,6 +49,6 @@ int main(int argc, char *argv[]) {
 
         render_frame(context, scene, camera_info);
 
-        camera->updated_since_last_frame = false;
+        camera->mark_rendered();
     }
 }
