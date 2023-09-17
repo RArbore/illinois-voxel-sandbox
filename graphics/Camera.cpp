@@ -26,6 +26,8 @@ Camera::Camera(std::shared_ptr<Window> window, const glm::vec3 &initial_pos,
 
     world_up_ = glm::vec3(0.0f, 1.0f, 0.0f);
     recompute_vectors();
+
+    frames_since_update_ = 0;
 }
 
 std::shared_ptr<Camera>
