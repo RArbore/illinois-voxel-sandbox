@@ -5,7 +5,7 @@
 
 #include "common.glsl"
 
-layout(location = 0) rayPayloadInEXT vec4 hit;
+layout(location = 0) rayPayloadInEXT RayPayload payload;
 
 const vec3 voxel_normals[6] = vec3[6](
 				      vec3(-1.0, 0.0, 0.0),
@@ -24,5 +24,9 @@ void main() {
 
     vec3 voxel_sample_pos = gl_WorldToObjectEXT * vec4(world_ray_pos, 1.0);
     ivec3 volume_load_pos = ivec3(voxel_sample_pos * vec3(imageSize(volumes[volume_id])) - 0.5 * voxel_normals[gl_HitKindEXT]);
-    hit = imageLoad(volumes[volume_id], volume_load_pos);
+
+	payload.hit = true;
+	payload.world_position = voxel_sample_pos;
+	payload.world_normal = voxel_normals[gl_HitKindEXT];
+    payload.color = imageLoad(volumes[volume_id], volume_load_pos);
 }

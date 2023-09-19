@@ -38,8 +38,7 @@ int main(int argc, char *argv[]) {
     auto object2 = build_object(context, model2, transform2);
     auto object3 = build_object(context, model2, transform3);
     auto object4 = build_object(context, model3, transform4);
-    // auto scene = build_scene(context, {object1, object2, object3, object4});
-    auto scene = build_scene(context, {object1});
+    auto scene = build_scene(context, {object1, object2, object3, object4});
 
     while (!window->should_close()) {
         window->poll_events();

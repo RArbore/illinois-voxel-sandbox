@@ -6,6 +6,13 @@ layout (push_constant) uniform PushConstants {
     uint64_t elapsed_ms;
 };
 
+struct RayPayload {
+    vec4 color;
+    vec3 world_position;
+    vec3 world_normal;
+    bool hit;
+};
+
 // Set 0 is swapped out per swapchain image.
 layout(set = 0, binding = 0, rgba8) uniform image2D output_image;
 

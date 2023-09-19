@@ -5,8 +5,9 @@
 
 #include "common.glsl"
 
-layout(location = 0) rayPayloadInEXT vec4 hit;
+layout(location = 0) rayPayloadInEXT RayPayload hit;
 
 void main() {
-    hit = vec4(0.0, 0.0, 0.0, 1.0);
+    hit.hit = false;
+    hit.color = vec4(0.0, 0.0, 0.0, 1.0);
 }
