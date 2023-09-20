@@ -15,17 +15,17 @@ class ChunkManager;
 class VoxelChunk {
 public:
     enum class State {
-	CPU,
-	GPU,
+	    CPU,
+	    GPU,
     };
 
     enum class Format {
-	Raw,
+	    Raw,
     };
 
     enum class AttributeSet {
-	Color,
-	ColorNormal,
+        Color,
+        ColorNormal,
     };
 
     VoxelChunk(

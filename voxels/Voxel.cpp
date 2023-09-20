@@ -10,8 +10,8 @@ VoxelChunk::VoxelChunk(
 		       uint32_t depth,
 		       State state,
 		       Format format,
-		       AttributeSet attribute_set
-		       ): cpu_data_(data),
+		       AttributeSet attribute_set): 
+              cpu_data_(data),
 			  width_(width),
 			  height_(height),
 			  depth_(depth),
@@ -63,23 +63,23 @@ void VoxelChunk::queue_gpu_upload(std::shared_ptr<Device> device,
     ASSERT(state_ == State::CPU, "Tried to upload CPU data of voxel chunk to GPU without CPU data resident.");
     std::cout << "INFO: Queued upload to GPU for voxel chunk " << this << ", which has the following dimensions: (" << width_ << ", " << height_ << ", " << depth_ << ").\n";
     if (timeline_ == nullptr) {
-	timeline_ = std::make_shared<Semaphore>(device, true);
-	timeline_->set_signal_value(1);
+        timeline_ = std::make_shared<Semaphore>(device, true);
+        timeline_->set_signal_value(1);
     }
     switch (format_) {
-    case Format::Raw: {
-	VkExtent3D extent = {width_, height_,
-			     depth_};
-	volume_data_ = std::make_shared<GPUVolume>(
-						   allocator, extent, VK_FORMAT_R8G8B8A8_UNORM, 0,
-						   VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_STORAGE_BIT,
-						   VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, 0, 1, 1);
-	ring_buffer->copy_to_device(volume_data_, VK_IMAGE_LAYOUT_GENERAL, get_cpu_data(), {timeline_}, {timeline_});
-	break;
-    }
-    default: {
-	ASSERT(false, "GPU upload for format is unimplemented.");
-    }
+        case Format::Raw: {
+            VkExtent3D extent = {width_, height_,
+                        depth_};
+            volume_data_ = std::make_shared<GPUVolume>(
+                                allocator, extent, VK_FORMAT_R8G8B8A8_UNORM, 0,
+                                VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_STORAGE_BIT,
+                                VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, 0, 1, 1);
+            ring_buffer->copy_to_device(volume_data_, VK_IMAGE_LAYOUT_GENERAL, get_cpu_data(), {timeline_}, {timeline_});
+            break;
+        }
+        default: {
+            ASSERT(false, "GPU upload for format is unimplemented.");
+        }
     }
     state_ = State::GPU;
     timeline_->increment();
