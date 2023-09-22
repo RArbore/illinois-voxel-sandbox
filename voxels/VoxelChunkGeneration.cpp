@@ -112,37 +112,43 @@ std::vector<std::byte> generate_terrain(uint32_t width, uint32_t height, uint32_
 	return data;
 }
 
-// std::vector<std::vector<std::byte>> load_vox_scene_as_models(std::string filepath) {
-// 	FILE* fp = fopen(filepath, "rb");
-// 	std::fseek(fp, 0, SEEK_END);
-// 	uint32_t buffer_size = ftell(fp);
-// 	std::fseek(fp, 0, SEEK_SET);
-// 	uint8_t* buffer = new uint8_t[buffer_size];
-// 	fread(buffer, buffer_size, 1, fp);
-// 	fclose(fp);
+std::vector<std::vector<std::byte>> load_vox_scene_as_models(std::string filepath) {
+	FILE* fp = fopen(filepath, "rb");
+	std::fseek(fp, 0, SEEK_END);
+	uint32_t buffer_size = ftell(fp);
+	std::fseek(fp, 0, SEEK_SET);
+	uint8_t* buffer = new uint8_t[buffer_size];
+	fread(buffer, buffer_size, 1, fp);
+	fclose(fp);
 
-// 	const ogt_vox_scene* scene = ogt_vox_read_scene(buffer, buffer_size);
-// 	delete[] buffer;
+	const ogt_vox_scene* scene = ogt_vox_read_scene(buffer, buffer_size);
+	delete[] buffer;
 
 
 	
-// 	for (auto model : scene->models) {
-// 		std::vector<std::byte> data(model->size_z * model->size_y * model->size_x * 4, static_cast<std::byte>(0));
-// 		uint32_t voxel_index = 0;
-// 		for (uint32_t z = 0; z < model->size_z; z++) {
-// 			for (uint32_t y = 0; y < model->size_y; y++) {
-// 				for (uint32_t x = 0; x < model->size_x; x++, voxel_index++) {
-// 					// if color index == 0, this voxel is empty, otherwise it is solid.
-// 					uint32_t color_index = model->voxel_data[voxel_index];
-// 					bool is_voxel_solid = (color_index != 0);
-// 					// add to our accumulator
+	for (auto model : scene->models) {
+		std::vector<std::byte> data(model->size_z * model->size_y * model->size_x * 4, static_cast<std::byte>(0));
+		uint32_t voxel_index = 0;
+		for (uint32_t z = 0; z < model->size_z; z++) {
+			for (uint32_t y = 0; y < model->size_y; y++) {
+				for (uint32_t x = 0; x < model->size_x; x++, voxel_index++) {
+					// if color index == 0, this voxel is empty, otherwise it is solid.
+					uint32_t color_index = model->voxel_data[voxel_index];
+					bool is_voxel_solid = (color_index != 0);
+					if (is_voxel_solid) {
+						data[voxel_index * 4] = 255;
+						data[voxel_index * 4 + 1] = 255;
+						data[voxel_index * 4 + 2] = 255;
+						data[voxel_index * 4 + 3] = 255; 
+					}
 					
-// 				}
-// 			}
-// 		}
-// 	}
+				}
+			}
+		}
+		
+	}
 
 
-// 	ogt_vox_destroy_scene(scene);
-// 	return data;
-// }
+ 	ogt_vox_destroy_scene(scene);
+	return data;
+}
