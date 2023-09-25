@@ -52,17 +52,16 @@ std::vector<std::byte> convert_raw_to_svo(const std::vector<std::byte> &raw, uin
 	    node.valid_mask_ = 0;
 	    node.leaf_mask_ = 0;
 
-	    bool identical_leaves = false;
+	    bool identical = false;
 	    for (uint32_t i = 0; i < queue_size;  ++i) {
 		node.valid_mask_ |= !is_node_empty(queues.at(d).at(i).first) << (7 - i);
 		node.leaf_mask_ |= queues.at(d).at(i).second << (7 - i);
-		bool identical_leaves = identical_leaves && nodes_equal(queues.at(d).at(i), queues.at(d).at(0));
+		bool identical = identical && nodes_equal(queues.at(d).at(i).first, queues.at(d).at(0).first);
 	    }
 	    node.leaf_mask_ &= node.valid_mask_;
-	    identical_leaves = identical_leaves && node.leaf_mask_ == 0xFF;
 
-	    if (identical_leaves) {
-		node = queues.at(d).at(0);
+	    if (identical) {
+		node = queues.at(d).at(0).first;
 	    } else {
 		for (uint32_t i = 0; i < queue_size;  ++i) {
 		    const SVONode &child = queues.at(d).at(i).first;
@@ -72,7 +71,7 @@ std::vector<std::byte> convert_raw_to_svo(const std::vector<std::byte> &raw, uin
 		}
 	    }
 
-	    queues.at(d - 1).emplace_back(node, identical_leaves);
+	    queues.at(d - 1).emplace_back(node, identical ? queues.at(d).at(0).second : false);
 	    queues.at(d).clear();
 	    --d;
 	}
