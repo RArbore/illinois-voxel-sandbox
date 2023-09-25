@@ -1,6 +1,7 @@
 #include <graphics/GraphicsContext.h>
 #include <voxels/Voxel.h>
 #include <voxels/VoxelChunkGeneration.h>
+#include <voxels/Conversion.h>
 
 int main(int argc, char *argv[]) {
     ChunkManager chunk_manager;
@@ -8,6 +9,8 @@ int main(int argc, char *argv[]) {
     auto test_sphere_data2 = generate_basic_sphere_chunk(64, 64, 64, 20);
     auto test_proc_data1 = generate_basic_procedural_chunk(16, 16, 16);
     // auto test_load = load_vox_scene_as_models("models/3x3x3.vox");
+    auto test_svo_data1 = convert_raw_to_svo(test_proc_data1, 16, 16, 16, 4);
+    debug_print_svo(test_svo_data1, 4);
 
     VoxelChunkPtr test_sphere1 = chunk_manager.add_chunk(
         std::move(test_sphere_data1), 64, 64, 64, VoxelChunk::Format::Raw,
