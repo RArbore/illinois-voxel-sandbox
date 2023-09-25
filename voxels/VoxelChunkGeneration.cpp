@@ -79,13 +79,9 @@ std::vector<std::byte> generate_basic_procedural_chunk(uint32_t width,
         for (uint32_t y = 0; y < height; ++y) {
             for (uint32_t z = 0; z < depth; ++z) {
                 if (densityfunction_({x, y, z}) > -30.0) {
-                    //std::byte red = static_cast<std::byte>(x * 15);
-                    //std::byte green = static_cast<std::byte>(y * 15);
-                    //std::byte blue = static_cast<std::byte>(z * 15);
-                    //std::byte alpha = static_cast<std::byte>(255);
-                    std::byte red = static_cast<std::byte>(255);
-                    std::byte green = static_cast<std::byte>(255);
-                    std::byte blue = static_cast<std::byte>(255);
+                    std::byte red = static_cast<std::byte>(x * 15);
+                    std::byte green = static_cast<std::byte>(y * 15);
+                    std::byte blue = static_cast<std::byte>(z * 15);
                     std::byte alpha = static_cast<std::byte>(255);
 
                     size_t voxel_idx = x + y * width + z * width * height;
