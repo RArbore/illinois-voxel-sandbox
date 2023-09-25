@@ -8,6 +8,7 @@ endif()
 add_subdirectory(glm)
 
 add_library(vma VmaImpl.cpp)
+add_library(ogt OgtImpl.cpp)
 
 find_package(Vulkan REQUIRED)
 target_link_libraries(vma PRIVATE Vulkan::Vulkan)

@@ -14,6 +14,7 @@ function(DEFINE_EXE NAME)
   add_dependencies(${NAME} shaders)
   
   target_link_libraries(${NAME} LINK_PUBLIC vma)
+  target_link_libraries(${NAME} LINK_PUBLIC ogt)
   
   target_link_libraries(${NAME} PRIVATE Vulkan::Vulkan)
   
