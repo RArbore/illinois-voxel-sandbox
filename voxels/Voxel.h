@@ -21,6 +21,7 @@ class VoxelChunk {
 
     enum class Format {
         Raw,
+	SVO,
     };
 
     enum class AttributeSet {
@@ -47,6 +48,7 @@ class VoxelChunk {
 
   private:
     std::vector<std::byte> cpu_data_;
+    std::shared_ptr<GPUBuffer> buffer_data_;
     std::shared_ptr<GPUVolume> volume_data_;
     std::shared_ptr<Semaphore> timeline_ = nullptr;
     uint32_t width_;

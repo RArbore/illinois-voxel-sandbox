@@ -62,6 +62,11 @@ void VoxelChunk::queue_gpu_upload(std::shared_ptr<Device> device,
                                     get_cpu_data(), {timeline_}, {timeline_});
         break;
     }
+    case Format::SVO: {
+	buffer_data_ = std::make_shared<GPUBuffer>(allocator, get_cpu_data().size(), 8, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, 0);
+	ring_buffer->copy_to_device(buffer_data_, 0, get_cpu_data(), {timeline_}, {timeline_});
+	break;
+    }
     default: {
         ASSERT(false, "GPU upload for format is unimplemented.");
     }
