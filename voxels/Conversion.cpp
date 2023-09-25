@@ -22,7 +22,7 @@ std::vector<std::byte> convert_raw_to_svo(const std::vector<std::byte> &raw, uin
 
     const uint32_t queue_size = 8;
     const uint32_t num_queues = static_cast<uint32_t>(power_of_two);
-    std::vector<std::vector<SVONode>> queues(num_queues);
+    std::vector<std::vector<std::pair<SVONode, bool>>> queues(num_queues);
     for (auto &queue : queues) {
 	queue.reserve(queue_size);
     }
@@ -44,7 +44,7 @@ std::vector<std::byte> convert_raw_to_svo(const std::vector<std::byte> &raw, uin
 	SVONode node {};
 	memcpy(&node, &raw[voxel_offset], bytes_per_voxel);
 
-	queues.at(num_queues - 1).push_back(node);
+	queues.at(num_queues - 1).emplace_back(node, true);
 	uint32_t d = num_queues - 1;
 	while (d > 0 && queues.at(d).size() == queue_size) {
 	    SVONode node {};
@@ -52,16 +52,28 @@ std::vector<std::byte> convert_raw_to_svo(const std::vector<std::byte> &raw, uin
 	    node.valid_mask_ = 0;
 	    node.leaf_mask_ = 0;
 
+	    bool identical_leaves = false;
 	    for (uint32_t i = 0; i < queue_size;  ++i) {
-		const SVONode &child = queues.at(d).at(i);
-		if (!is_node_empty(child)) {
-		    node.valid_mask_ |= 1 << (7 - i);
-		    push_node_to_svo(child);
+		node.valid_mask_ |= !is_node_empty(queues.at(d).at(i).first) << (7 - i);
+		node.leaf_mask_ |= queues.at(d).at(i).second << (7 - i);
+		bool identical_leaves = identical_leaves && nodes_equal(queues.at(d).at(i), queues.at(d).at(0));
+	    }
+	    node.leaf_mask_ &= node.valid_mask_;
+	    identical_leaves = identical_leaves && node.leaf_mask_ == 0xFF;
+
+	    if (identical_leaves) {
+		node = queues.at(d).at(0);
+	    } else {
+		for (uint32_t i = 0; i < queue_size;  ++i) {
+		    const SVONode &child = queues.at(d).at(i).first;
+		    if (!is_node_empty(child)) {
+			push_node_to_svo(child);
+		    }
 		}
 	    }
 
+	    queues.at(d - 1).emplace_back(node, identical_leaves);
 	    queues.at(d).clear();
-	    queues.at(d - 1).push_back(node);
 	    --d;
 	}
     }
