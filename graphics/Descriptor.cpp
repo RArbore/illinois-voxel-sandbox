@@ -255,9 +255,10 @@ DescriptorSetBuilder &DescriptorSetBuilder::bind_buffers(
         write.pNext = nullptr;
         write.descriptorCount = 1;
         write.descriptorType = type;
-        write.pBufferInfo = buffer_infos.empty() ? nullptr
-                                               : &buffer_infos_.back() -
-                                                     buffer_infos.size() + i + 1;
+        write.pBufferInfo =
+            buffer_infos.empty()
+                ? nullptr
+                : &buffer_infos_.back() - buffer_infos.size() + i + 1;
         write.dstBinding = binding;
         write.dstArrayElement = buffer_infos.at(i).second;
         writes_.push_back(write);

@@ -1,6 +1,6 @@
+#include <cstring>
 #include <filesystem>
 #include <fstream>
-#include <cstring>
 #include <vector>
 
 #include "Pipeline.h"

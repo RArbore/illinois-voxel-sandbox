@@ -1,7 +1,7 @@
 #include <graphics/GraphicsContext.h>
+#include <voxels/Conversion.h>
 #include <voxels/Voxel.h>
 #include <voxels/VoxelChunkGeneration.h>
-#include <voxels/Conversion.h>
 
 int main(int argc, char *argv[]) {
     ChunkManager chunk_manager;
@@ -19,7 +19,7 @@ int main(int argc, char *argv[]) {
         std::move(test_sphere_data2), 64, 64, 64, VoxelChunk::Format::Raw,
         VoxelChunk::AttributeSet::Color);
     VoxelChunkPtr test_proc1 = chunk_manager.add_chunk(
-        std::move(test_proc_data1), 16, 16, 16, VoxelChunk::Format::Raw,
+        std::move(test_svo_data1), 16, 16, 16, VoxelChunk::Format::SVO,
         VoxelChunk::AttributeSet::Color);
 
     auto context = create_graphics_context();

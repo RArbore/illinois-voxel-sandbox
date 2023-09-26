@@ -18,6 +18,7 @@ const std::map<std::pair<VoxelChunk::Format, VoxelChunk::AttributeSet>,
                uint32_t>
     FORMAT_TO_SBT_OFFSET = {
         {{VoxelChunk::Format::Raw, VoxelChunk::AttributeSet::Color}, 1},
+        {{VoxelChunk::Format::SVO, VoxelChunk::AttributeSet::Color}, 2},
 };
 const uint64_t MAX_NUM_CHUNKS_LOADED_PER_FRAME = 32;
 
@@ -125,6 +126,9 @@ GraphicsContext::GraphicsContext() {
     scene_builder.bind_images(1, {}, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,
                               VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR |
                                   VK_SHADER_STAGE_INTERSECTION_BIT_KHR);
+    scene_builder.bind_buffers(2, {}, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
+                               VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR |
+                                   VK_SHADER_STAGE_INTERSECTION_BIT_KHR);
 
     unloaded_chunks_buffer_ = std::make_shared<GPUBuffer>(
         gpu_allocator_, MAX_NUM_CHUNKS_LOADED_PER_FRAME * sizeof(uint64_t),
@@ -152,11 +156,15 @@ GraphicsContext::GraphicsContext() {
     auto unloaded_rint = std::make_shared<Shader>(device_, "Unloaded_rint");
     auto raw_color_rchit = std::make_shared<Shader>(device_, "Raw_Color_rchit");
     auto raw_color_rint = std::make_shared<Shader>(device_, "Raw_Color_rint");
+    auto svo_color_rchit = std::make_shared<Shader>(device_, "SVO_Color_rchit");
+    auto svo_color_rint = std::make_shared<Shader>(device_, "SVO_Color_rint");
     std::vector<std::vector<std::shared_ptr<Shader>>> shader_groups = {
         {rgen},
         {rmiss},
         {unloaded_rchit, unloaded_rint},
-        {raw_color_rchit, raw_color_rint}};
+        {raw_color_rchit, raw_color_rint},
+        {svo_color_rchit, svo_color_rint},
+    };
     std::vector<VkDescriptorSetLayout> layouts = {
         swapchain_->get_image_descriptor(0)->get_layout(),
         scene_builder.get_layout()->get_layout(),
@@ -332,20 +340,33 @@ build_scene(std::shared_ptr<GraphicsContext> context,
                                         },
                                         VK_SHADER_STAGE_RAYGEN_BIT_KHR);
 
-    std::vector<std::pair<VkDescriptorImageInfo, uint32_t>> image_infos;
+    std::vector<std::pair<VkDescriptorImageInfo, uint32_t>> raw_volume_infos;
+    std::vector<std::pair<VkDescriptorBufferInfo, uint32_t>> svo_buffer_infos;
     for (auto [model, idx] : referenced_models) {
-        if (model->chunk_->get_state() == VoxelChunk::State::GPU) {
+        if (model->chunk_->get_state() == VoxelChunk::State::GPU &&
+            model->chunk_->get_format() == VoxelChunk::Format::Raw) {
             auto volume = model->chunk_->get_gpu_volume();
-            VkDescriptorImageInfo image_info{};
-            image_info.imageView = volume->get_view();
-            image_info.sampler = VK_NULL_HANDLE;
-            image_info.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
-            image_infos.emplace_back(image_info, idx);
+            VkDescriptorImageInfo raw_volume_info{};
+            raw_volume_info.imageView = volume->get_view();
+            raw_volume_info.sampler = VK_NULL_HANDLE;
+            raw_volume_info.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
+            raw_volume_infos.emplace_back(raw_volume_info, idx);
+        } else if (model->chunk_->get_state() == VoxelChunk::State::GPU &&
+                   model->chunk_->get_format() == VoxelChunk::Format::Raw) {
+            auto buffer = model->chunk_->get_gpu_buffer();
+            VkDescriptorBufferInfo svo_buffer_info{};
+            svo_buffer_info.buffer = buffer->get_buffer();
+            svo_buffer_info.offset = 0;
+            svo_buffer_info.range = buffer->get_size();
+            svo_buffer_infos.emplace_back(svo_buffer_info, idx);
         }
     }
-    builder.bind_images(1, image_infos, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,
+    builder.bind_images(1, raw_volume_infos, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,
                         VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR |
                             VK_SHADER_STAGE_INTERSECTION_BIT_KHR);
+    builder.bind_buffers(2, svo_buffer_infos, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
+                         VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR |
+                             VK_SHADER_STAGE_INTERSECTION_BIT_KHR);
 
     auto scene_descriptor = builder.build();
     return std::make_shared<GraphicsScene>(tlas, objects, scene_descriptor);
@@ -398,21 +419,38 @@ void GraphicsContext::check_chunk_request_buffer(
             },
             VK_SHADER_STAGE_RAYGEN_BIT_KHR);
 
-        std::vector<std::pair<VkDescriptorImageInfo, uint32_t>> image_infos;
+        std::vector<std::pair<VkDescriptorImageInfo, uint32_t>>
+            raw_volume_infos;
+        std::vector<std::pair<VkDescriptorBufferInfo, uint32_t>>
+            svo_buffer_infos;
         for (size_t i = 0; i < scene_models.size(); ++i) {
             const auto &model = scene_models.at(i);
-            if (model->chunk_->get_state() == VoxelChunk::State::GPU) {
+            if (model->chunk_->get_state() == VoxelChunk::State::GPU &&
+                model->chunk_->get_format() == VoxelChunk::Format::Raw) {
                 auto volume = model->chunk_->get_gpu_volume();
-                VkDescriptorImageInfo image_info{};
-                image_info.imageView = volume->get_view();
-                image_info.sampler = VK_NULL_HANDLE;
-                image_info.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
-                image_infos.emplace_back(image_info, i);
+                VkDescriptorImageInfo raw_volume_info{};
+                raw_volume_info.imageView = volume->get_view();
+                raw_volume_info.sampler = VK_NULL_HANDLE;
+                raw_volume_info.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
+                raw_volume_infos.emplace_back(raw_volume_info, i);
+            } else if (model->chunk_->get_state() == VoxelChunk::State::GPU &&
+                       model->chunk_->get_format() == VoxelChunk::Format::Raw) {
+                auto buffer = model->chunk_->get_gpu_buffer();
+                VkDescriptorBufferInfo svo_buffer_info{};
+                svo_buffer_info.buffer = buffer->get_buffer();
+                svo_buffer_info.offset = 0;
+                svo_buffer_info.range = buffer->get_size();
+                svo_buffer_infos.emplace_back(svo_buffer_info, i);
             }
         }
-        builder.bind_images(1, image_infos, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,
+        builder.bind_images(1, raw_volume_infos,
+                            VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,
                             VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR |
                                 VK_SHADER_STAGE_INTERSECTION_BIT_KHR);
+        builder.bind_buffers(2, svo_buffer_infos,
+                             VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
+                             VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR |
+                                 VK_SHADER_STAGE_INTERSECTION_BIT_KHR);
         builder.update(current_scene_->scene_descriptor_);
     }
 }
