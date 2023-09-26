@@ -14,7 +14,6 @@
 #include "Synchronization.h"
 #include "Window.h"
 
-const uint32_t UNLOADED_SBT_OFFSET = 0;
 const std::map<std::pair<VoxelChunk::Format, VoxelChunk::AttributeSet>,
                uint32_t>
     FORMAT_TO_SBT_OFFSET = {

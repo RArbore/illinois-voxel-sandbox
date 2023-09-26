@@ -5,6 +5,8 @@
 #include "GPUAllocator.h"
 #include "RingBuffer.h"
 
+static const uint32_t UNLOADED_SBT_OFFSET = 0;
+
 class BLAS {
   public:
     BLAS(std::shared_ptr<GPUAllocator> allocator,
