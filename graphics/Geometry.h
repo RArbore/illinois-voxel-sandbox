@@ -15,7 +15,7 @@ class BLAS {
          std::vector<VkAabbPositionsKHR> aabbs);
     ~BLAS();
 
-    VkAccelerationStructureKHR get_blas();
+    VkAccelerationStructureKHR &get_blas();
 
     std::shared_ptr<Semaphore> get_timeline();
 
@@ -45,7 +45,7 @@ class TLAS {
     void
     update_model_sbt_offsets(std::unordered_map<uint64_t, uint32_t> models);
 
-    VkAccelerationStructureKHR get_tlas();
+    VkAccelerationStructureKHR &get_tlas();
 
     std::shared_ptr<Semaphore> get_timeline();
 

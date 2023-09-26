@@ -132,7 +132,7 @@ BLAS::~BLAS() {
         nullptr);
 }
 
-VkAccelerationStructureKHR BLAS::get_blas() { return blas_; }
+VkAccelerationStructureKHR &BLAS::get_blas() { return blas_; }
 
 std::shared_ptr<Semaphore> BLAS::get_timeline() { return timeline_; }
 
@@ -348,7 +348,7 @@ TLAS::~TLAS() {
         nullptr);
 }
 
-VkAccelerationStructureKHR TLAS::get_tlas() { return tlas_; }
+VkAccelerationStructureKHR &TLAS::get_tlas() { return tlas_; }
 
 std::shared_ptr<Semaphore> TLAS::get_timeline() { return timeline_; }
 
