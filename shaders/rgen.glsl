@@ -8,7 +8,7 @@
 layout(location = 0) rayPayloadEXT vec4 hit;
 
 void main() {
-    float t = float(elapsed_ms) / 1000.0;
+    float t = float(elapsed_ms) / 5000.0;
 
     vec2 normalized = vec2(gl_LaunchIDEXT.xy) / vec2(gl_LaunchSizeEXT.xy) - 0.5;
     vec3 ray_origin = 3.0 * vec3(cos(t), 0.0, sin(t));

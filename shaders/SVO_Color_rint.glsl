@@ -36,12 +36,12 @@ aabb_intersect_result hit_aabb(const vec3 minimum, const vec3 maximum, const vec
 
 const vec3 subpositions[8] = vec3[8](
 				     vec3(0.0, 0.0, 0.0),
-				     vec3(0.0, 0.0, 0.5),
-				     vec3(0.0, 0.5, 0.0),
-				     vec3(0.0, 0.5, 0.5),
 				     vec3(0.5, 0.0, 0.0),
-				     vec3(0.5, 0.0, 0.5),
+				     vec3(0.0, 0.5, 0.0),
 				     vec3(0.5, 0.5, 0.0),
+				     vec3(0.0, 0.0, 0.5),
+				     vec3(0.5, 0.0, 0.5),
+				     vec3(0.0, 0.5, 0.5),
 				     vec3(0.5, 0.5, 0.5)
 				     );
 
@@ -49,6 +49,8 @@ struct SVOMarchStackFrame {
     uint node_id;
     uint8_t valid_mask;
     uint8_t num_valid;
+    vec3 low;
+    vec3 high;
 };
 
 void main() {
@@ -64,8 +66,8 @@ void main() {
 	stack[level].node_id = svo_buffers[svo_id].num_nodes - 1;
 	stack[level].valid_mask = uint8_t(0xFF);
 	stack[level].num_valid = uint8_t(0);
-	vec3 curr_low = vec3(0.0);
-	vec3 curr_high = vec3(1.0);
+	stack[level].low = vec3(0.0);
+	stack[level].high = vec3(1.0);
 	while (level >= 0 && level < MAX_DEPTH) {
 	    uint curr_node = stack[level].node_id;
 	    for (int child = 0; child < 8; ++child) {
@@ -76,9 +78,9 @@ void main() {
 		    stack[level].valid_mask ^= uint8_t(1 << (7 - child));
 		    uint8_t old_num_valid = stack[level].num_valid;
 		    ++stack[level].num_valid;
-		    vec3 diff = curr_high - curr_low;
-		    vec3 sub_low = curr_low + subpositions[child];
-		    vec3 sub_high = sub_low + diff / 2.0;
+		    vec3 diff = stack[level].high - stack[level].low;
+		    vec3 sub_low = stack[level].low + subpositions[child] * diff;
+		    vec3 sub_high = sub_low + diff * 0.5;
 		    aabb_intersect_result r = hit_aabb(sub_low, sub_high, obj_ray_pos, obj_ray_dir);
 		    if (r.front_t != -FAR_AWAY) {
 			int leaf = svo_buffers[svo_id].nodes[curr_node].leaf_mask_;
@@ -86,13 +88,16 @@ void main() {
 			leaf &= 1;
 			uint child_node_id = svo_buffers[svo_id].nodes[curr_node].child_pointer_ + old_num_valid;
 			if (bool(leaf)) {
-			    reportIntersectionEXT(r.front_t, child_node_id);
-			    return;
+			    vec3 obj_ray_voxel_intersect_point = obj_ray_pos + obj_ray_dir * max(r.front_t, 0.0);
+			    float intersect_time = length(gl_ObjectToWorldEXT * vec4(obj_ray_voxel_intersect_point, 1.0) - gl_ObjectToWorldEXT * vec4(obj_ray_pos, 1.0));
+			    reportIntersectionEXT(intersect_time, child_node_id);
 			}
 			++level;
 			stack[level].node_id = child_node_id;
 			stack[level].valid_mask = uint8_t(0xFF);
 			stack[level].num_valid = uint8_t(0);
+			stack[level].low = sub_low;
+			stack[level].high = sub_high;
 			++level;
 			break;
 		    }
