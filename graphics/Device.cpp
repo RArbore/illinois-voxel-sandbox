@@ -112,11 +112,16 @@ Device::Device(std::shared_ptr<Window> window) : window_(window) {
     queue_create_info.queueCount = 1;
     queue_create_info.pQueuePriorities = &queue_priority;
 
+    VkPhysicalDeviceShaderFloat16Int8Features int_eight_features {};
+    int_eight_features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SHADER_FLOAT16_INT8_FEATURES;
+    int_eight_features.shaderInt8 = VK_TRUE;
+    int_eight_features.pNext = nullptr;
+
     VkPhysicalDevice8BitStorageFeatures eight_bit_storage_features{};
     eight_bit_storage_features.sType =
         VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_8BIT_STORAGE_FEATURES;
     eight_bit_storage_features.storageBuffer8BitAccess = VK_TRUE;
-    eight_bit_storage_features.pNext = nullptr;
+    eight_bit_storage_features.pNext = &int_eight_features;
 
     VkPhysicalDeviceShaderAtomicInt64Features shader_atomic_int_64_features{};
     shader_atomic_int_64_features.sType =
@@ -358,10 +363,14 @@ int32_t physical_check_extensions(VkPhysicalDevice physical) {
 }
 
 int32_t physical_check_features_support(VkPhysicalDevice physical) {
+    VkPhysicalDeviceShaderFloat16Int8Features int_eight_features {};
+    int_eight_features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SHADER_FLOAT16_INT8_FEATURES;
+    int_eight_features.pNext = nullptr;
+
     VkPhysicalDevice8BitStorageFeatures eight_bit_storage_features{};
     eight_bit_storage_features.sType =
         VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_8BIT_STORAGE_FEATURES;
-    eight_bit_storage_features.pNext = nullptr;
+    eight_bit_storage_features.pNext = &int_eight_features;
 
     VkPhysicalDeviceShaderAtomicInt64Features shader_atomic_int_64_features{};
     shader_atomic_int_64_features.sType =
@@ -422,7 +431,8 @@ int32_t physical_check_features_support(VkPhysicalDevice physical) {
         synchronization_2_features.synchronization2 &&
         timeline_semaphore_features.timelineSemaphore &&
         shader_atomic_int_64_features.shaderBufferInt64Atomics &&
-        eight_bit_storage_features.storageBuffer8BitAccess) {
+        eight_bit_storage_features.storageBuffer8BitAccess &&
+	int_eight_features.shaderInt8) {
         return 0;
     }
     return -1;

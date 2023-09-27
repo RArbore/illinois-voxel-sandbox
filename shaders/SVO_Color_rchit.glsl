@@ -8,5 +8,12 @@
 layout(location = 0) rayPayloadInEXT vec4 hit;
 
 void main() {
-    hit = vec4(1.0, 0.0, 1.0, 1.0);
+    uint svo_id = gl_InstanceCustomIndexEXT;
+    SVOLeaf_Color color = svo_leaf_color_buffers[svo_id].nodes[gl_HitKindEXT];
+    hit = vec4(
+	       float(int(color.red_)) / 255.0,
+	       float(int(color.green_)) / 255.0,
+	       float(int(color.blue_)) / 255.0,
+	       float(int(color.alpha_)) / 255.0
+	       );
 }

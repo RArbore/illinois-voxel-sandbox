@@ -37,7 +37,13 @@ layout(set = 1, binding = 2) buffer SVOBuffer {
     uint32_t num_nodes;
     SVONode nodes[];
 } svo_buffers[];
-layout(set = 1, binding = 2) buffer SVOBuffer_Color { SVOLeaf_Color nodes[]; } svo_leaf_color_buffers[];
+layout(set = 1, binding = 2) buffer SVOBuffer_Color {
+    uint32_t voxel_width;
+    uint32_t voxel_height;
+    uint32_t voxel_depth;
+    uint32_t num_nodes;
+    SVOLeaf_Color nodes[];
+} svo_leaf_color_buffers[];
 
 // Set 2 is not swapped out - it is for GraphicsContext-wide data.
 #define MAX_NUM_CHUNKS_LOADED_PER_FRAME 32
