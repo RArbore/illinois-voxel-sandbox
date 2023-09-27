@@ -73,7 +73,7 @@ std::vector<std::byte> convert_raw_to_svo(const std::vector<std::byte> &raw,
         uint32_t d = num_queues - 1;
         while (d > 0 && queues.at(d).size() == queue_size) {
             SVONode node{};
-            node.child_pointer_ = svo.size();
+            node.child_pointer_ = static_cast<uint32_t>((svo.size() - sizeof(uint32_t) * 4) / sizeof(SVONode));
             node.valid_mask_ = 0;
             node.leaf_mask_ = 0;
 
@@ -159,15 +159,16 @@ static void debug_print_internal_helper(const std::span<const std::byte> &svo,
     std::cout << " " << node.child_pointer_ << "\n";
 
     for (uint32_t i = 0, j = 0; i < 8; ++i) {
+	uint32_t adjusted_child_pointer = node.child_pointer_ * sizeof(SVONode) + sizeof(uint32_t) * 4;
         if (node.valid_mask_ & (1 << (7 - i)) &&
             node.leaf_mask_ & (1 << (7 - i))) {
             debug_print_leaf_helper(svo.subspan(0, j++ * sizeof(SVONode) +
-                                                       node.child_pointer_ +
+                                                       adjusted_child_pointer +
                                                        sizeof(SVONode)),
                                     bytes_per_voxel, level + 1);
         } else if (node.valid_mask_ & (1 << (7 - i))) {
             debug_print_internal_helper(svo.subspan(0, j++ * sizeof(SVONode) +
-                                                           node.child_pointer_ +
+                                                           adjusted_child_pointer +
                                                            sizeof(SVONode)),
                                         bytes_per_voxel, level + 1);
         }

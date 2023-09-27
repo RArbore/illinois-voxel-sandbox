@@ -5,6 +5,8 @@
 
 #include "common.glsl"
 
+#define MAX_DEPTH 12
+
 struct aabb_intersect_result {
     float front_t;
     float back_t;
@@ -32,6 +34,23 @@ aabb_intersect_result hit_aabb(const vec3 minimum, const vec3 maximum, const vec
     return r;
 }
 
+const vec3 subpositions[8] = vec3[8](
+				     vec3(0.0, 0.0, 0.0),
+				     vec3(0.0, 0.0, 0.5),
+				     vec3(0.0, 0.5, 0.0),
+				     vec3(0.0, 0.5, 0.5),
+				     vec3(0.5, 0.0, 0.0),
+				     vec3(0.5, 0.0, 0.5),
+				     vec3(0.5, 0.5, 0.0),
+				     vec3(0.5, 0.5, 0.5)
+				     );
+
+struct SVOMarchStackFrame {
+    uint node_id;
+    uint8_t valid_mask;
+    uint8_t num_valid;
+};
+
 void main() {
     uint svo_id = gl_InstanceCustomIndexEXT;
 
@@ -40,8 +59,46 @@ void main() {
 
     aabb_intersect_result r = hit_aabb(vec3(0.0), vec3(1.0), obj_ray_pos, obj_ray_dir);
     if (r.front_t != -FAR_AWAY) {
-	if (svo_buffers[svo_id].num_nodes == 1888) {
-	    reportIntersectionEXT(r.front_t, 0);
+	int level = 0;
+	SVOMarchStackFrame stack[MAX_DEPTH];
+	stack[level].node_id = svo_buffers[svo_id].num_nodes - 1;
+	stack[level].valid_mask = uint8_t(0xFF);
+	stack[level].num_valid = uint8_t(0);
+	vec3 curr_low = vec3(0.0);
+	vec3 curr_high = vec3(1.0);
+	while (level >= 0 && level < MAX_DEPTH) {
+	    uint curr_node = stack[level].node_id;
+	    for (int child = 0; child < 8; ++child) {
+		int valid = stack[level].valid_mask & svo_buffers[svo_id].nodes[curr_node].valid_mask_;
+		valid >>= (7 - child);
+		valid &= 1;
+		if (bool(valid)) {
+		    stack[level].valid_mask ^= uint8_t(1 << (7 - child));
+		    uint8_t old_num_valid = stack[level].num_valid;
+		    ++stack[level].num_valid;
+		    vec3 diff = curr_high - curr_low;
+		    vec3 sub_low = curr_low + subpositions[child];
+		    vec3 sub_high = sub_low + diff / 2.0;
+		    aabb_intersect_result r = hit_aabb(sub_low, sub_high, obj_ray_pos, obj_ray_dir);
+		    if (r.front_t != -FAR_AWAY) {
+			int leaf = svo_buffers[svo_id].nodes[curr_node].leaf_mask_;
+			leaf >>= (7 - child);
+			leaf &= 1;
+			uint child_node_id = svo_buffers[svo_id].nodes[curr_node].child_pointer_ + old_num_valid;
+			if (bool(leaf)) {
+			    reportIntersectionEXT(r.front_t, child_node_id);
+			    return;
+			}
+			++level;
+			stack[level].node_id = child_node_id;
+			stack[level].valid_mask = uint8_t(0xFF);
+			stack[level].num_valid = uint8_t(0);
+			++level;
+			break;
+		    }
+		}
+	    }
+	    --level;
 	}
     }
 }
