@@ -9,6 +9,15 @@ struct SVONode {
     uint32_t child_pointer_;
     uint8_t valid_mask_;
     uint8_t leaf_mask_;
+    uint8_t _padding_[2];
+};
+
+struct SVOLeaf_Color {
+    uint8_t red_;
+    uint8_t green_;
+    uint8_t blue_;
+    uint8_t alpha_;
+    uint8_t _padding_[4];
 };
 
 layout (push_constant) uniform PushConstants {
@@ -21,7 +30,14 @@ layout(set = 0, binding = 0, rgba8) uniform image2D output_image;
 // Set 1 is swapped out per scene.
 layout(set = 1, binding = 0) uniform accelerationStructureEXT tlas;
 layout(set = 1, binding = 1, rgba8) uniform readonly image3D volumes[];
-layout(set = 1, binding = 2) buffer SVOBuffer { SVONode nodes[]; } svo_buffers[];
+layout(set = 1, binding = 2) buffer SVOBuffer {
+    uint32_t voxel_width;
+    uint32_t voxel_height;
+    uint32_t voxel_depth;
+    uint32_t num_nodes;
+    SVONode nodes[];
+} svo_buffers[];
+layout(set = 1, binding = 2) buffer SVOBuffer_Color { SVOLeaf_Color nodes[]; } svo_leaf_color_buffers[];
 
 // Set 2 is not swapped out - it is for GraphicsContext-wide data.
 #define MAX_NUM_CHUNKS_LOADED_PER_FRAME 32

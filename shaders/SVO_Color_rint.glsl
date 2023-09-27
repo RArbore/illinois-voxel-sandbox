@@ -33,14 +33,15 @@ aabb_intersect_result hit_aabb(const vec3 minimum, const vec3 maximum, const vec
 }
 
 void main() {
-    uint volume_id = gl_InstanceCustomIndexEXT;
+    uint svo_id = gl_InstanceCustomIndexEXT;
 
     vec3 obj_ray_pos = gl_WorldToObjectEXT * vec4(gl_WorldRayOriginEXT, 1.0);
     vec3 obj_ray_dir = gl_WorldToObjectEXT * vec4(gl_WorldRayDirectionEXT, 0.0);
 
     aabb_intersect_result r = hit_aabb(vec3(0.0), vec3(1.0), obj_ray_pos, obj_ray_dir);
-
     if (r.front_t != -FAR_AWAY) {
-	reportIntersectionEXT(r.front_t, 0);
+	if (svo_buffers[svo_id].num_nodes == 1888) {
+	    reportIntersectionEXT(r.front_t, 0);
+	}
     }
 }

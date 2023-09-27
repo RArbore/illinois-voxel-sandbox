@@ -412,7 +412,7 @@ void GraphicsContext::bind_scene_descriptors(DescriptorSetBuilder &builder, std:
                 raw_volume_info.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
                 raw_volume_infos.emplace_back(raw_volume_info, i);
             } else if (model->chunk_->get_state() == VoxelChunk::State::GPU &&
-                       model->chunk_->get_format() == VoxelChunk::Format::Raw) {
+                       model->chunk_->get_format() == VoxelChunk::Format::SVO) {
                 auto buffer = model->chunk_->get_gpu_buffer();
                 VkDescriptorBufferInfo svo_buffer_info{};
                 svo_buffer_info.buffer = buffer->get_buffer();
