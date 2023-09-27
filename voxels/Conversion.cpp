@@ -158,8 +158,8 @@ static void debug_print_internal_helper(const std::span<const std::byte> &svo,
     }
     std::cout << " " << node.child_pointer_ << "\n";
 
+    uint32_t adjusted_child_pointer = node.child_pointer_ * sizeof(SVONode) + sizeof(uint32_t) * 4;
     for (uint32_t i = 0, j = 0; i < 8; ++i) {
-	uint32_t adjusted_child_pointer = node.child_pointer_ * sizeof(SVONode) + sizeof(uint32_t) * 4;
         if (node.valid_mask_ & (1 << (7 - i)) &&
             node.leaf_mask_ & (1 << (7 - i))) {
             debug_print_leaf_helper(svo.subspan(0, j++ * sizeof(SVONode) +

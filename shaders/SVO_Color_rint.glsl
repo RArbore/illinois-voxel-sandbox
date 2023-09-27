@@ -5,6 +5,8 @@
 
 #include "common.glsl"
 
+hitAttributeEXT uint leaf_id;
+
 #define MAX_DEPTH 12
 
 struct aabb_intersect_result {
@@ -61,6 +63,7 @@ void main() {
 
     aabb_intersect_result r = hit_aabb(vec3(0.0), vec3(1.0), obj_ray_pos, obj_ray_dir);
     if (r.front_t != -FAR_AWAY) {
+	float best_intersect_time = 100000.0;
 	int level = 0;
 	SVOMarchStackFrame stack[MAX_DEPTH];
 	stack[level].node_id = svo_buffers[svo_id].num_nodes - 1;
@@ -70,9 +73,9 @@ void main() {
 	stack[level].high = vec3(1.0);
 	while (level >= 0 && level < MAX_DEPTH) {
 	    uint curr_node = stack[level].node_id;
+	    int valid = stack[level].valid_mask & svo_buffers[svo_id].nodes[curr_node].valid_mask_;
 	    for (int child = 0; child < 8; ++child) {
-		int valid = stack[level].valid_mask & svo_buffers[svo_id].nodes[curr_node].valid_mask_;
-		valid >>= (7 - child);
+		int valid = valid >> (7 - child);
 		valid &= 1;
 		if (bool(valid)) {
 		    stack[level].valid_mask ^= uint8_t(1 << (7 - child));
@@ -82,7 +85,7 @@ void main() {
 		    vec3 sub_low = stack[level].low + subpositions[child] * diff;
 		    vec3 sub_high = sub_low + diff * 0.5;
 		    aabb_intersect_result r = hit_aabb(sub_low, sub_high, obj_ray_pos, obj_ray_dir);
-		    if (r.front_t != -FAR_AWAY) {
+		    if (r.front_t != -FAR_AWAY && r.front_t < best_intersect_time) {
 			int leaf = svo_buffers[svo_id].nodes[curr_node].leaf_mask_;
 			leaf >>= (7 - child);
 			leaf &= 1;
@@ -90,16 +93,21 @@ void main() {
 			if (bool(leaf)) {
 			    vec3 obj_ray_voxel_intersect_point = obj_ray_pos + obj_ray_dir * max(r.front_t, 0.0);
 			    float intersect_time = length(gl_ObjectToWorldEXT * vec4(obj_ray_voxel_intersect_point, 1.0) - gl_ObjectToWorldEXT * vec4(obj_ray_pos, 1.0));
-			    reportIntersectionEXT(intersect_time, child_node_id);
+			    if (intersect_time < best_intersect_time) {
+				leaf_id = child_node_id;
+				best_intersect_time = intersect_time;
+				reportIntersectionEXT(best_intersect_time, 0);
+			    }
+			} else {
+			    ++level;
+			    stack[level].node_id = child_node_id;
+			    stack[level].valid_mask = uint8_t(0xFF);
+			    stack[level].num_valid = uint8_t(0);
+			    stack[level].low = sub_low;
+			    stack[level].high = sub_high;
+			    ++level;
+			    break;
 			}
-			++level;
-			stack[level].node_id = child_node_id;
-			stack[level].valid_mask = uint8_t(0xFF);
-			stack[level].num_valid = uint8_t(0);
-			stack[level].low = sub_low;
-			stack[level].high = sub_high;
-			++level;
-			break;
 		    }
 		}
 	    }
