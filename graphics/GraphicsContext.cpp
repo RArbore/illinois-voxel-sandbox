@@ -59,7 +59,9 @@ class GraphicsContext {
     void check_chunk_request_buffer(
         std::vector<std::shared_ptr<Semaphore>> &render_wait_semaphores);
 
-    void bind_scene_descriptors(DescriptorSetBuilder &builder, std::shared_ptr<TLAS> tlas, std::vector<std::shared_ptr<GraphicsModel>> &&models);
+    void bind_scene_descriptors(
+        DescriptorSetBuilder &builder, std::shared_ptr<TLAS> tlas,
+        std::vector<std::shared_ptr<GraphicsModel>> &&models);
 };
 
 class GraphicsModel {
@@ -335,9 +337,10 @@ build_scene(std::shared_ptr<GraphicsContext> context,
         bottom_structures, instances);
 
     DescriptorSetBuilder builder(context->descriptor_allocator_);
-    std::vector<std::shared_ptr<GraphicsModel>> scene_models(referenced_models.size());
+    std::vector<std::shared_ptr<GraphicsModel>> scene_models(
+        referenced_models.size());
     for (auto &[model, idx] : referenced_models) {
-	scene_models.at(idx) = std::move(model);
+        scene_models.at(idx) = std::move(model);
     }
     context->bind_scene_descriptors(builder, tlas, std::move(scene_models));
 
@@ -383,50 +386,49 @@ void GraphicsContext::check_chunk_request_buffer(
             current_scene_->tlas_->get_timeline());
 
         DescriptorSetBuilder builder(descriptor_allocator_);
-	bind_scene_descriptors(builder, current_scene_->tlas_, std::move(scene_models));
+        bind_scene_descriptors(builder, current_scene_->tlas_,
+                               std::move(scene_models));
         builder.update(current_scene_->scene_descriptor_);
     }
 }
 
-void GraphicsContext::bind_scene_descriptors(DescriptorSetBuilder &builder, std::shared_ptr<TLAS> tlas, std::vector<std::shared_ptr<GraphicsModel>> &&models) {
-        builder.bind_acceleration_structure(
-            0,
-            {
-                .accelerationStructureCount = 1,
-                .pAccelerationStructures = &tlas->get_tlas(),
-            },
-            VK_SHADER_STAGE_RAYGEN_BIT_KHR);
+void GraphicsContext::bind_scene_descriptors(
+    DescriptorSetBuilder &builder, std::shared_ptr<TLAS> tlas,
+    std::vector<std::shared_ptr<GraphicsModel>> &&models) {
+    builder.bind_acceleration_structure(
+        0,
+        {
+            .accelerationStructureCount = 1,
+            .pAccelerationStructures = &tlas->get_tlas(),
+        },
+        VK_SHADER_STAGE_RAYGEN_BIT_KHR);
 
-        std::vector<std::pair<VkDescriptorImageInfo, uint32_t>>
-            raw_volume_infos;
-        std::vector<std::pair<VkDescriptorBufferInfo, uint32_t>>
-            svo_buffer_infos;
-        for (size_t i = 0; i < models.size(); ++i) {
-            const auto &model = models.at(i);
-            if (model->chunk_->get_state() == VoxelChunk::State::GPU &&
-                model->chunk_->get_format() == VoxelChunk::Format::Raw) {
-                auto volume = model->chunk_->get_gpu_volume();
-                VkDescriptorImageInfo raw_volume_info{};
-                raw_volume_info.imageView = volume->get_view();
-                raw_volume_info.sampler = VK_NULL_HANDLE;
-                raw_volume_info.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
-                raw_volume_infos.emplace_back(raw_volume_info, i);
-            } else if (model->chunk_->get_state() == VoxelChunk::State::GPU &&
-                       model->chunk_->get_format() == VoxelChunk::Format::SVO) {
-                auto buffer = model->chunk_->get_gpu_buffer();
-                VkDescriptorBufferInfo svo_buffer_info{};
-                svo_buffer_info.buffer = buffer->get_buffer();
-                svo_buffer_info.offset = 0;
-                svo_buffer_info.range = buffer->get_size();
-                svo_buffer_infos.emplace_back(svo_buffer_info, i);
-            }
+    std::vector<std::pair<VkDescriptorImageInfo, uint32_t>> raw_volume_infos;
+    std::vector<std::pair<VkDescriptorBufferInfo, uint32_t>> svo_buffer_infos;
+    for (size_t i = 0; i < models.size(); ++i) {
+        const auto &model = models.at(i);
+        if (model->chunk_->get_state() == VoxelChunk::State::GPU &&
+            model->chunk_->get_format() == VoxelChunk::Format::Raw) {
+            auto volume = model->chunk_->get_gpu_volume();
+            VkDescriptorImageInfo raw_volume_info{};
+            raw_volume_info.imageView = volume->get_view();
+            raw_volume_info.sampler = VK_NULL_HANDLE;
+            raw_volume_info.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
+            raw_volume_infos.emplace_back(raw_volume_info, i);
+        } else if (model->chunk_->get_state() == VoxelChunk::State::GPU &&
+                   model->chunk_->get_format() == VoxelChunk::Format::SVO) {
+            auto buffer = model->chunk_->get_gpu_buffer();
+            VkDescriptorBufferInfo svo_buffer_info{};
+            svo_buffer_info.buffer = buffer->get_buffer();
+            svo_buffer_info.offset = 0;
+            svo_buffer_info.range = buffer->get_size();
+            svo_buffer_infos.emplace_back(svo_buffer_info, i);
         }
-        builder.bind_images(1, raw_volume_infos,
-                            VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,
-                            VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR |
-                                VK_SHADER_STAGE_INTERSECTION_BIT_KHR);
-        builder.bind_buffers(2, svo_buffer_infos,
-                             VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
-                             VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR |
-                                 VK_SHADER_STAGE_INTERSECTION_BIT_KHR);
+    }
+    builder.bind_images(1, raw_volume_infos, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,
+                        VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR |
+                            VK_SHADER_STAGE_INTERSECTION_BIT_KHR);
+    builder.bind_buffers(2, svo_buffer_infos, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
+                         VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR |
+                             VK_SHADER_STAGE_INTERSECTION_BIT_KHR);
 }
