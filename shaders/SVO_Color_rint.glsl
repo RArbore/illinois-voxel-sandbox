@@ -9,12 +9,7 @@ hitAttributeEXT uint leaf_id;
 
 #define MAX_DEPTH 32
 
-struct aabb_intersect_result {
-    float front_t;
-};
-
-aabb_intersect_result hit_aabb(const vec3 minimum, const vec3 maximum, const vec3 origin, const vec3 direction) {
-    aabb_intersect_result r;
+float hit_aabb(const vec3 minimum, const vec3 maximum, const vec3 origin, const vec3 direction) {
     vec3 invDir = 1.0 / direction;
     vec3 tbot = invDir * (minimum - origin);
     vec3 ttop = invDir * (maximum - origin);
@@ -22,8 +17,7 @@ aabb_intersect_result hit_aabb(const vec3 minimum, const vec3 maximum, const vec
     vec3 tmax = max(ttop, tbot);
     float t0 = max(tmin.x, max(tmin.y, tmin.z));
     float t1 = min(tmax.x, min(tmax.y, tmax.z));
-    r.front_t = t1 > max(t0, 0.0) ? t0 : -FAR_AWAY;
-    return r;
+    return t1 > max(t0, 0.0) ? t0 : -FAR_AWAY;
 }
 
 const vec3 subpositions[8] = vec3[8](
@@ -63,8 +57,8 @@ void main() {
 
     int direction_kind = int(obj_ray_dir.x < 0.0) + 2 * int(obj_ray_dir.y < 0.0) + 4 * int(obj_ray_dir.z < 0.0);
 
-    aabb_intersect_result r = hit_aabb(vec3(0.0), vec3(1.0), obj_ray_pos, obj_ray_dir);
-    if (r.front_t != -FAR_AWAY) {
+    float bounding = hit_aabb(vec3(0.0), vec3(1.0), obj_ray_pos, obj_ray_dir);
+    if (bounding != -FAR_AWAY) {
 	int level = 0;
 	SVOMarchStackFrame stack[MAX_DEPTH];
 	stack[level].node_id = svo_buffers[svo_id].num_nodes - 1;
@@ -82,22 +76,20 @@ void main() {
 		    vec3 diff = stack[level].high - stack[level].low;
 		    vec3 sub_low = stack[level].low + subpositions[child] * diff;
 		    vec3 sub_high = sub_low + diff * 0.5;
-		    aabb_intersect_result r = hit_aabb(sub_low, sub_high, obj_ray_pos, obj_ray_dir);
-		    if (r.front_t != -FAR_AWAY) {
+		    float hit = hit_aabb(sub_low, sub_high, obj_ray_pos, obj_ray_dir);
+		    if (hit != -FAR_AWAY) {
 			int leaf = svo_buffers[svo_id].nodes[curr_node].leaf_mask_;
 			leaf >>= (7 - child);
 			leaf &= 1;
-			uint8_t[8] expanded_indices;
 			uint8_t num_valid = uint8_t(0);
-			for (int child = 0; child < 8; ++child) {
-			    expanded_indices[child] = num_valid;
-			    if (bool((valid_mask >> (7 - child)) & 1)) {
+			for (int idx = 0; idx < child; ++idx) {
+			    if (bool((valid_mask >> (7 - idx)) & 1)) {
 				++num_valid;
 			    }
 			}
-			uint child_node_id = svo_buffers[svo_id].nodes[curr_node].child_pointer_ + expanded_indices[child];
+			uint child_node_id = svo_buffers[svo_id].nodes[curr_node].child_pointer_ + num_valid;
 			if (bool(leaf)) {
-			    vec3 obj_ray_voxel_intersect_point = obj_ray_pos + obj_ray_dir * max(r.front_t, 0.0);
+			    vec3 obj_ray_voxel_intersect_point = obj_ray_pos + obj_ray_dir * max(hit, 0.0);
 			    float intersect_time = length(gl_ObjectToWorldEXT * vec4(obj_ray_voxel_intersect_point, 1.0) - gl_ObjectToWorldEXT * vec4(obj_ray_pos, 1.0));
 			    leaf_id = child_node_id;
 			    reportIntersectionEXT(intersect_time, 0);
