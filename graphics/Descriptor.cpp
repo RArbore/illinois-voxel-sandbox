@@ -203,6 +203,9 @@ DescriptorSetBuilder::DescriptorSetBuilder(
     VkDescriptorSetLayoutCreateFlags layout_flags) {
     allocator_ = allocator;
     layout_ = std::make_shared<DescriptorSetLayout>(allocator_, layout_flags);
+    buffer_infos_.reserve(128);
+    image_infos_.reserve(128);
+    acceleration_structure_infos_.reserve(128);
 }
 
 DescriptorSetBuilder &DescriptorSetBuilder::bind_buffer(
@@ -226,6 +229,40 @@ DescriptorSetBuilder &DescriptorSetBuilder::bind_buffer(
     write.pBufferInfo = &buffer_infos_.back();
     write.dstBinding = binding;
     writes_.push_back(write);
+
+    return *this;
+}
+
+DescriptorSetBuilder &DescriptorSetBuilder::bind_buffers(
+    uint32_t binding,
+    std::vector<std::pair<VkDescriptorBufferInfo, uint32_t>> buffer_infos,
+    VkDescriptorType type, VkShaderStageFlags stages) {
+    VkDescriptorSetLayoutBinding layout_binding{};
+    layout_binding.descriptorCount = MAX_MODELS;
+    layout_binding.descriptorType = type;
+    layout_binding.pImmutableSamplers = nullptr;
+    layout_binding.stageFlags = stages;
+    layout_binding.binding = binding;
+    layout_->add_binding(layout_binding, true);
+
+    for (auto [buffer_info, _] : buffer_infos) {
+        buffer_infos_.push_back(buffer_info);
+    }
+
+    for (size_t i = 0; i < buffer_infos.size(); ++i) {
+        VkWriteDescriptorSet write{};
+        write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+        write.pNext = nullptr;
+        write.descriptorCount = 1;
+        write.descriptorType = type;
+        write.pBufferInfo =
+            buffer_infos.empty()
+                ? nullptr
+                : &buffer_infos_.back() - buffer_infos.size() + i + 1;
+        write.dstBinding = binding;
+        write.dstArrayElement = buffer_infos.at(i).second;
+        writes_.push_back(write);
+    }
 
     return *this;
 }

@@ -1,4 +1,5 @@
 #include <graphics/GraphicsContext.h>
+#include <voxels/Conversion.h>
 #include <voxels/Voxel.h>
 #include <voxels/VoxelChunkGeneration.h>
 

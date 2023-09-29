@@ -1,12 +1,12 @@
+#include <cmath>
 #include <filesystem>
 #include <fstream>
+#include <random>
 #include <stdio.h>
 #include <string>
-#include <random>
-#include <cmath>
 
-#include <external/glm/glm/glm.hpp>
 #include <external/PerlinNoise.hpp>
+#include <external/glm/glm/glm.hpp>
 #include <external/ogt_vox.h>
 
 #include "VoxelChunkGeneration.h"
@@ -134,12 +134,24 @@ std::vector<std::byte> generate_terrain(uint32_t width, uint32_t height,
     return data;
 }
 
+<<<<<<< HEAD
 std::shared_ptr<GraphicsScene> test_loader(const std::string& filepath, ChunkManager& chunk_manager, std::shared_ptr<GraphicsContext> context) {
+=======
+std::vector<std::vector<std::byte>>
+load_vox_scene_as_models(std::string filepath) {
+    ASSERT(std::filesystem::exists(filepath),
+           "Tried to load .vox scene from file that doesn't exist.");
+>>>>>>> main
     std::ifstream fstream(filepath, std::ios::in | std::ios::binary);
     std::vector<uint8_t> buffer(std::filesystem::file_size(filepath));
-    fstream.read(reinterpret_cast<char*>(buffer.data()), buffer.size());
+    fstream.read(reinterpret_cast<char *>(buffer.data()), buffer.size());
 
+<<<<<<< HEAD
     const ogt_vox_scene *voxscene = ogt_vox_read_scene(buffer.data(), buffer.size());
+=======
+    const ogt_vox_scene *scene =
+        ogt_vox_read_scene(buffer.data(), buffer.size());
+>>>>>>> main
 
     std::cout << "Number of models: " << voxscene->num_models << std::endl;
 

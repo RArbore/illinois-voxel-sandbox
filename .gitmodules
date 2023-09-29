@@ -9,4 +9,4 @@
 	url = https://github.com/g-truc/glm.git
 [submodule "external/libmorton"]
 	path = external/libmorton
-	url = https://github.com/Forceflow/libmorton
+	url = https://github.com/Forceflow/libmorton.git
