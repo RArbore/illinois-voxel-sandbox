@@ -134,7 +134,7 @@ std::vector<std::byte> generate_terrain(uint32_t width, uint32_t height,
     return data;
 }
 
-std::shared_ptr<GraphicsScene> test_loader(std::string filepath, ChunkManager chunk_manager, std::shared_ptr<GraphicsContext> context) {
+std::shared_ptr<GraphicsScene> test_loader(const std::string& filepath, ChunkManager& chunk_manager, std::shared_ptr<GraphicsContext> context) {
     std::ifstream fstream(filepath, std::ios::in | std::ios::binary);
     std::vector<uint8_t> buffer(std::filesystem::file_size(filepath));
     fstream.read(reinterpret_cast<char*>(buffer.data()), buffer.size());
@@ -146,6 +146,8 @@ std::shared_ptr<GraphicsScene> test_loader(std::string filepath, ChunkManager ch
     auto model = voxscene->models[0];
 
     std::cout << "X size: " << model->size_x << std::endl;
+    std::cout << "Y size: " << model->size_y << std::endl;
+    std::cout << "Z size: " << model->size_z << std::endl;
 
 
     std::vector<std::byte> data(model->size_z * model->size_y *

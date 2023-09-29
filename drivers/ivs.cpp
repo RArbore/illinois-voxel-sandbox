@@ -45,7 +45,7 @@ int main(int argc, char *argv[]) {
 
 
     const std::string modelsDirectory = MODELS_DIRECTORY;
-    const std::string filePath = modelsDirectory + "/3x3x3.vox";
+    const std::string filePath = modelsDirectory + "/castle.vox";
     auto test_scene = test_loader(filePath, chunk_manager, context);
 
     // auto test_scene = load_vox_scene(filePath, chunk_manager, context);
