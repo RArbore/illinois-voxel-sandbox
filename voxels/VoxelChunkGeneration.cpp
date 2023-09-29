@@ -12,6 +12,9 @@
 #include "VoxelChunkGeneration.h"
 #include "utils/Assert.h"
 
+// Have to include so that can read in vox files for now
+#include <graphics/GraphicsContext.h>
+
 std::vector<std::byte> generate_basic_sphere_chunk(uint32_t width,
                                                    uint32_t height,
                                                    uint32_t depth,
@@ -36,7 +39,7 @@ std::vector<std::byte> generate_basic_sphere_chunk(uint32_t width,
                     data.at(voxel_idx * 4 + 1) = green;
                     data.at(voxel_idx * 4 + 2) = blue;
                     data.at(voxel_idx * 4 + 3) = alpha;
-                }
+                } 
             }
         }
     }
@@ -131,22 +134,90 @@ std::vector<std::byte> generate_terrain(uint32_t width, uint32_t height,
     return data;
 }
 
-std::vector<std::vector<std::byte>>
-load_vox_scene_as_models(std::string filepath) {
-    ASSERT(std::filesystem::exists(filepath), "Tried to load .vox scene from file that doesn't exist.");
+std::shared_ptr<GraphicsScene> test_loader(std::string filepath, ChunkManager chunk_manager, std::shared_ptr<GraphicsContext> context) {
     std::ifstream fstream(filepath, std::ios::in | std::ios::binary);
     std::vector<uint8_t> buffer(std::filesystem::file_size(filepath));
     fstream.read(reinterpret_cast<char*>(buffer.data()), buffer.size());
 
-    const ogt_vox_scene *scene = ogt_vox_read_scene(buffer.data(), buffer.size());
+    const ogt_vox_scene *voxscene = ogt_vox_read_scene(buffer.data(), buffer.size());
 
-    std::vector<std::vector<std::byte>> models;
+    std::cout << "Number of models: " << voxscene->num_models << std::endl;
 
-    for (size_t i = 0; i < scene->num_models; ++i) {
-        auto model = scene->models[i];
+    auto model = voxscene->models[0];
+
+    std::cout << "X size: " << model->size_x << std::endl;
+
+
+    std::vector<std::byte> data(model->size_z * model->size_y *
+                                        model->size_x * 4,
+                                        static_cast<std::byte>(0));
+    uint32_t voxel_index = 0;
+    for (uint32_t z = 0; z < model->size_z; z++) {
+        for (uint32_t y = 0; y < model->size_y; y++) {
+            for (uint32_t x = 0; x < model->size_x; x++, voxel_index++) {
+                // if color index == 0, this voxel is empty, otherwise it is
+                // solid.
+                uint32_t color_index = model->voxel_data[voxel_index];
+                // doing without color first
+                // ogt_vox_rgba color = voxscene->palette.color[color_index];
+                bool is_voxel_solid = (color_index != 0);
+                if (is_voxel_solid) {
+                    data[voxel_index * 4] = static_cast<std::byte>(255);
+                    data[voxel_index * 4 + 1] = static_cast<std::byte>(255);
+                    data[voxel_index * 4 + 2] = static_cast<std::byte>(255);
+                    data[voxel_index * 4 + 3] = static_cast<std::byte>(255);
+                } else {
+                    data[voxel_index * 4] = static_cast<std::byte>(0);
+                    data[voxel_index * 4 + 1] = static_cast<std::byte>(0);
+                    data[voxel_index * 4 + 2] = static_cast<std::byte>(0);
+                    data[voxel_index * 4 + 3] = static_cast<std::byte>(0);
+                }
+            }
+        }
+    }
+
+    VoxelChunkPtr model_pointer = chunk_manager.add_chunk(
+            std::move(data), model->size_x, model->size_y, model->size_z, VoxelChunk::Format::Raw,
+            VoxelChunk::AttributeSet::Color);
+
+    std::shared_ptr<GraphicsModel> graphicsmodel = build_model(context, model_pointer);
+
+    std::cout << "Number of instances: " << voxscene->num_instances << std::endl;
+    
+    auto instance = voxscene->instances[0];
+
+    ogt_vox_transform trans = instance.transform;
+    glm::mat3x4 glmtransform = {trans.m00, trans.m10, trans.m20, trans.m30,
+                                trans.m01, trans.m11, trans.m21, trans.m31, 
+                                trans.m02, trans.m12, trans.m22, trans.m32};
+
+    std::shared_ptr<GraphicsObject> obj = build_object(context, 
+                                                    graphicsmodel,
+                                                    glmtransform);
+
+    std::shared_ptr<GraphicsScene> gscene = build_scene(context, {obj});
+
+    ogt_vox_destroy_scene(voxscene);
+    return gscene;
+}
+
+std::shared_ptr<GraphicsScene>
+load_vox_scene(std::string filepath, ChunkManager chunk_manager, std::shared_ptr<GraphicsContext> context) {
+    ASSERT(std::filesystem::exists(filepath), "Tried to load .vox scene from file that doesn't exist.");
+    
+    std::ifstream fstream(filepath, std::ios::in | std::ios::binary);
+    std::vector<uint8_t> buffer(std::filesystem::file_size(filepath));
+    fstream.read(reinterpret_cast<char*>(buffer.data()), buffer.size());
+    
+    const ogt_vox_scene *voxscene = ogt_vox_read_scene(buffer.data(), buffer.size());
+
+    std::vector<std::shared_ptr<GraphicsModel>> models;
+    
+    for (size_t i = 0; i < voxscene->num_models; ++i) {
+        auto model = voxscene->models[i];
         std::vector<std::byte> data(model->size_z * model->size_y *
                                         model->size_x * 4,
-                                    static_cast<std::byte>(0));
+                                        static_cast<std::byte>(0));
         uint32_t voxel_index = 0;
         for (uint32_t z = 0; z < model->size_z; z++) {
             for (uint32_t y = 0; y < model->size_y; y++) {
@@ -154,6 +225,8 @@ load_vox_scene_as_models(std::string filepath) {
                     // if color index == 0, this voxel is empty, otherwise it is
                     // solid.
                     uint32_t color_index = model->voxel_data[voxel_index];
+                    // doing without color first
+                    // ogt_vox_rgba color = voxscene->palette.color[color_index];
                     bool is_voxel_solid = (color_index != 0);
                     if (is_voxel_solid) {
                         data[voxel_index * 4] = static_cast<std::byte>(255);
@@ -164,10 +237,32 @@ load_vox_scene_as_models(std::string filepath) {
                 }
             }
         }
+        VoxelChunkPtr model_pointer = chunk_manager.add_chunk(
+            std::move(data), model->size_x, model->size_y, model->size_z, VoxelChunk::Format::Raw,
+            VoxelChunk::AttributeSet::Color);
+        std::shared_ptr<GraphicsModel> graphicsmodel = build_model(context, model_pointer);
+        
 
-        models.emplace_back(std::move(data));
+
+        models.emplace_back(std::move(graphicsmodel));
     }
 
-    ogt_vox_destroy_scene(scene);
-    return models;
+    std::vector<std::shared_ptr<GraphicsObject>> objs;
+    for (size_t i = 0; i < voxscene->num_instances; ++i) {
+        ogt_vox_instance instance = voxscene->instances[i];
+        ogt_vox_transform trans = instance.transform;
+        glm::mat3x4 glmtransform = {trans.m00, trans.m10, trans.m20, trans.m30,
+                                    trans.m01, trans.m11, trans.m21, trans.m31, 
+                                    trans.m02, trans.m12, trans.m22, trans.m32};
+        std::shared_ptr<GraphicsObject> obj = build_object(context, 
+                                                    models[instance.model_index],
+                                                    glmtransform);
+
+        objs.emplace_back(std::move(obj));
+    }
+
+    std::shared_ptr<GraphicsScene> gscene = build_scene(context, objs);
+    
+    ogt_vox_destroy_scene(voxscene);
+    return gscene;
 }
