@@ -95,6 +95,10 @@ class DescriptorSetBuilder {
                                       VkDescriptorBufferInfo buffer_info,
                                       VkDescriptorType type,
                                       VkShaderStageFlags stages);
+    DescriptorSetBuilder &bind_buffers(
+        uint32_t binding,
+        std::vector<std::pair<VkDescriptorBufferInfo, uint32_t>> buffer_infos,
+        VkDescriptorType type, VkShaderStageFlags stages);
     DescriptorSetBuilder &bind_image(uint32_t binding,
                                      VkDescriptorImageInfo image_info,
                                      VkDescriptorType type,

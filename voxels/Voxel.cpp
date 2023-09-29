@@ -15,6 +15,12 @@ std::span<const std::byte> VoxelChunk::get_cpu_data() const {
     return std::span{cpu_data_};
 }
 
+std::shared_ptr<GPUBuffer> VoxelChunk::get_gpu_buffer() const {
+    ASSERT(state_ == State::GPU, "Tried to get GPU buffer data of voxel chunk "
+                                 "without GPU data resident.");
+    return buffer_data_;
+}
+
 std::shared_ptr<GPUVolume> VoxelChunk::get_gpu_volume() const {
     ASSERT(state_ == State::GPU, "Tried to get GPU volume data of voxel chunk "
                                  "without GPU data resident.");
@@ -60,6 +66,16 @@ void VoxelChunk::queue_gpu_upload(std::shared_ptr<Device> device,
             VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, 0, 1, 1);
         ring_buffer->copy_to_device(volume_data_, VK_IMAGE_LAYOUT_GENERAL,
                                     get_cpu_data(), {timeline_}, {timeline_});
+        break;
+    }
+    case Format::SVO: {
+        buffer_data_ =
+            std::make_shared<GPUBuffer>(allocator, get_cpu_data().size(), 8,
+                                        VK_BUFFER_USAGE_TRANSFER_DST_BIT |
+                                            VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
+                                        VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, 0);
+        ring_buffer->copy_to_device(buffer_data_, 0, get_cpu_data(),
+                                    {timeline_}, {timeline_});
         break;
     }
     default: {

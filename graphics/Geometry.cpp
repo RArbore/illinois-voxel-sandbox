@@ -63,9 +63,8 @@ BLAS::BLAS(std::shared_ptr<GPUAllocator> allocator,
     blas_build_geometry_info.type =
         VK_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL_KHR;
     blas_build_geometry_info.flags =
-        VK_BUILD_ACCELERATION_STRUCTURE_ALLOW_UPDATE_BIT_KHR |
-        VK_BUILD_ACCELERATION_STRUCTURE_ALLOW_COMPACTION_BIT_KHR |
-        VK_BUILD_ACCELERATION_STRUCTURE_PREFER_FAST_TRACE_BIT_KHR;
+        VK_BUILD_ACCELERATION_STRUCTURE_PREFER_FAST_TRACE_BIT_KHR |
+        VK_BUILD_ACCELERATION_STRUCTURE_ALLOW_UPDATE_BIT_KHR;
     blas_build_geometry_info.mode =
         VK_BUILD_ACCELERATION_STRUCTURE_MODE_BUILD_KHR;
     blas_build_geometry_info.geometryCount = 1;
@@ -133,7 +132,7 @@ BLAS::~BLAS() {
         nullptr);
 }
 
-VkAccelerationStructureKHR BLAS::get_blas() { return blas_; }
+VkAccelerationStructureKHR &BLAS::get_blas() { return blas_; }
 
 std::shared_ptr<Semaphore> BLAS::get_timeline() { return timeline_; }
 
@@ -200,7 +199,8 @@ TLAS::TLAS(std::shared_ptr<GPUAllocator> allocator,
     tlas_build_geometry_info.type =
         VK_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL_KHR;
     tlas_build_geometry_info.flags =
-        VK_BUILD_ACCELERATION_STRUCTURE_PREFER_FAST_TRACE_BIT_KHR;
+        VK_BUILD_ACCELERATION_STRUCTURE_PREFER_FAST_TRACE_BIT_KHR |
+        VK_BUILD_ACCELERATION_STRUCTURE_ALLOW_UPDATE_BIT_KHR;
     tlas_build_geometry_info.mode =
         VK_BUILD_ACCELERATION_STRUCTURE_MODE_BUILD_KHR;
     tlas_build_geometry_info.geometryCount = 1;
@@ -275,9 +275,12 @@ TLAS::TLAS(std::shared_ptr<GPUAllocator> allocator,
 void TLAS::update_model_sbt_offsets(
     std::unordered_map<uint64_t, uint32_t> models) {
     for (auto &instance : instances_) {
-        auto it = models.find(instance.instanceCustomIndex);
-        if (it != models.end()) {
-            instance.instanceShaderBindingTableRecordOffset = it->second;
+        if (instance.instanceShaderBindingTableRecordOffset ==
+            UNLOADED_SBT_OFFSET) {
+            auto it = models.find(instance.instanceCustomIndex);
+            if (it != models.end()) {
+                instance.instanceShaderBindingTableRecordOffset = it->second;
+            }
         }
     }
     timeline_ = std::make_shared<Semaphore>(command_pool_->get_device(), true);
@@ -314,9 +317,10 @@ void TLAS::update_model_sbt_offsets(
     tlas_build_geometry_info.type =
         VK_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL_KHR;
     tlas_build_geometry_info.flags =
-        VK_BUILD_ACCELERATION_STRUCTURE_PREFER_FAST_TRACE_BIT_KHR;
+        VK_BUILD_ACCELERATION_STRUCTURE_PREFER_FAST_TRACE_BIT_KHR |
+        VK_BUILD_ACCELERATION_STRUCTURE_ALLOW_UPDATE_BIT_KHR;
     tlas_build_geometry_info.mode =
-        VK_BUILD_ACCELERATION_STRUCTURE_MODE_BUILD_KHR;
+        VK_BUILD_ACCELERATION_STRUCTURE_MODE_UPDATE_KHR;
     tlas_build_geometry_info.srcAccelerationStructure = tlas_;
     tlas_build_geometry_info.dstAccelerationStructure = tlas_;
     tlas_build_geometry_info.scratchData.deviceAddress =
@@ -344,7 +348,7 @@ TLAS::~TLAS() {
         nullptr);
 }
 
-VkAccelerationStructureKHR TLAS::get_tlas() { return tlas_; }
+VkAccelerationStructureKHR &TLAS::get_tlas() { return tlas_; }
 
 std::shared_ptr<Semaphore> TLAS::get_timeline() { return timeline_; }
 

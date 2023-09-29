@@ -1,4 +1,5 @@
 #include <graphics/GraphicsContext.h>
+#include <voxels/Conversion.h>
 #include <voxels/Voxel.h>
 #include <voxels/VoxelChunkGeneration.h>
 
@@ -10,14 +11,14 @@ int main(int argc, char *argv[]) {
     // auto test_load = load_vox_scene_as_models("models/3x3x3.vox");
 
     VoxelChunkPtr test_sphere1 = chunk_manager.add_chunk(
-        std::move(test_sphere_data1), 64, 64, 64, VoxelChunk::Format::Raw,
-        VoxelChunk::AttributeSet::Color);
+        convert_raw_to_svo(std::move(test_sphere_data1), 64, 64, 64, 4), 64, 64,
+        64, VoxelChunk::Format::SVO, VoxelChunk::AttributeSet::Color);
     VoxelChunkPtr test_sphere2 = chunk_manager.add_chunk(
-        std::move(test_sphere_data2), 64, 64, 64, VoxelChunk::Format::Raw,
-        VoxelChunk::AttributeSet::Color);
+        convert_raw_to_svo(std::move(test_sphere_data2), 64, 64, 64, 4), 64, 64,
+        64, VoxelChunk::Format::SVO, VoxelChunk::AttributeSet::Color);
     VoxelChunkPtr test_proc1 = chunk_manager.add_chunk(
-        std::move(test_proc_data1), 16, 16, 16, VoxelChunk::Format::Raw,
-        VoxelChunk::AttributeSet::Color);
+        convert_raw_to_svo(std::move(test_proc_data1), 16, 16, 16, 4), 16, 16,
+        16, VoxelChunk::Format::SVO, VoxelChunk::AttributeSet::Color);
 
     auto context = create_graphics_context();
 
