@@ -57,14 +57,16 @@ void main() {
 
     int direction_kind = int(obj_ray_dir.x < 0.0) + 2 * int(obj_ray_dir.y < 0.0) + 4 * int(obj_ray_dir.z < 0.0);
 
-    float bounding = hit_aabb(vec3(0.0), vec3(1.0), obj_ray_pos, obj_ray_dir);
+    vec3 first_low = vec3(0.0);
+    vec3 first_high = vec3(svo_buffers[svo_id].voxel_width, svo_buffers[svo_id].voxel_height, svo_buffers[svo_id].voxel_depth);
+    float bounding = hit_aabb(first_low, first_high, obj_ray_pos, obj_ray_dir);
     if (bounding != -FAR_AWAY) {
 	int level = 0;
 	SVOMarchStackFrame stack[MAX_DEPTH];
 	stack[level].node_id = svo_buffers[svo_id].num_nodes - 1;
 	stack[level].left_off = 0;
-	stack[level].low = vec3(0.0);
-	stack[level].high = vec3(1.0);
+	stack[level].low = first_low;
+	stack[level].high = first_high;
 	while (level >= 0 && level < MAX_DEPTH) {
 	    uint curr_node = stack[level].node_id;
 	    int valid_mask = svo_buffers[svo_id].nodes[curr_node].valid_mask_;

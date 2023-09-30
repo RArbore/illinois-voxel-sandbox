@@ -10,6 +10,7 @@
 #include <external/ogt_vox.h>
 
 #include "VoxelChunkGeneration.h"
+#include "Conversion.h"
 #include "utils/Assert.h"
 
 // Have to include so that can read in vox files for now
@@ -158,7 +159,7 @@ std::shared_ptr<GraphicsScene> test_loader(const std::string& filepath, ChunkMan
     for (uint32_t y = 0; y < model->size_y; y++) {
 	for (uint32_t z = 0; z < model->size_z; z++) {
             for (uint32_t x = 0; x < model->size_x; x++, output_index++) {
-                uint32_t color_index = model->voxel_data[x + y * model->size_x + (model->size_z - z - 1) * model->size_x * model->size_y];
+                uint32_t color_index = model->voxel_data[(model->size_x - x - 1) + (model->size_y - y - 1) * model->size_x + (model->size_z - z - 1) * model->size_x * model->size_y];
                 ogt_vox_rgba color = voxscene->palette.color[color_index];
 		data[output_index * 4] = static_cast<std::byte>(color.r);
 		data[output_index * 4 + 1] = static_cast<std::byte>(color.g);
@@ -169,7 +170,7 @@ std::shared_ptr<GraphicsScene> test_loader(const std::string& filepath, ChunkMan
     }
 
     VoxelChunkPtr model_pointer = chunk_manager.add_chunk(
-							  std::move(data), width, height, depth, VoxelChunk::Format::Raw,
+							  convert_raw_to_svo(std::move(data), width, height, depth, 4), width, height, depth, VoxelChunk::Format::SVO,
             VoxelChunk::AttributeSet::Color);
 
     std::shared_ptr<GraphicsModel> graphicsmodel = build_model(context, model_pointer);
