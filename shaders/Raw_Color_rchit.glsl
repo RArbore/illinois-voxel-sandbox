@@ -23,6 +23,6 @@ void main() {
     vec3 world_obj_pos = gl_ObjectToWorldEXT * vec4(0.0, 0.0, 0.0, 1.0);
 
     vec3 voxel_sample_pos = gl_WorldToObjectEXT * vec4(world_ray_pos, 1.0);
-    ivec3 volume_load_pos = ivec3(voxel_sample_pos * vec3(imageSize(volumes[volume_id])) - 0.5 * voxel_normals[gl_HitKindEXT]);
+    ivec3 volume_load_pos = ivec3(voxel_sample_pos - 0.5 * voxel_normals[gl_HitKindEXT]);
     hit = imageLoad(volumes[volume_id], volume_load_pos);
 }

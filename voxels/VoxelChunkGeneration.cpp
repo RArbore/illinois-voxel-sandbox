@@ -134,24 +134,12 @@ std::vector<std::byte> generate_terrain(uint32_t width, uint32_t height,
     return data;
 }
 
-<<<<<<< HEAD
 std::shared_ptr<GraphicsScene> test_loader(const std::string& filepath, ChunkManager& chunk_manager, std::shared_ptr<GraphicsContext> context) {
-=======
-std::vector<std::vector<std::byte>>
-load_vox_scene_as_models(std::string filepath) {
-    ASSERT(std::filesystem::exists(filepath),
-           "Tried to load .vox scene from file that doesn't exist.");
->>>>>>> main
     std::ifstream fstream(filepath, std::ios::in | std::ios::binary);
     std::vector<uint8_t> buffer(std::filesystem::file_size(filepath));
     fstream.read(reinterpret_cast<char *>(buffer.data()), buffer.size());
 
-<<<<<<< HEAD
     const ogt_vox_scene *voxscene = ogt_vox_read_scene(buffer.data(), buffer.size());
-=======
-    const ogt_vox_scene *scene =
-        ogt_vox_read_scene(buffer.data(), buffer.size());
->>>>>>> main
 
     std::cout << "Number of models: " << voxscene->num_models << std::endl;
 
@@ -160,7 +148,6 @@ load_vox_scene_as_models(std::string filepath) {
     std::cout << "X size: " << model->size_x << std::endl;
     std::cout << "Y size: " << model->size_y << std::endl;
     std::cout << "Z size: " << model->size_z << std::endl;
-
 
     std::vector<std::byte> data(model->size_z * model->size_y *
                                         model->size_x * 4,
@@ -176,9 +163,9 @@ load_vox_scene_as_models(std::string filepath) {
                 // ogt_vox_rgba color = voxscene->palette.color[color_index];
                 bool is_voxel_solid = (color_index != 0);
                 if (is_voxel_solid) {
-                    data[voxel_index * 4] = static_cast<std::byte>(255);
-                    data[voxel_index * 4 + 1] = static_cast<std::byte>(255);
-                    data[voxel_index * 4 + 2] = static_cast<std::byte>(255);
+                    data[voxel_index * 4] = static_cast<std::byte>(x * 2);
+                    data[voxel_index * 4 + 1] = static_cast<std::byte>(y * 2);
+                    data[voxel_index * 4 + 2] = static_cast<std::byte>(z * 2);
                     data[voxel_index * 4 + 3] = static_cast<std::byte>(255);
                 } else {
                     data[voxel_index * 4] = static_cast<std::byte>(0);
@@ -201,9 +188,9 @@ load_vox_scene_as_models(std::string filepath) {
     auto instance = voxscene->instances[0];
 
     ogt_vox_transform trans = instance.transform;
-    glm::mat3x4 glmtransform = {trans.m00, trans.m10, trans.m20, trans.m30,
-                                trans.m01, trans.m11, trans.m21, trans.m31, 
-                                trans.m02, trans.m12, trans.m22, trans.m32};
+    glm::mat3x4 glmtransform = {1.0, 0.0, 0.0, 0.0,
+                                0.0, 1.0, 0.0, 0.0, 
+                                0.0, 0.0, 1.0, 0.0};
 
     std::shared_ptr<GraphicsObject> obj = build_object(context, 
                                                     graphicsmodel,
