@@ -145,40 +145,31 @@ std::shared_ptr<GraphicsScene> test_loader(const std::string& filepath, ChunkMan
 
     auto model = voxscene->models[0];
 
-    std::cout << "X size: " << model->size_x << std::endl;
-    std::cout << "Y size: " << model->size_y << std::endl;
-    std::cout << "Z size: " << model->size_z << std::endl;
+    uint32_t width = model->size_x;
+    uint32_t height = model->size_z;
+    uint32_t depth = model->size_y;
+    std::cout << "Width: " << width << "\n";
+    std::cout << "Height: " << height << "\n";
+    std::cout << "Depth: " << depth << "\n";
 
-    std::vector<std::byte> data(model->size_z * model->size_y *
-                                        model->size_x * 4,
+    std::vector<std::byte> data(width * height * depth * 4,
                                         static_cast<std::byte>(0));
-    uint32_t voxel_index = 0;
-    for (uint32_t z = 0; z < model->size_z; z++) {
-        for (uint32_t y = 0; y < model->size_y; y++) {
-            for (uint32_t x = 0; x < model->size_x; x++, voxel_index++) {
-                // if color index == 0, this voxel is empty, otherwise it is
-                // solid.
-                uint32_t color_index = model->voxel_data[voxel_index];
-                // doing without color first
-                // ogt_vox_rgba color = voxscene->palette.color[color_index];
-                bool is_voxel_solid = (color_index != 0);
-                if (is_voxel_solid) {
-                    data[voxel_index * 4] = static_cast<std::byte>(x * 2);
-                    data[voxel_index * 4 + 1] = static_cast<std::byte>(y * 2);
-                    data[voxel_index * 4 + 2] = static_cast<std::byte>(z * 2);
-                    data[voxel_index * 4 + 3] = static_cast<std::byte>(255);
-                } else {
-                    data[voxel_index * 4] = static_cast<std::byte>(0);
-                    data[voxel_index * 4 + 1] = static_cast<std::byte>(0);
-                    data[voxel_index * 4 + 2] = static_cast<std::byte>(0);
-                    data[voxel_index * 4 + 3] = static_cast<std::byte>(0);
-                }
+    uint32_t output_index = 0;
+    for (uint32_t y = 0; y < model->size_y; y++) {
+	for (uint32_t z = 0; z < model->size_z; z++) {
+            for (uint32_t x = 0; x < model->size_x; x++, output_index++) {
+                uint32_t color_index = model->voxel_data[x + y * model->size_x + (model->size_z - z - 1) * model->size_x * model->size_y];
+                ogt_vox_rgba color = voxscene->palette.color[color_index];
+		data[output_index * 4] = static_cast<std::byte>(color.r);
+		data[output_index * 4 + 1] = static_cast<std::byte>(color.g);
+		data[output_index * 4 + 2] = static_cast<std::byte>(color.b);
+		data[output_index * 4 + 3] = static_cast<std::byte>(color.a);
             }
         }
     }
 
     VoxelChunkPtr model_pointer = chunk_manager.add_chunk(
-            std::move(data), model->size_x, model->size_y, model->size_z, VoxelChunk::Format::Raw,
+							  std::move(data), width, height, depth, VoxelChunk::Format::Raw,
             VoxelChunk::AttributeSet::Color);
 
     std::shared_ptr<GraphicsModel> graphicsmodel = build_model(context, model_pointer);
@@ -187,10 +178,9 @@ std::shared_ptr<GraphicsScene> test_loader(const std::string& filepath, ChunkMan
     
     auto instance = voxscene->instances[0];
 
-    ogt_vox_transform trans = instance.transform;
-    glm::mat3x4 glmtransform = {1.0, 0.0, 0.0, 0.0,
-                                0.0, 1.0, 0.0, 0.0, 
-                                0.0, 0.0, 1.0, 0.0};
+    glm::mat3x4 glmtransform = {1.0, 0.0, 0.0, -(width/2.0),
+				0.0, 1.0, 0.0, -(height/2.0), 
+				0.0, 0.0, 1.0, -(depth/2.0)};
 
     std::shared_ptr<GraphicsObject> obj = build_object(context, 
                                                     graphicsmodel,
