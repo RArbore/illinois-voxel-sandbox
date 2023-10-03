@@ -22,4 +22,5 @@ function(DEFINE_EXE NAME)
 endfunction()
 
 define_exe(ivs)
+define_exe(model_viewer)
 define_exe(benchmark_graphics)
