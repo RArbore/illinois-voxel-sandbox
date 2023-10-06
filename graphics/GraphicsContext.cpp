@@ -295,12 +295,9 @@ bool should_exit(std::shared_ptr<GraphicsContext> context) {
 std::shared_ptr<GraphicsModel>
 build_model(std::shared_ptr<GraphicsContext> context, VoxelChunkPtr chunk) {
     std::vector<VkAabbPositionsKHR> aabbs = {
-        {0.0F,
-	 0.0F,
-	 0.0F,
-	 static_cast<float>(chunk->get_width()),
-	 static_cast<float>(chunk->get_height()),
-	 static_cast<float>(chunk->get_depth())}};
+        {0.0F, 0.0F, 0.0F, static_cast<float>(chunk->get_width()),
+         static_cast<float>(chunk->get_height()),
+         static_cast<float>(chunk->get_depth())}};
     std::shared_ptr<BLAS> blas =
         std::make_shared<BLAS>(context->gpu_allocator_, context->command_pool_,
                                context->ring_buffer_, aabbs);

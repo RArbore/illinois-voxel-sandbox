@@ -31,7 +31,10 @@ std::vector<std::byte> convert_raw_to_svo(const std::vector<std::byte> &raw,
         return nodes_equal(node, EMPTY_SVO_NODE);
     };
 
-    const uint32_t power_of_two = ceil(log2(static_cast<double>(width > height ? width > depth ? width : depth : height > depth ? height : depth)));
+    const uint32_t power_of_two = ceil(
+        log2(static_cast<double>(width > height ? width > depth ? width : depth
+                                 : height > depth ? height
+                                                  : depth)));
     const uint32_t bounded_edge_length = 1 << power_of_two;
 
     const uint32_t queue_size = 8;
@@ -56,19 +59,20 @@ std::vector<std::byte> convert_raw_to_svo(const std::vector<std::byte> &raw,
         memcpy(&svo.back() - sizeof(SVONode) + 1, &node, sizeof(SVONode));
     };
 
-    const uint64_t num_voxels = bounded_edge_length * bounded_edge_length * bounded_edge_length;
+    const uint64_t num_voxels =
+        bounded_edge_length * bounded_edge_length * bounded_edge_length;
     for (uint64_t morton = 0; morton < num_voxels; ++morton) {
         uint_fast32_t x = 0, y = 0, z = 0;
         libmorton::morton3D_64_decode(morton, x, y, z);
 
         SVONode node{};
-	if (x < width && y < height && z < depth) {
-	    size_t voxel_offset =
-		(x + y * width + z * width * height) * bytes_per_voxel;
-	    memcpy(&node, &raw[voxel_offset], bytes_per_voxel);
-	} else {
-	    memset(&node, 0, sizeof(SVONode));
-	}
+        if (x < width && y < height && z < depth) {
+            size_t voxel_offset =
+                (x + y * width + z * width * height) * bytes_per_voxel;
+            memcpy(&node, &raw[voxel_offset], bytes_per_voxel);
+        } else {
+            memset(&node, 0, sizeof(SVONode));
+        }
 
         queues.at(num_queues - 1).emplace_back(node, true);
         uint32_t d = num_queues - 1;

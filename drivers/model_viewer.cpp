@@ -8,8 +8,8 @@ int main(int argc, char *argv[]) {
     auto context = create_graphics_context();
 
     const std::string modelsDirectory = MODELS_DIRECTORY;
-    const std::string filePath = modelsDirectory + "/monu16.vox";
-    auto test_scene = test_loader(filePath, chunk_manager, context);
+    const std::string filePath = modelsDirectory + "/carsmodified.vox";
+    auto test_scene = load_vox_scene(filePath, chunk_manager, context);
 
     while (!should_exit(context)) {
         render_frame(context, test_scene);
