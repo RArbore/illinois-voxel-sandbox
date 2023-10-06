@@ -8,6 +8,8 @@
 
 #include "GPUAllocator.h"
 
+static const uint32_t MAX_MODELS = 2 << 16;
+
 class DescriptorAllocator {
   public:
     DescriptorAllocator(std::shared_ptr<Device> device);

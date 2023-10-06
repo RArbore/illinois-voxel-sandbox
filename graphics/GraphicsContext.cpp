@@ -60,7 +60,7 @@ class GraphicsContext {
         std::vector<std::shared_ptr<Semaphore>> &render_wait_semaphores);
 
     void bind_scene_descriptors(
-        DescriptorSetBuilder &builder, std::shared_ptr<TLAS> tlas,
+        DescriptorSetBuilder &builder, std::shared_ptr<GraphicsScene> scene,
         std::vector<std::shared_ptr<GraphicsModel>> &&models);
 };
 
@@ -86,14 +86,34 @@ class GraphicsObject {
 
 class GraphicsScene {
   public:
-    GraphicsScene(std::shared_ptr<TLAS> tlas,
+    GraphicsScene(std::shared_ptr<GraphicsContext> context,
+		  std::shared_ptr<TLAS> tlas,
                   std::vector<std::shared_ptr<GraphicsObject>> objects,
                   std::shared_ptr<DescriptorSet> scene_descriptor)
-        : tlas_(tlas), objects_(objects), scene_descriptor_(scene_descriptor) {}
+        : tlas_(tlas), objects_(objects), scene_descriptor_(scene_descriptor) {
+	valid_chunks_buffer_ = std::make_shared<GPUBuffer>(
+							   context->gpu_allocator_, MAX_MODELS / 8,
+							   sizeof(uint64_t), VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
+							   VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
+							   VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+							   VMA_ALLOCATION_CREATE_HOST_ACCESS_RANDOM_BIT);
+	valid_chunks_span_ = valid_chunks_buffer_->cpu_map();
+	uint8_t *valid = reinterpret_cast<uint8_t *>(valid_chunks_span_.data());
+	for (uint32_t i = 0; i < MAX_MODELS / 8; ++i) {
+	    valid[i] = 0;
+	}
+    }
+    
+    ~GraphicsScene() {
+	valid_chunks_buffer_->cpu_unmap();
+    }
 
     std::shared_ptr<TLAS> tlas_;
     std::vector<std::shared_ptr<GraphicsObject>> objects_;
     std::shared_ptr<DescriptorSet> scene_descriptor_ = nullptr;
+
+    std::shared_ptr<GPUBuffer> valid_chunks_buffer_ = nullptr;
+    std::span<std::byte> valid_chunks_span_;
 
     std::vector<std::shared_ptr<GraphicsModel>> assemble_models_in_order() {
         std::unordered_map<std::shared_ptr<GraphicsModel>, size_t>
@@ -127,10 +147,12 @@ GraphicsContext::GraphicsContext() {
     DescriptorSetBuilder scene_builder(descriptor_allocator_);
     scene_builder.bind_acceleration_structure(0, {},
                                               VK_SHADER_STAGE_RAYGEN_BIT_KHR);
-    scene_builder.bind_images(1, {}, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,
+    scene_builder.bind_buffer(1, {}, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
+                                   VK_SHADER_STAGE_INTERSECTION_BIT_KHR);
+    scene_builder.bind_images(2, {}, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,
                               VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR |
                                   VK_SHADER_STAGE_INTERSECTION_BIT_KHR);
-    scene_builder.bind_buffers(2, {}, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
+    scene_builder.bind_buffers(3, {}, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
                                VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR |
                                    VK_SHADER_STAGE_INTERSECTION_BIT_KHR);
 
@@ -344,10 +366,11 @@ build_scene(std::shared_ptr<GraphicsContext> context,
     for (auto &[model, idx] : referenced_models) {
         scene_models.at(idx) = std::move(model);
     }
-    context->bind_scene_descriptors(builder, tlas, std::move(scene_models));
 
-    auto scene_descriptor = builder.build();
-    return std::make_shared<GraphicsScene>(tlas, objects, scene_descriptor);
+    auto scene = std::make_shared<GraphicsScene>(context, tlas, objects, nullptr);
+    context->bind_scene_descriptors(builder, scene, std::move(scene_models));
+    scene->scene_descriptor_ = builder.build();
+    return scene;
 }
 
 void GraphicsContext::check_chunk_request_buffer(
@@ -388,22 +411,29 @@ void GraphicsContext::check_chunk_request_buffer(
             current_scene_->tlas_->get_timeline());
 
         DescriptorSetBuilder builder(descriptor_allocator_);
-        bind_scene_descriptors(builder, current_scene_->tlas_,
+        bind_scene_descriptors(builder, current_scene_,
                                std::move(scene_models));
         builder.update(current_scene_->scene_descriptor_);
     }
 }
 
 void GraphicsContext::bind_scene_descriptors(
-    DescriptorSetBuilder &builder, std::shared_ptr<TLAS> tlas,
+    DescriptorSetBuilder &builder, std::shared_ptr<GraphicsScene> scene,
     std::vector<std::shared_ptr<GraphicsModel>> &&models) {
     builder.bind_acceleration_structure(
         0,
         {
             .accelerationStructureCount = 1,
-            .pAccelerationStructures = &tlas->get_tlas(),
+            .pAccelerationStructures = &scene->tlas_->get_tlas(),
         },
         VK_SHADER_STAGE_RAYGEN_BIT_KHR);
+    builder.bind_buffer(1,
+			{
+			    .buffer = scene->valid_chunks_buffer_->get_buffer(),
+			    .offset = 0,
+			    .range = scene->valid_chunks_buffer_->get_size(),
+			}, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
+                             VK_SHADER_STAGE_INTERSECTION_BIT_KHR);
 
     std::vector<std::pair<VkDescriptorImageInfo, uint32_t>> raw_volume_infos;
     std::vector<std::pair<VkDescriptorBufferInfo, uint32_t>> svo_buffer_infos;
@@ -427,10 +457,10 @@ void GraphicsContext::bind_scene_descriptors(
             svo_buffer_infos.emplace_back(svo_buffer_info, i);
         }
     }
-    builder.bind_images(1, raw_volume_infos, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,
+    builder.bind_images(2, raw_volume_infos, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,
                         VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR |
                             VK_SHADER_STAGE_INTERSECTION_BIT_KHR);
-    builder.bind_buffers(2, svo_buffer_infos, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
+    builder.bind_buffers(3, svo_buffer_infos, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
                          VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR |
                              VK_SHADER_STAGE_INTERSECTION_BIT_KHR);
 }
