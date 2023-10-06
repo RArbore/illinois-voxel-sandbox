@@ -106,21 +106,6 @@ std::vector<std::byte> generate_basic_procedural_chunk(uint32_t width,
     return data;
 }
 
-std::vector<std::byte> generate_terrain(uint32_t width, uint32_t height,
-                                        uint32_t depth, float density) {
-    std::vector<std::byte> data(width * height * depth * 4,
-                                static_cast<std::byte>(0));
-    data = generate_basic_procedural_chunk(width, height, depth);
-    // for loop depending on density
-    std::random_device rd;
-    std::mt19937 gen(rd());
-    std::uniform_int_distribution<> xran(0, width - 1);
-    std::uniform_int_distribution<> zran(0, depth - 1);
-    // Find random place in chunk, find highest point, put tree there
-
-    return data;
-}
-
 std::shared_ptr<GraphicsScene>
 load_vox_scene(const std::string &filepath, ChunkManager &chunk_manager,
                std::shared_ptr<GraphicsContext> context) {
