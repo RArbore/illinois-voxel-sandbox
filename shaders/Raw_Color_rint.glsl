@@ -36,13 +36,13 @@ void main() {
     uint volume_id = gl_InstanceCustomIndexEXT;
 
     vec3 obj_ray_pos = gl_WorldToObjectEXT * vec4(gl_WorldRayOriginEXT, 1.0);
-    vec3 obj_ray_dir = gl_WorldToObjectEXT * vec4(gl_WorldRayDirectionEXT, 0.0);
+    vec3 obj_ray_dir = normalize(gl_WorldToObjectEXT * vec4(gl_WorldRayDirectionEXT, 0.0));
 
-    aabb_intersect_result r = hit_aabb(vec3(0.0), vec3(1.0), obj_ray_pos, obj_ray_dir);
+    ivec3 volume_size = imageSize(volumes[volume_id]);
+    aabb_intersect_result r = hit_aabb(vec3(0.0), volume_size, obj_ray_pos, obj_ray_dir);
 
     if (r.front_t != -FAR_AWAY) {
-	ivec3 volume_size = imageSize(volumes[volume_id]);
-	vec3 obj_ray_intersect_point = (obj_ray_pos + obj_ray_dir * max(r.front_t, 0.0)) * volume_size;
+	vec3 obj_ray_intersect_point = obj_ray_pos + obj_ray_dir * max(r.front_t, 0.0);
 	ivec3 obj_ray_voxel = ivec3(min(obj_ray_intersect_point, volume_size - 1));
 	ivec3 obj_ray_step = ivec3(sign(obj_ray_dir));
 	vec3 obj_ray_delta = abs(vec3(length(obj_ray_dir)) / obj_ray_dir);
@@ -54,9 +54,8 @@ void main() {
 	    float palette = imageLoad(volumes[volume_id], obj_ray_voxel).a;
 	    
 	    if (palette > 0.0) {
-		r = hit_aabb(vec3(obj_ray_voxel) / volume_size, vec3(obj_ray_voxel + 1) / volume_size, obj_ray_pos, obj_ray_dir);
-		vec3 obj_ray_voxel_intersect_point = obj_ray_pos + obj_ray_dir * max(r.front_t, 0.0);
-		float intersect_time = length(gl_ObjectToWorldEXT * vec4(obj_ray_voxel_intersect_point, 1.0) - gl_ObjectToWorldEXT * vec4(obj_ray_pos, 1.0));
+		aabb_intersect_result r = hit_aabb(obj_ray_voxel, obj_ray_voxel + 1, obj_ray_pos, obj_ray_dir);
+		float intersect_time = length(gl_ObjectToWorldEXT * vec4(obj_ray_pos + obj_ray_dir * r.front_t, 1.0) - gl_ObjectToWorldEXT * vec4(obj_ray_pos, 1.0));
 		reportIntersectionEXT(intersect_time, r.k);
 		return;
 	    }
