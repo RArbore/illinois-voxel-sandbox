@@ -13,7 +13,7 @@ int main(int argc, char *argv[]) {
 
     ChunkManager chunk_manager;
     auto window = create_window();
-    auto context = create_graphics_context();
+    auto context = create_graphics_context(window);
     VoxelChunkPtr test_proc1 = chunk_manager.add_chunk(
         std::move(test_svo_data1), 128, 128, 128, VoxelChunk::Format::SVO,
         VoxelChunk::AttributeSet::Color);
@@ -27,11 +27,8 @@ int main(int argc, char *argv[]) {
     while (!window->should_close()) {
         window->poll_events();
         camera->handle_keys(0.0001f);
-
         auto camera_info = camera->get_uniform_buffer();
-
         render_frame(context, scene, camera_info);
-
         camera->mark_rendered();
     }
 }

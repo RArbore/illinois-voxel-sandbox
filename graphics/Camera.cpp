@@ -2,7 +2,7 @@
 #include <iostream> 
 
 #include <external/glm/glm/gtc/matrix_transform.hpp>
-#include <external/glm/glm/gtx/string_cast.hpp>>
+#include <external/glm/glm/gtx/string_cast.hpp>
 
 #include "Camera.h"
 

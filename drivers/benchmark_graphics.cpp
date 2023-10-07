@@ -30,8 +30,9 @@ int main(int argc, char *argv[]) {
 
     while (!window->should_close()) {
         window->poll_events();
-        render_frame(context, scene);
+        camera->handle_keys(0.0001f);
+        auto camera_info = camera->get_uniform_buffer();
+        render_frame(context, scene, camera_info);
+        camera->mark_rendered();
     }
-
-
 }
