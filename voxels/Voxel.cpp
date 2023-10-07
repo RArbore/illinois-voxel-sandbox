@@ -94,6 +94,17 @@ VoxelChunk *VoxelChunkPtr::operator->() {
     return &manager_->chunks_.at(chunk_idx_);
 }
 
+ChunkManager::ChunkManager() {
+    std::stringstream string_pointer;
+    string_pointer << this;
+    chunks_directory_ = "disk_chunks_" + string_pointer.str();
+    std::filesystem::create_directory(chunks_directory_);
+}
+
+ChunkManager::~ChunkManager() {
+    std::filesystem::remove_all(chunks_directory_);
+}
+
 VoxelChunkPtr ChunkManager::add_chunk(std::vector<std::byte> &&data,
                                       uint32_t width, uint32_t height,
                                       uint32_t depth, VoxelChunk::Format format,

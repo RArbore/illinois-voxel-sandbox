@@ -1,9 +1,10 @@
 #pragma once
 
-#include <set>
-#include <span>
 #include <unordered_set>
+#include <filesystem>
 #include <vector>
+#include <span>
+#include <set>
 
 #include <graphics/Command.h>
 #include <graphics/GPUAllocator.h>
@@ -75,12 +76,16 @@ class VoxelChunkPtr {
 
 class ChunkManager {
   public:
+    ChunkManager();
+    ~ChunkManager();
+    
     VoxelChunkPtr add_chunk(std::vector<std::byte> &&data, uint32_t width,
                             uint32_t height, uint32_t depth,
                             VoxelChunk::Format format,
                             VoxelChunk::AttributeSet attribute_set);
 
   private:
+    std::filesystem::path chunks_directory_;
     std::vector<VoxelChunk> chunks_;
 
     friend class VoxelChunk;

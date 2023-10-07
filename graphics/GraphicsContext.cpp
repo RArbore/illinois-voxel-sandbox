@@ -87,33 +87,15 @@ class GraphicsObject {
 class GraphicsScene {
   public:
     GraphicsScene(std::shared_ptr<GraphicsContext> context,
-		  std::shared_ptr<TLAS> tlas,
+                  std::shared_ptr<TLAS> tlas,
                   std::vector<std::shared_ptr<GraphicsObject>> objects,
                   std::shared_ptr<DescriptorSet> scene_descriptor)
         : tlas_(tlas), objects_(objects), scene_descriptor_(scene_descriptor) {
-	valid_chunks_buffer_ = std::make_shared<GPUBuffer>(
-							   context->gpu_allocator_, MAX_MODELS / 8,
-							   sizeof(uint64_t), VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
-							   VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
-							   VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
-							   VMA_ALLOCATION_CREATE_HOST_ACCESS_RANDOM_BIT);
-	valid_chunks_span_ = valid_chunks_buffer_->cpu_map();
-	uint8_t *valid = reinterpret_cast<uint8_t *>(valid_chunks_span_.data());
-	for (uint32_t i = 0; i < MAX_MODELS / 8; ++i) {
-	    valid[i] = 0;
-	}
-    }
-    
-    ~GraphicsScene() {
-	valid_chunks_buffer_->cpu_unmap();
     }
 
     std::shared_ptr<TLAS> tlas_;
     std::vector<std::shared_ptr<GraphicsObject>> objects_;
     std::shared_ptr<DescriptorSet> scene_descriptor_ = nullptr;
-
-    std::shared_ptr<GPUBuffer> valid_chunks_buffer_ = nullptr;
-    std::span<std::byte> valid_chunks_span_;
 
     std::vector<std::shared_ptr<GraphicsModel>> assemble_models_in_order() {
         std::unordered_map<std::shared_ptr<GraphicsModel>, size_t>
@@ -147,12 +129,10 @@ GraphicsContext::GraphicsContext() {
     DescriptorSetBuilder scene_builder(descriptor_allocator_);
     scene_builder.bind_acceleration_structure(0, {},
                                               VK_SHADER_STAGE_RAYGEN_BIT_KHR);
-    scene_builder.bind_buffer(1, {}, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
-                                   VK_SHADER_STAGE_INTERSECTION_BIT_KHR);
-    scene_builder.bind_images(2, {}, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,
+    scene_builder.bind_images(1, {}, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,
                               VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR |
                                   VK_SHADER_STAGE_INTERSECTION_BIT_KHR);
-    scene_builder.bind_buffers(3, {}, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
+    scene_builder.bind_buffers(2, {}, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
                                VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR |
                                    VK_SHADER_STAGE_INTERSECTION_BIT_KHR);
 
@@ -367,7 +347,8 @@ build_scene(std::shared_ptr<GraphicsContext> context,
         scene_models.at(idx) = std::move(model);
     }
 
-    auto scene = std::make_shared<GraphicsScene>(context, tlas, objects, nullptr);
+    auto scene =
+        std::make_shared<GraphicsScene>(context, tlas, objects, nullptr);
     context->bind_scene_descriptors(builder, scene, std::move(scene_models));
     scene->scene_descriptor_ = builder.build();
     return scene;
@@ -389,31 +370,31 @@ void GraphicsContext::check_chunk_request_buffer(
         }
     }
     if (!deduplicated_requests.empty()) {
+        std::vector<uint64_t> not_ready_yet;
         for (auto [model_idx, _] : deduplicated_requests) {
             auto &model = scene_models.at(model_idx);
             if (model->chunk_->get_state() == VoxelChunk::State::CPU) {
                 model->chunk_->queue_gpu_upload(device_, gpu_allocator_,
                                                 ring_buffer_);
-                render_wait_semaphores.emplace_back(
-                    model->chunk_->get_timeline());
-            } else {
-                std::cout << "WARNING: A voxel chunk whose data is already "
-                             "resident in GPU memory was found as unloaded.\n";
-                std::cout << "The chunk has width "
-                          << model->chunk_->get_width() << ", height "
-                          << model->chunk_->get_height() << ", and depth "
-                          << model->chunk_->get_depth();
+            }
+            if (!model->chunk_->get_timeline()->has_reached_wait()) {
+                not_ready_yet.push_back(model_idx);
             }
         }
-        current_scene_->tlas_->update_model_sbt_offsets(
-            std::move(deduplicated_requests));
-        render_wait_semaphores.emplace_back(
-            current_scene_->tlas_->get_timeline());
+        for (auto model_idx : not_ready_yet) {
+            deduplicated_requests.erase(model_idx);
+        }
+        if (!deduplicated_requests.empty()) {
+            current_scene_->tlas_->update_model_sbt_offsets(
+                std::move(deduplicated_requests));
+            render_wait_semaphores.emplace_back(
+                current_scene_->tlas_->get_timeline());
 
-        DescriptorSetBuilder builder(descriptor_allocator_);
-        bind_scene_descriptors(builder, current_scene_,
-                               std::move(scene_models));
-        builder.update(current_scene_->scene_descriptor_);
+            DescriptorSetBuilder builder(descriptor_allocator_);
+            bind_scene_descriptors(builder, current_scene_,
+                                   std::move(scene_models));
+            builder.update(current_scene_->scene_descriptor_);
+        }
     }
 }
 
@@ -427,13 +408,6 @@ void GraphicsContext::bind_scene_descriptors(
             .pAccelerationStructures = &scene->tlas_->get_tlas(),
         },
         VK_SHADER_STAGE_RAYGEN_BIT_KHR);
-    builder.bind_buffer(1,
-			{
-			    .buffer = scene->valid_chunks_buffer_->get_buffer(),
-			    .offset = 0,
-			    .range = scene->valid_chunks_buffer_->get_size(),
-			}, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
-                             VK_SHADER_STAGE_INTERSECTION_BIT_KHR);
 
     std::vector<std::pair<VkDescriptorImageInfo, uint32_t>> raw_volume_infos;
     std::vector<std::pair<VkDescriptorBufferInfo, uint32_t>> svo_buffer_infos;
@@ -457,10 +431,10 @@ void GraphicsContext::bind_scene_descriptors(
             svo_buffer_infos.emplace_back(svo_buffer_info, i);
         }
     }
-    builder.bind_images(2, raw_volume_infos, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,
+    builder.bind_images(1, raw_volume_infos, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,
                         VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR |
                             VK_SHADER_STAGE_INTERSECTION_BIT_KHR);
-    builder.bind_buffers(3, svo_buffer_infos, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
+    builder.bind_buffers(2, svo_buffer_infos, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
                          VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR |
                              VK_SHADER_STAGE_INTERSECTION_BIT_KHR);
 }
