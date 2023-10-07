@@ -18,6 +18,7 @@ class VoxelChunk {
     enum class State {
         CPU,
         GPU,
+	Disk,
     };
 
     enum class Format {

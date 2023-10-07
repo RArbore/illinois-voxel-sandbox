@@ -373,7 +373,7 @@ void GraphicsContext::check_chunk_request_buffer(
         std::vector<uint64_t> not_ready_yet;
         for (auto [model_idx, _] : deduplicated_requests) {
             auto &model = scene_models.at(model_idx);
-            if (model->chunk_->get_state() == VoxelChunk::State::CPU) {
+            if (model->chunk_->get_state() != VoxelChunk::State::GPU) {
                 model->chunk_->queue_gpu_upload(device_, gpu_allocator_,
                                                 ring_buffer_);
             }
