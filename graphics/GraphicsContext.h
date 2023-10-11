@@ -8,6 +8,8 @@
 
 #include <external/glm/glm/glm.hpp>
 
+#include "Camera.h"
+
 class GraphicsContext;
 class GraphicsModel;
 class GraphicsObject;
@@ -16,12 +18,11 @@ class GraphicsScene;
 class VoxelChunk;
 class VoxelChunkPtr;
 
-std::shared_ptr<GraphicsContext> create_graphics_context();
+std::shared_ptr<GraphicsContext> create_graphics_context(std::shared_ptr<Window> window);
 
-void render_frame(std::shared_ptr<GraphicsContext> context,
-                  std::shared_ptr<GraphicsScene> scene);
-
-bool should_exit(std::shared_ptr<GraphicsContext> context);
+double render_frame(std::shared_ptr<GraphicsContext> context,
+                  std::shared_ptr<GraphicsScene> scene,
+                  CameraUB camera_info);
 
 std::shared_ptr<GraphicsModel>
 build_model(std::shared_ptr<GraphicsContext> context, VoxelChunkPtr chunk);

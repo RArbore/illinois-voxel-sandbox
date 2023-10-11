@@ -16,6 +16,7 @@ class Swapchain {
 
     VkImage get_image(uint32_t image_index);
     VkExtent2D get_extent();
+    VkFormat get_format();
     uint32_t acquire_next_image(std::shared_ptr<Semaphore> notify);
     void present_image(uint32_t image_index, std::shared_ptr<Semaphore> wait);
     std::shared_ptr<DescriptorSet> get_image_descriptor(uint32_t image_index);
