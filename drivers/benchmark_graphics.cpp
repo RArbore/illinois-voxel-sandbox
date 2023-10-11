@@ -20,9 +20,9 @@ int main(int argc, char *argv[]) {
 
         auto model = build_model(context, test_sphere);
         glm::mat3x4 transform = {
-            1.0F, 0.0F, 0.0F, 60.0F * cosf(radians),
-            0.0F, 1.0F, 0.0F, 10.0F * cosf(radians * 4.0F),
-            0.0F, 0.0F, 1.0F, 60.0F * sinf(radians)};
+            1.0F, 0.0F, 0.0F, 500.0F * cosf(radians),
+            0.0F, 1.0F, 0.0F, 100.0F * cosf(radians * 4.0F),
+            0.0F, 0.0F, 1.0F, 500.0F * sinf(radians)};
         auto object = build_object(context, model, transform);
         objects.emplace_back(std::move(object));
     }
