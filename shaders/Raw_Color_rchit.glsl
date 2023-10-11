@@ -27,6 +27,6 @@ void main() {
 
     payload.hit = false;
     payload.world_position = voxel_sample_pos;
-    payload.world_normal = voxel_normals[gl_HitKindEXT];
+    payload.world_normal = gl_ObjectToWorldEXT * vec4(voxel_normals[gl_HitKindEXT], 0.0);
     payload.color = imageLoad(volumes[volume_id], volume_load_pos);
 }
