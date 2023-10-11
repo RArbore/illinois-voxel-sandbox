@@ -20,7 +20,7 @@ int main(int argc, char *argv[]) {
 
     auto model1 = build_model(context, test_proc1);
     glm::mat3x4 transform1 = {1.0F, 0.0F,   0.0F, -64.0F, 0.0F, 1.0F,
-                              0.0F, -64.0F, 0.0F, 0.0F,   1.0F, -64.0F};
+                              0.0F, -64.0F, 0.0F, 0.0F, 1.0F, -64.0F};
     auto object1 = build_object(context, model1, transform1);
     auto scene = build_scene(context, {object1});
 
