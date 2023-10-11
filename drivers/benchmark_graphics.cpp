@@ -7,7 +7,7 @@ int main(int argc, char *argv[]) {
     std::vector<std::shared_ptr<GraphicsObject>> objects;
     auto window = create_window();
     auto context = create_graphics_context(window);
-    const size_t num_objects = 50;
+    const size_t num_objects = 25;
     for (size_t i = 0; i < num_objects; ++i) {
         const float linear =
             static_cast<float>(i) / static_cast<float>(num_objects);
@@ -20,13 +20,16 @@ int main(int argc, char *argv[]) {
 
         auto model = build_model(context, test_sphere);
         glm::mat3x4 transform = {
-            1.0F, 0.0F, 0.0F, 500.0F * cosf(radians),
-            0.0F, 1.0F, 0.0F, 100.0F * cosf(radians * 4.0F),
-            0.0F, 0.0F, 1.0F, 500.0F * sinf(radians)};
+            1.0F, 0.0F, 0.0F, 60.0F * cosf(radians),
+            0.0F, 1.0F, 0.0F, 10.0F * cosf(radians * 4.0F),
+            0.0F, 0.0F, 1.0F, 60.0F * sinf(radians)};
         auto object = build_object(context, model, transform);
         objects.emplace_back(std::move(object));
     }
     auto scene = build_scene(context, std::move(objects));
+
+    glm::vec3 camera_pos = glm::vec3(0.0f, 0.0f, -5.0f);
+    auto camera = create_camera(window, camera_pos, 0.0f, 0.0f, 10.0f, 0.05f);
 
     while (!window->should_close()) {
         window->poll_events();
