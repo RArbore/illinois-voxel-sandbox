@@ -62,6 +62,8 @@ class GraphicsContext {
     std::chrono::time_point<std::chrono::system_clock> first_time_;
     uint64_t elapsed_ms_;
 
+    std::chrono::time_point<std::chrono::system_clock> last_time_;
+
     void check_chunk_request_buffer(
         std::vector<std::shared_ptr<Semaphore>> &render_wait_semaphores);
 
@@ -352,8 +354,13 @@ double render_frame(std::shared_ptr<GraphicsContext> context,
                                current_time - context->first_time_)
                                .count() /
                            1000000;
+    const auto dt = std::chrono::duration_cast<std::chrono::nanoseconds>(
+                               current_time - context->last_time_)
+                               .count() /
+                           1000000.0;
+    context->last_time_ = current_time;
     ++context->frame_index_;
-    return context->elapsed_ms_ / 1000.0;
+    return dt;
 }
 
 std::shared_ptr<GraphicsModel>
