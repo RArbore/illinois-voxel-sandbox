@@ -38,10 +38,11 @@ void main() {
         vec3 new_origin = payload.world_position;
         traceRayEXT(tlas, gl_RayFlagsOpaqueEXT, 0xFF, 0, 0, 0, new_origin, 0.001f, new_direction, 10.0f, 0);
 
-        if (!payload.hit) {
+        //if (!payload.hit) {
             L = color;
-        }
+        //}
     }
+    L = payload.color;
 
     if (camera.frames_since_update == 0) {
         imageStore(image_history, ivec2(gl_LaunchIDEXT), L);
@@ -52,6 +53,6 @@ void main() {
         if (L.x > 0 || L.y > 0 || L.z > 0) {
             final_color = L;
         }
-        imageStore(image_history, ivec2(gl_LaunchIDEXT), final_color);
+        imageStore(image_history, ivec2(gl_LaunchIDEXT), L);
     }
 }
