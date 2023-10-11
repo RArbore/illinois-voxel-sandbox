@@ -14,6 +14,9 @@ int main(int argc, char *argv[]) {
     ChunkManager chunk_manager;
     auto window = create_window();
     auto context = create_graphics_context(window);
+    glm::vec3 camera_pos = glm::vec3(0.0f, 0.0f, -250.0f);
+    auto camera = create_camera(window, camera_pos, 0.0f, 0.0f, 100.0f, 0.05f);
+
     VoxelChunkPtr test_proc1 = chunk_manager.add_chunk(
         std::move(test_svo_data1), 128, 128, 128, VoxelChunk::Format::SVO,
         VoxelChunk::AttributeSet::Color);
