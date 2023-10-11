@@ -15,6 +15,8 @@ Window::~Window() {
 
 GLFWwindow *Window::get_window() { return window_; }
 
-bool Window::shouldClose() { return glfwWindowShouldClose(window_); }
+bool Window::should_close() { return glfwWindowShouldClose(window_); }
 
-void Window::pollEvents() { glfwPollEvents(); }
+void Window::poll_events() { glfwPollEvents(); }
+
+std::shared_ptr<Window> create_window() { return std::make_shared<Window>(); }
