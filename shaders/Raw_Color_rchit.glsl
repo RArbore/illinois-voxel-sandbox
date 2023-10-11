@@ -29,4 +29,5 @@ void main() {
     payload.world_position = voxel_sample_pos;
     payload.world_normal = gl_ObjectToWorldEXT * vec4(voxel_normals[gl_HitKindEXT], 0.0);
     payload.color = imageLoad(volumes[volume_id], volume_load_pos);
+    payload.color = vec4(vec3(volume_load_pos) / (vec3(imageSize(volumes[volume_id])) * vec3(imageSize(volumes[volume_id]))), 1.0);
 }
