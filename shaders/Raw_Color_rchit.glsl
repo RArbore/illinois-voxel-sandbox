@@ -25,7 +25,7 @@ void main() {
     vec3 voxel_sample_pos = gl_WorldToObjectEXT * vec4(world_ray_pos, 1.0);
     ivec3 volume_load_pos = ivec3(voxel_sample_pos * vec3(imageSize(volumes[volume_id])) - 0.5 * voxel_normals[gl_HitKindEXT]);
 
-    payload.hit = true;
+    payload.hit = false;
     payload.world_position = voxel_sample_pos;
     payload.world_normal = voxel_normals[gl_HitKindEXT];
     payload.color = imageLoad(volumes[volume_id], volume_load_pos);

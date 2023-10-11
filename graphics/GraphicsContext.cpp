@@ -222,7 +222,7 @@ std::shared_ptr<GraphicsContext> create_graphics_context(std::shared_ptr<Window>
     return context;
 }
 
-void render_frame(std::shared_ptr<GraphicsContext> context,
+double render_frame(std::shared_ptr<GraphicsContext> context,
                   std::shared_ptr<GraphicsScene> scene,
                   CameraUB camera_info) {
     std::vector<std::shared_ptr<Semaphore>> render_wait_semaphores{
@@ -353,6 +353,7 @@ void render_frame(std::shared_ptr<GraphicsContext> context,
                                .count() /
                            1000000;
     ++context->frame_index_;
+    return context->elapsed_ms_ / 1000.0;
 }
 
 std::shared_ptr<GraphicsModel>
