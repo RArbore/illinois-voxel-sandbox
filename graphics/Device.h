@@ -1,8 +1,9 @@
 #pragma once
 
-#include <memory>
 #include <string_view>
 #include <vector>
+#include <memory>
+#include <mutex>
 
 #define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
@@ -58,6 +59,8 @@ class Device {
     VkPhysicalDevice physical_device_;
     VkDevice device_;
     VkQueue queue_;
+
+    std::mutex queue_mutex_;
 
     uint32_t queue_family_;
     VkPhysicalDeviceRayTracingPipelinePropertiesKHR ray_tracing_properties_;

@@ -21,6 +21,8 @@ VkCommandPool CommandPool::get_pool() { return command_pool_; }
 
 std::shared_ptr<Device> CommandPool::get_device() { return device_; }
 
+std::mutex &CommandPool::get_mutex() { return pool_mutex_; }
+
 Command::Command(std::shared_ptr<CommandPool> command_pool) {
     VkCommandBufferAllocateInfo allocate_info{};
     allocate_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
