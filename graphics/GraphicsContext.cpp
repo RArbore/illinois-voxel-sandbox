@@ -442,38 +442,34 @@ void GraphicsContext::check_chunk_request_buffer(
             crb[i] = 0xFFFFFFFF;
         }
     }
+    for (auto [model_idx, sbt_offset] : deduplicated_requests) {
+	auto &model = scene_models.at(model_idx);
+	if (model->chunk_->get_state() != VoxelChunk::State::GPU) {
+	    model->chunk_->queue_gpu_upload(device_, gpu_allocator_,
+					    ring_buffer_);
+	    uploading_models_.emplace(model_idx, sbt_offset);
+	}
+    }
+    
+    deduplicated_requests.clear();
+    for (auto [model_idx, sbt_offset] : uploading_models_) {
+	auto &model = scene_models.at(model_idx);
+	if (model->chunk_->get_timeline()->has_reached_wait()) {
+	    deduplicated_requests.emplace(model_idx, sbt_offset);
+	}
+    }
+    for (auto [model_idx, _] : deduplicated_requests) {
+	uploading_models_.erase(model_idx);
+    }
+    
     if (!deduplicated_requests.empty()) {
-        for (auto [model_idx, sbt_offset] : deduplicated_requests) {
-            auto &model = scene_models.at(model_idx);
-            if (model->chunk_->get_state() != VoxelChunk::State::GPU) {
-                model->chunk_->queue_gpu_upload(device_, gpu_allocator_,
-                                                ring_buffer_);
-		uploading_models_.emplace(model_idx, sbt_offset);
-            }
-        }
-
-	deduplicated_requests.clear();
-	for (auto [model_idx, sbt_offset] : uploading_models_) {
-            auto &model = scene_models.at(model_idx);
-            if (model->chunk_->get_timeline()->has_reached_wait()) {
-                deduplicated_requests.emplace(model_idx, sbt_offset);
-            }
-	}
-	for (auto [model_idx, _] : deduplicated_requests) {
-	    uploading_models_.erase(model_idx);
-	}
-
-        if (!deduplicated_requests.empty()) {
-            current_scene_->tlas_->update_model_sbt_offsets(
-                std::move(deduplicated_requests));
-            render_wait_semaphores.emplace_back(
-                current_scene_->tlas_->get_timeline());
-
-            DescriptorSetBuilder builder(descriptor_allocator_);
-            bind_scene_descriptors(builder, current_scene_,
-                                   std::move(scene_models));
-            builder.update(current_scene_->scene_descriptor_);
-        }
+	current_scene_->tlas_->update_model_sbt_offsets(std::move(deduplicated_requests));
+	render_wait_semaphores.emplace_back(current_scene_->tlas_->get_timeline());
+	
+	DescriptorSetBuilder builder(descriptor_allocator_);
+	bind_scene_descriptors(builder, current_scene_,
+			       std::move(scene_models));
+	builder.update(current_scene_->scene_descriptor_);
     }
 }
 
