@@ -459,6 +459,9 @@ void GraphicsContext::check_chunk_request_buffer(
                 deduplicated_requests.emplace(model_idx, sbt_offset);
             }
 	}
+	for (auto [model_idx, _] : deduplicated_requests) {
+	    uploading_models_.erase(model_idx);
+	}
 
         if (!deduplicated_requests.empty()) {
             current_scene_->tlas_->update_model_sbt_offsets(
