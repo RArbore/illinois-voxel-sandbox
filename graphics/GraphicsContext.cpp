@@ -229,8 +229,10 @@ std::shared_ptr<GraphicsContext> create_graphics_context(std::shared_ptr<Window>
 }
 
 double render_frame(std::shared_ptr<GraphicsContext> context,
-                  std::shared_ptr<GraphicsScene> scene,
-                  CameraUB camera_info) {
+		    std::shared_ptr<GraphicsScene> scene,
+		    glm::vec3 camera_position,
+		    glm::vec3 camera_front,
+		    CameraUB camera_info) {
     std::vector<std::shared_ptr<Semaphore>> render_wait_semaphores{
         context->acquire_semaphore_};
     const bool changed_scenes = context->current_scene_ != scene;
@@ -338,6 +340,28 @@ double render_frame(std::shared_ptr<GraphicsContext> context,
 
     context->swapchain_->present_image(swapchain_image_index,
                                        context->render_semaphore_);
+
+    auto onscreen = [&](std::shared_ptr<GraphicsObject> object) -> bool {
+	for (uint32_t i = 0; i < 8; ++i) {
+	    auto point_object = glm::vec4(
+					  static_cast<float>(object->model_->chunk_->get_width()) * static_cast<float>(i & 1),
+					  static_cast<float>(object->model_->chunk_->get_height()) * static_cast<float>((i >> 1) & 1),
+					  static_cast<float>(object->model_->chunk_->get_depth()) * static_cast<float>((i >> 2) & 1),
+					  1.0
+					  );
+	    auto point_world = glm::transpose(object->transform_) * point_object;
+	    if (glm::dot(glm::vec3(point_world.x, point_world.y, point_world.z) - camera_position, camera_front) > 0.0) {
+		return true;
+	    }
+	}
+	return false;
+    };
+    std::unordered_map<std::shared_ptr<GraphicsModel>, uint32_t> num_onscreen_objects_per_model;
+    for (const auto &object : scene->objects_) {
+	if (onscreen(object)) {
+	    ++num_onscreen_objects_per_model[object->model_];
+	}
+    }
 
     const auto current_time = std::chrono::system_clock::now();
     if (context->frame_index_ == 0) {

@@ -21,8 +21,10 @@ class VoxelChunkPtr;
 std::shared_ptr<GraphicsContext> create_graphics_context(std::shared_ptr<Window> window);
 
 double render_frame(std::shared_ptr<GraphicsContext> context,
-                  std::shared_ptr<GraphicsScene> scene,
-                  CameraUB camera_info);
+		    std::shared_ptr<GraphicsScene> scene,
+		    glm::vec3 camera_position,
+		    glm::vec3 camera_front,
+		    CameraUB camera_info);
 
 std::shared_ptr<GraphicsModel>
 build_model(std::shared_ptr<GraphicsContext> context, VoxelChunkPtr chunk);

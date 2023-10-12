@@ -27,6 +27,8 @@ class Camera {
 
     glm::mat4 get_view_inverse() const;
     CameraUB get_uniform_buffer() const;
+    glm::vec3 get_front() const;
+    glm::vec3 get_position() const;
 
   private:
     std::shared_ptr<Window> window_;

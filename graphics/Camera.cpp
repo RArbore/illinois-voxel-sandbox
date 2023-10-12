@@ -139,3 +139,11 @@ CameraUB Camera::get_uniform_buffer() const {
     uniform.frames_since_update = frames_since_update_;
     return uniform;
 }
+
+glm::vec3 Camera::get_front() const {
+    return front_;
+}
+
+glm::vec3 Camera::get_position() const {
+    return origin_;
+}
