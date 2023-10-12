@@ -286,7 +286,6 @@ void Device::submit_command(
 
     VkFence vk_fence = fence ? fence->get_fence() : VK_NULL_HANDLE;
 
-    std::lock_guard<std::mutex> queue_guard(queue_mutex_);
     ASSERT(vkQueueSubmit(queue_, 1, &submit_info, vk_fence),
            "Unable to submit command.");
 }

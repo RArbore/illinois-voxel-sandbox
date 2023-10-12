@@ -1,6 +1,6 @@
 #pragma once
 
-#include <mutex>
+#include <vulkan/vulkan.h>
 
 #include "Device.h"
 #include "utils/Assert.h"
@@ -12,12 +12,9 @@ class CommandPool {
 
     VkCommandPool get_pool();
     std::shared_ptr<Device> get_device();
-    std::mutex &get_mutex();
 
   private:
     VkCommandPool command_pool_;
-
-    std::mutex pool_mutex_;
 
     std::shared_ptr<Device> device_;
 };
@@ -39,7 +36,6 @@ class Command {
         begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
         begin_info.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
 
-	std::lock_guard<std::mutex> record_guard(command_pool_->get_mutex());
         ASSERT(vkBeginCommandBuffer(buffer_, &begin_info),
                "Unable to begin recording command buffer.");
         F(buffer_);
