@@ -64,6 +64,8 @@ class GraphicsContext {
 
     std::chrono::time_point<std::chrono::system_clock> last_time_;
 
+    std::unordered_map<uint64_t, uint32_t> uploading_models_;
+
     void check_chunk_request_buffer(
         std::vector<std::shared_ptr<Semaphore>> &render_wait_semaphores);
 
@@ -441,20 +443,23 @@ void GraphicsContext::check_chunk_request_buffer(
         }
     }
     if (!deduplicated_requests.empty()) {
-        std::vector<uint64_t> not_ready_yet;
-        for (auto [model_idx, _] : deduplicated_requests) {
+        for (auto [model_idx, sbt_offset] : deduplicated_requests) {
             auto &model = scene_models.at(model_idx);
             if (model->chunk_->get_state() != VoxelChunk::State::GPU) {
                 model->chunk_->queue_gpu_upload(device_, gpu_allocator_,
                                                 ring_buffer_);
-            }
-            if (!model->chunk_->get_timeline()->has_reached_wait()) {
-                not_ready_yet.push_back(model_idx);
+		uploading_models_.emplace(model_idx, sbt_offset);
             }
         }
-        for (auto model_idx : not_ready_yet) {
-            deduplicated_requests.erase(model_idx);
-        }
+
+	deduplicated_requests.clear();
+	for (auto [model_idx, sbt_offset] : uploading_models_) {
+            auto &model = scene_models.at(model_idx);
+            if (model->chunk_->get_timeline()->has_reached_wait()) {
+                deduplicated_requests.emplace(model_idx, sbt_offset);
+            }
+	}
+
         if (!deduplicated_requests.empty()) {
             current_scene_->tlas_->update_model_sbt_offsets(
                 std::move(deduplicated_requests));
