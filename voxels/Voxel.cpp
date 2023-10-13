@@ -91,10 +91,19 @@ void VoxelChunk::queue_cpu_download(std::shared_ptr<Device> device,
     ASSERT(state_ == State::GPU, "Tried to download GPU data of voxel chunk to CPU without GPU data resident.");
     std::cout << "INFO: Queued download to CPU for voxel chunk " << this << ", which has the following dimensions: (" << width_ << ", "
               << height_ << ", " << depth_ << ").\n";
-
-    volume_data_ = nullptr;
-    buffer_data_ = nullptr;
-
+    switch (format_) {
+    case Format::Raw: {
+	volume_data_ = nullptr;
+	break;
+    }
+    case Format::SVO: {
+	buffer_data_ = nullptr;
+	break;
+    }
+    default: {
+	ASSERT(false, "GPU download for format is unimplemented.");
+    }
+    }
     state_ = State::CPU;
 }
 
