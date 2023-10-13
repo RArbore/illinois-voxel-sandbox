@@ -172,3 +172,13 @@ void RingBuffer::copy_to_device(
     in_flight_copies_.push_back(copy);
     virtual_counter_ += src.size();
 }
+
+void RingBuffer::reap_in_flight_copies() {
+    for (auto &copy : in_flight_copies_) {
+	if (copy.fence_->has_finished()) {
+	    copy.gpu_buffer_ = nullptr;
+	    copy.gpu_image_ = nullptr;
+	    copy.gpu_volume_ = nullptr;
+	}
+    }
+}

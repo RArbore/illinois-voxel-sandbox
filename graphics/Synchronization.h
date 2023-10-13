@@ -13,6 +13,7 @@ class Fence {
 
     void wait();
     void reset();
+    bool has_finished();
 
     VkFence get_fence();
 

@@ -20,6 +20,15 @@ void Fence::wait() {
 
 void Fence::reset() { vkResetFences(device_->get_device(), 1, &fence_); }
 
+bool Fence::has_finished() {
+    VkResult result = vkGetFenceStatus(device_->get_device(), fence_);
+    if (result == VK_NOT_READY) {
+	return false;
+    }
+    ASSERT(result, "Unable to check if fence has finished.");
+    return true;
+}
+
 VkFence Fence::get_fence() { return fence_; }
 
 Fence::~Fence() { vkDestroyFence(device_->get_device(), fence_, nullptr); }

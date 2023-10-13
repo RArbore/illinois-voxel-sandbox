@@ -260,6 +260,7 @@ double render_frame(std::shared_ptr<GraphicsContext> context,
     if (!changed_scenes) {
         context->check_chunk_request_buffer(render_wait_semaphores);
 	context->download_offscreen_models(camera_position, camera_front, render_wait_semaphores);
+	context->ring_buffer_->reap_in_flight_copies();
     }
 
     context->frame_fence_->reset();
@@ -437,12 +438,9 @@ void GraphicsContext::check_chunk_request_buffer(
     std::vector<std::shared_ptr<Semaphore>> &render_wait_semaphores) {
     uint64_t *crb = reinterpret_cast<uint64_t *>(unloaded_chunks_span_.data());
     std::unordered_map<uint64_t, uint32_t> deduplicated_requests;
-    std::vector<std::shared_ptr<GraphicsModel>> scene_models;
+    std::vector<std::shared_ptr<GraphicsModel>> scene_models = current_scene_->assemble_models_in_order();
     for (uint32_t i = 0; i < MAX_NUM_CHUNKS_LOADED_PER_FRAME; ++i) {
         if (crb[i] != 0xFFFFFFFF) {
-            if (scene_models.empty()) {
-                scene_models = current_scene_->assemble_models_in_order();
-            }
             deduplicated_requests.emplace(crb[i],
                                           scene_models.at(crb[i])->sbt_offset_);
             crb[i] = 0xFFFFFFFF;
