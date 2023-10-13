@@ -355,7 +355,7 @@ double render_frame(std::shared_ptr<GraphicsContext> context,
                    .count() >= 1000000000) {
         const uint64_t num_frames =
             context->frame_index_ - context->start_frame_;
-        std::cout << "INFO: " << num_frames << " FPS\n";
+        std::cout << "INFO: " << num_frames << " FPS   " << context->gpu_allocator_->bookkeep_count() << " BYTES\n";
 
         context->start_time_ = current_time;
         context->start_frame_ = context->frame_index_;
