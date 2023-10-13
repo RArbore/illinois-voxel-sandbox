@@ -258,9 +258,11 @@ double render_frame(std::shared_ptr<GraphicsContext> context,
     context->frame_fence_->wait();
 
     if (!changed_scenes) {
-        context->check_chunk_request_buffer(render_wait_semaphores);
-	context->download_offscreen_models(camera_position, camera_front, render_wait_semaphores);
-	context->ring_buffer_->reap_in_flight_copies();
+	context->check_chunk_request_buffer(render_wait_semaphores);
+	if (context->frame_index_ % 512 == 0) {
+	    context->download_offscreen_models(camera_position, camera_front, render_wait_semaphores);
+	    context->ring_buffer_->reap_in_flight_copies();
+	}
     }
 
     context->frame_fence_->reset();
