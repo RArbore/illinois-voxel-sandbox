@@ -65,8 +65,12 @@ class GraphicsContext {
     std::chrono::time_point<std::chrono::system_clock> last_time_;
 
     std::unordered_map<uint64_t, uint32_t> uploading_models_;
+    std::unordered_set<uint64_t> downloading_models_;
 
     void check_chunk_request_buffer(
+        std::vector<std::shared_ptr<Semaphore>> &render_wait_semaphores);
+
+    void download_offscreen_models(glm::vec3 camera_position, glm::vec3 camera_front,
         std::vector<std::shared_ptr<Semaphore>> &render_wait_semaphores);
 
     void bind_scene_descriptors(
@@ -239,7 +243,6 @@ double render_frame(std::shared_ptr<GraphicsContext> context,
     if (changed_scenes) {
         std::shared_ptr<Semaphore> tlas_semaphore =
             scene->tlas_->get_timeline();
-        tlas_semaphore->set_wait_value(TLAS::TLAS_BUILD_TIMELINE);
         render_wait_semaphores.emplace_back(std::move(tlas_semaphore));
         for (auto object : scene->objects_) {
             std::shared_ptr<Semaphore> upload_semaphore =
@@ -256,6 +259,7 @@ double render_frame(std::shared_ptr<GraphicsContext> context,
 
     if (!changed_scenes) {
         context->check_chunk_request_buffer(render_wait_semaphores);
+	context->download_offscreen_models(camera_position, camera_front, render_wait_semaphores);
     }
 
     context->frame_fence_->reset();
@@ -340,28 +344,6 @@ double render_frame(std::shared_ptr<GraphicsContext> context,
 
     context->swapchain_->present_image(swapchain_image_index,
                                        context->render_semaphore_);
-
-    auto onscreen = [&](std::shared_ptr<GraphicsObject> object) -> bool {
-	for (uint32_t i = 0; i < 8; ++i) {
-	    auto point_object = glm::vec4(
-					  static_cast<float>(object->model_->chunk_->get_width()) * static_cast<float>(i & 1),
-					  static_cast<float>(object->model_->chunk_->get_height()) * static_cast<float>((i >> 1) & 1),
-					  static_cast<float>(object->model_->chunk_->get_depth()) * static_cast<float>((i >> 2) & 1),
-					  1.0
-					  );
-	    auto point_world = glm::transpose(object->transform_) * point_object;
-	    if (glm::dot(glm::vec3(point_world.x, point_world.y, point_world.z) - camera_position, camera_front) > 0.0) {
-		return true;
-	    }
-	}
-	return false;
-    };
-    std::unordered_map<std::shared_ptr<GraphicsModel>, uint32_t> num_onscreen_objects_per_model;
-    for (const auto &object : scene->objects_) {
-	if (onscreen(object)) {
-	    ++num_onscreen_objects_per_model[object->model_];
-	}
-    }
 
     const auto current_time = std::chrono::system_clock::now();
     if (context->frame_index_ == 0) {
@@ -467,8 +449,8 @@ void GraphicsContext::check_chunk_request_buffer(
         }
     }
     for (auto [model_idx, sbt_offset] : deduplicated_requests) {
-	auto &model = scene_models.at(model_idx);
-	if (model->chunk_->get_state() != VoxelChunk::State::GPU) {
+	if (!uploading_models_.contains(model_idx) && !downloading_models_.contains(model_idx)) {
+	    auto &model = scene_models.at(model_idx);
 	    model->chunk_->queue_gpu_upload(device_, gpu_allocator_,
 					    ring_buffer_);
 	    uploading_models_.emplace(model_idx, sbt_offset);
@@ -488,6 +470,64 @@ void GraphicsContext::check_chunk_request_buffer(
     
     if (!deduplicated_requests.empty()) {
 	current_scene_->tlas_->update_model_sbt_offsets(std::move(deduplicated_requests));
+	render_wait_semaphores.emplace_back(current_scene_->tlas_->get_timeline());
+	
+	DescriptorSetBuilder builder(descriptor_allocator_);
+	bind_scene_descriptors(builder, current_scene_,
+			       std::move(scene_models));
+	builder.update(current_scene_->scene_descriptor_);
+    }
+}
+
+void GraphicsContext::download_offscreen_models(glm::vec3 camera_position, glm::vec3 camera_front,
+    std::vector<std::shared_ptr<Semaphore>> &render_wait_semaphores) {
+    auto onscreen = [&](std::shared_ptr<GraphicsObject> object) -> bool {
+	for (uint32_t i = 0; i < 8; ++i) {
+	    auto point_object = glm::vec4(
+					  static_cast<float>(object->model_->chunk_->get_width()) * static_cast<float>(i & 1),
+					  static_cast<float>(object->model_->chunk_->get_height()) * static_cast<float>((i >> 1) & 1),
+					  static_cast<float>(object->model_->chunk_->get_depth()) * static_cast<float>((i >> 2) & 1),
+					  1.0
+					  );
+	    auto point_world = glm::transpose(object->transform_) * point_object;
+	    if (glm::dot(glm::vec3(point_world.x, point_world.y, point_world.z) - camera_position, camera_front) > 0.0) {
+		return true;
+	    }
+	}
+	return false;
+    };
+    std::unordered_set<std::shared_ptr<GraphicsModel>> onscreen_models;
+    for (const auto &object : current_scene_->objects_) {
+	if (onscreen(object)) {
+	    onscreen_models.insert(object->model_);
+	}
+    }
+
+    std::vector<std::shared_ptr<GraphicsModel>> scene_models = current_scene_->assemble_models_in_order();
+    for (uint64_t model_idx = 0; model_idx < scene_models.size(); ++model_idx) {
+	auto &model = scene_models.at(model_idx);
+	if (!uploading_models_.contains(model_idx) &&
+	    !downloading_models_.contains(model_idx) &&
+	    !onscreen_models.contains(model) &&
+	    model->chunk_->get_state() == VoxelChunk::State::GPU) {
+	    model->chunk_->queue_cpu_download(device_, ring_buffer_);
+	    downloading_models_.insert(model_idx);
+	}
+    }
+
+    std::unordered_map<uint64_t, uint32_t> new_sbt_offsets;
+    for (auto model_idx : downloading_models_) {
+	auto &model = scene_models.at(model_idx);
+	if (model->chunk_->get_timeline()->has_reached_wait()) {
+	    new_sbt_offsets.emplace(model_idx, 0);
+	}
+    }
+    for (auto [model_idx, _] : new_sbt_offsets) {
+	downloading_models_.erase(model_idx);
+    }
+
+    if (!new_sbt_offsets.empty()) {
+	current_scene_->tlas_->update_model_sbt_offsets(std::move(new_sbt_offsets));
 	render_wait_semaphores.emplace_back(current_scene_->tlas_->get_timeline());
 	
 	DescriptorSetBuilder builder(descriptor_allocator_);

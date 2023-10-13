@@ -161,7 +161,7 @@ TLAS::TLAS(std::shared_ptr<GPUAllocator> allocator,
             VK_BUFFER_USAGE_TRANSFER_DST_BIT,
         VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, 0);
     timeline_ = std::make_shared<Semaphore>(allocator->get_device(), true);
-    timeline_->set_signal_value(INSTANCES_BUFFER_TIMELINE);
+    timeline_->set_signal_value(1);
     ring_buffer->copy_to_device(
         instances_buffer_, 0,
         std::as_bytes(std::span<VkAccelerationStructureInstanceKHR>(
@@ -255,8 +255,7 @@ TLAS::TLAS(std::shared_ptr<GPUAllocator> allocator,
                                  *const *>(tlas_build_range_infos));
     });
     std::vector<std::shared_ptr<Semaphore>> wait_semaphores;
-    timeline_->set_wait_value(INSTANCES_BUFFER_TIMELINE);
-    timeline_->set_signal_value(TLAS_BUILD_TIMELINE);
+    timeline_->increment();
     wait_semaphores.push_back(timeline_);
     for (auto blas : bottom_structures) {
         std::shared_ptr<Semaphore> timeline = blas->get_timeline();
@@ -275,16 +274,13 @@ TLAS::TLAS(std::shared_ptr<GPUAllocator> allocator,
 void TLAS::update_model_sbt_offsets(
     std::unordered_map<uint64_t, uint32_t> models) {
     for (auto &instance : instances_) {
-        if (instance.instanceShaderBindingTableRecordOffset ==
-            UNLOADED_SBT_OFFSET) {
-            auto it = models.find(instance.instanceCustomIndex);
-            if (it != models.end()) {
-                instance.instanceShaderBindingTableRecordOffset = it->second;
-            }
-        }
+	auto it = models.find(instance.instanceCustomIndex);
+	if (it != models.end()) {
+	    instance.instanceShaderBindingTableRecordOffset = it->second;
+	}
     }
-    timeline_ = std::make_shared<Semaphore>(command_pool_->get_device(), true);
-    timeline_->set_signal_value(INSTANCES_BUFFER_TIMELINE);
+    timeline_->increment();
+    timeline_->increment();
     ring_buffer_->copy_to_device(
         instances_buffer_, 0,
         std::as_bytes(std::span<VkAccelerationStructureInstanceKHR>(
@@ -336,8 +332,7 @@ void TLAS::update_model_sbt_offsets(
             reinterpret_cast<const VkAccelerationStructureBuildRangeInfoKHR
                                  *const *>(tlas_build_range_infos));
     });
-    timeline_->set_wait_value(INSTANCES_BUFFER_TIMELINE);
-    timeline_->set_signal_value(TLAS_BUILD_TIMELINE);
+    timeline_->increment();
     command_pool_->get_device()->submit_command(update_command, {timeline_},
                                                 {timeline_});
 }

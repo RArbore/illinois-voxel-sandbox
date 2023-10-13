@@ -51,9 +51,6 @@ class TLAS {
 
     VkDeviceAddress get_device_address();
 
-    static const uint64_t INSTANCES_BUFFER_TIMELINE = 1;
-    static const uint64_t TLAS_BUILD_TIMELINE = 2;
-
   private:
     VkAccelerationStructureKHR tlas_ = VK_NULL_HANDLE;
 

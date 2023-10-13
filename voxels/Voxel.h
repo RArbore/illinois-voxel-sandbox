@@ -48,6 +48,8 @@ class VoxelChunk {
     void queue_gpu_upload(std::shared_ptr<Device> device,
                           std::shared_ptr<GPUAllocator> allocator,
                           std::shared_ptr<RingBuffer> ring_buffer);
+    void queue_cpu_download(std::shared_ptr<Device> device,
+			    std::shared_ptr<RingBuffer> ring_buffer);
 
   private:
     std::vector<std::byte> cpu_data_;

@@ -86,6 +86,18 @@ void VoxelChunk::queue_gpu_upload(std::shared_ptr<Device> device,
     timeline_->increment();
 }
 
+void VoxelChunk::queue_cpu_download(std::shared_ptr<Device> device,
+			std::shared_ptr<RingBuffer> ring_buffer) {
+    ASSERT(state_ == State::GPU, "Tried to download GPU data of voxel chunk to CPU without GPU data resident.");
+    std::cout << "INFO: Queued download to CPU for voxel chunk " << this << ", which has the following dimensions: (" << width_ << ", "
+              << height_ << ", " << depth_ << ").\n";
+
+    volume_data_ = nullptr;
+    buffer_data_ = nullptr;
+
+    state_ = State::CPU;
+}
+
 VoxelChunk &VoxelChunkPtr::operator*() {
     return manager_->chunks_.at(chunk_idx_);
 }
