@@ -40,4 +40,5 @@ class Camera {
 
 std::shared_ptr<Camera> create_camera(std::shared_ptr<Window> window,
                                       const glm::vec3 &initial_pos, float pitch,
-                                      float yaw, float speed, float sensitivity);
+                                      float yaw, float speed,
+                                      float sensitivity);

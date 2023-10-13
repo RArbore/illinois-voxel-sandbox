@@ -179,7 +179,7 @@ load_vox_scene(const std::string &filepath, ChunkManager &chunk_manager,
         ogt_vox_transform trans = instance.transform;
         glm::mat3x4 glmtransform = {trans.m00, trans.m02, trans.m01, trans.m03,
                                     trans.m20, trans.m22, trans.m21, trans.m23,
-				    trans.m10, trans.m12, trans.m11, trans.m13};
+                                    trans.m10, trans.m12, trans.m11, trans.m13};
         std::shared_ptr<GraphicsObject> obj =
             build_object(context, models[instance.model_index], glmtransform);
 

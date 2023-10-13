@@ -23,13 +23,12 @@ void GPUAllocator::bookkeep_alloc(VkDeviceSize size) {
 }
 
 void GPUAllocator::bookkeep_free(VkDeviceSize size) {
-    ASSERT(num_bytes_allocated_ >= size, "Bookkeeping count of number of bytes allocated is wrong.");
+    ASSERT(num_bytes_allocated_ >= size,
+           "Bookkeeping count of number of bytes allocated is wrong.");
     num_bytes_allocated_ -= size;
 }
 
-VkDeviceSize GPUAllocator::bookkeep_count() {
-    return num_bytes_allocated_;
-}
+VkDeviceSize GPUAllocator::bookkeep_count() { return num_bytes_allocated_; }
 
 GPUBuffer::GPUBuffer(std::shared_ptr<GPUAllocator> allocator, VkDeviceSize size,
                      VkDeviceSize alignment, VkBufferUsageFlags usage,
@@ -60,9 +59,10 @@ GPUBuffer::GPUBuffer(std::shared_ptr<GPUAllocator> allocator, VkDeviceSize size,
     vma_flags_ = vma_flags;
 
     if (size > 0) {
-	VmaAllocationInfo allocation_info;
-	vmaGetAllocationInfo(allocator_->get_vma(), allocation_, &allocation_info);
-	allocator_->bookkeep_alloc(allocation_info.size);
+        VmaAllocationInfo allocation_info;
+        vmaGetAllocationInfo(allocator_->get_vma(), allocation_,
+                             &allocation_info);
+        allocator_->bookkeep_alloc(allocation_info.size);
     }
 }
 

@@ -18,7 +18,8 @@ int main(int argc, char *argv[]) {
     while (!window->should_close()) {
         window->poll_events();
         auto camera_info = camera->get_uniform_buffer();
-        double dt = render_frame(context, test_scene, camera->get_position(), camera->get_front(), camera_info);
+        double dt = render_frame(context, test_scene, camera->get_position(),
+                                 camera->get_front(), camera_info);
         camera->handle_keys(dt);
         camera->mark_rendered();
     }

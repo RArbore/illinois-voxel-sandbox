@@ -274,10 +274,10 @@ TLAS::TLAS(std::shared_ptr<GPUAllocator> allocator,
 void TLAS::update_model_sbt_offsets(
     std::unordered_map<uint64_t, uint32_t> models) {
     for (auto &instance : instances_) {
-	auto it = models.find(instance.instanceCustomIndex);
-	if (it != models.end()) {
-	    instance.instanceShaderBindingTableRecordOffset = it->second;
-	}
+        auto it = models.find(instance.instanceCustomIndex);
+        if (it != models.end()) {
+            instance.instanceShaderBindingTableRecordOffset = it->second;
+        }
     }
     timeline_->increment();
     timeline_->increment();
