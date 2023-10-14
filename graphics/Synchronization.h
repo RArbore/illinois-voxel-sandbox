@@ -32,6 +32,7 @@ class Semaphore {
 
     bool is_timeline();
     bool has_reached_wait();
+    void wait();
 
     uint64_t get_wait_value();
     uint64_t get_signal_value();

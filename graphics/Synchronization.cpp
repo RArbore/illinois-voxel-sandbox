@@ -79,6 +79,17 @@ bool Semaphore::has_reached_wait() {
     return true;
 }
 
+void Semaphore::wait() {
+    VkSemaphoreWaitInfo wait_info{};
+    wait_info.sType = VK_STRUCTURE_TYPE_SEMAPHORE_WAIT_INFO;
+    wait_info.pNext = nullptr;
+    wait_info.flags = 0;
+    wait_info.semaphoreCount = 1;
+    wait_info.pSemaphores = &semaphore_;
+    wait_info.pValues = &wait_value_;
+    ASSERT(vkWaitSemaphores(device_->get_device(), &wait_info, UINT64_MAX), "Failed to wait on semaphore.");
+}
+
 uint64_t Semaphore::get_wait_value() {
     ASSERT(timeline_, "Must be a timeline semaphore to get a wait value.");
     return wait_value_;

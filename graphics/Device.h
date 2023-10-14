@@ -1,8 +1,10 @@
 #pragma once
 
-#include <memory>
 #include <string_view>
+#include <functional>
+#include <memory>
 #include <vector>
+#include <list>
 
 #define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
@@ -47,6 +49,9 @@ class Device {
         std::vector<std::shared_ptr<Semaphore>> signal_semaphores = {},
         std::shared_ptr<Fence> fence = nullptr);
 
+    void queue_cleanup(std::function<void()> cleanup);
+    void do_cleanups();
+
     VkPhysicalDeviceRayTracingPipelinePropertiesKHR
     get_ray_tracing_properties();
     VkPhysicalDeviceAccelerationStructurePropertiesKHR
@@ -58,6 +63,8 @@ class Device {
     VkPhysicalDevice physical_device_;
     VkDevice device_;
     VkQueue queue_;
+
+    std::list<std::pair<std::function<void()>, uint32_t>> cleanups_;
 
     uint32_t queue_family_;
     VkPhysicalDeviceRayTracingPipelinePropertiesKHR ray_tracing_properties_;
