@@ -47,8 +47,6 @@ class TLAS {
 
     VkAccelerationStructureKHR &get_tlas();
 
-    std::vector<VkAccelerationStructureInstanceKHR> &get_instances();
-
     std::shared_ptr<Semaphore> get_timeline();
 
     VkDeviceAddress get_device_address();
@@ -56,6 +54,7 @@ class TLAS {
   private:
     VkAccelerationStructureKHR tlas_ = VK_NULL_HANDLE;
 
+    std::vector<std::shared_ptr<BLAS>> contained_structures_;
     std::vector<VkAccelerationStructureInstanceKHR> instances_;
 
     std::shared_ptr<GPUBuffer> instances_buffer_ = nullptr;

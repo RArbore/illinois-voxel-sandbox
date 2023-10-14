@@ -290,22 +290,6 @@ void Device::submit_command(
            "Unable to submit command.");
 }
 
-void Device::queue_cleanup(std::function<void()> cleanup) {
-    cleanups_.emplace_back(std::move(cleanup), 3);
-}
-
-void Device::do_cleanups() {
-    for (auto it = cleanups_.begin(); it != cleanups_.end();) {
-	if (it->second > 0) {
-	    --it->second;
-	    ++it;
-	} else {
-	    it->first();
-	    cleanups_.erase(it++);
-	}
-    }
-}
-
 VkPhysicalDeviceRayTracingPipelinePropertiesKHR
 Device::get_ray_tracing_properties() {
     return ray_tracing_properties_;

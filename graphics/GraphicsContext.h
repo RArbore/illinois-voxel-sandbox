@@ -37,7 +37,3 @@ build_object(std::shared_ptr<GraphicsContext> context,
 std::shared_ptr<GraphicsScene>
 build_scene(std::shared_ptr<GraphicsContext> context,
             const std::vector<std::shared_ptr<GraphicsObject>> &objects);
-
-void add_objects(std::shared_ptr<GraphicsContext> context,
-		 std::shared_ptr<GraphicsScene> scene,
-		 const std::vector<std::shared_ptr<GraphicsObject>> &objects);

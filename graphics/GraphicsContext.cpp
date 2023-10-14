@@ -104,18 +104,14 @@ class GraphicsScene {
     GraphicsScene(std::shared_ptr<GraphicsContext> context,
                   std::shared_ptr<TLAS> tlas,
                   std::vector<std::shared_ptr<GraphicsObject>> objects,
-                  std::shared_ptr<DescriptorSet> scene_descriptor,
-                  uint64_t num_referenced_models)
-        : tlas_(tlas), objects_(objects), scene_descriptor_(scene_descriptor),
-          num_referenced_models_(num_referenced_models) {}
+                  std::shared_ptr<DescriptorSet> scene_descriptor)
+        : tlas_(tlas), objects_(objects), scene_descriptor_(scene_descriptor) {}
 
     std::shared_ptr<TLAS> tlas_;
     std::vector<std::shared_ptr<GraphicsObject>> objects_;
     std::shared_ptr<DescriptorSet> scene_descriptor_ = nullptr;
-    uint64_t num_referenced_models_;
 
-    std::unordered_map<std::shared_ptr<GraphicsModel>, size_t>
-    assemble_models() {
+    std::vector<std::shared_ptr<GraphicsModel>> assemble_models_in_order() {
         std::unordered_map<std::shared_ptr<GraphicsModel>, size_t>
             referenced_models;
         for (const auto &object : objects_) {
@@ -124,12 +120,6 @@ class GraphicsScene {
                                           referenced_models.size());
             }
         }
-        return referenced_models;
-    }
-
-    std::vector<std::shared_ptr<GraphicsModel>> assemble_models_in_order() {
-        std::unordered_map<std::shared_ptr<GraphicsModel>, size_t>
-            referenced_models = assemble_models();
         std::vector<std::shared_ptr<GraphicsModel>> models(
             referenced_models.size(), nullptr);
         for (auto &&[model, idx] : referenced_models) {
@@ -441,43 +431,11 @@ build_scene(std::shared_ptr<GraphicsContext> context,
         scene_models.at(idx) = std::move(model);
     }
 
-    auto scene = std::make_shared<GraphicsScene>(context, tlas, objects,
-                                                 nullptr, scene_models.size());
+    auto scene =
+        std::make_shared<GraphicsScene>(context, tlas, objects, nullptr);
     context->bind_scene_descriptors(builder, scene, std::move(scene_models));
     scene->scene_descriptor_ = builder.build();
     return scene;
-}
-
-void add_objects(std::shared_ptr<GraphicsContext> context,
-		 std::shared_ptr<GraphicsScene> scene,
-		 const std::vector<std::shared_ptr<GraphicsObject>> &objects) {
-    for (const auto object : objects) {
-	scene->objects_.emplace_back(object);
-    }
-    std::unordered_map<std::shared_ptr<GraphicsModel>, size_t>
-        referenced_models = scene->assemble_models();
-
-    for (const auto object : objects) {
-	VkTransformMatrixKHR transform{};
-	memcpy(&transform, &object->transform_, sizeof(VkTransformMatrixKHR));
-	uint32_t sbt_offset =
-	    object->model_->chunk_->get_state() == VoxelChunk::State::GPU
-            ? object->model_->sbt_offset_
-            : UNLOADED_SBT_OFFSET;
-	scene->tlas_->get_instances().emplace_back(
-						   transform, referenced_models.at(object->model_), 0xFF, sbt_offset, 0,
-						   object->model_->blas_->get_device_address());
-    }
-    
-    scene->tlas_->update_model_sbt_offsets({});
-    if (scene->num_referenced_models_ != referenced_models.size()) {
-        scene->num_referenced_models_ = referenced_models.size();
-
-        DescriptorSetBuilder builder(context->descriptor_allocator_);
-        context->bind_scene_descriptors(builder, scene,
-                                        scene->assemble_models_in_order());
-        builder.update(scene->scene_descriptor_);
-    }
 }
 
 void GraphicsContext::check_chunk_request_buffer(
