@@ -25,7 +25,12 @@ int main(int argc, char *argv[]) {
     glm::mat3x4 transform1 = {1.0F, 0.0F,   0.0F, -64.0F, 0.0F, 1.0F,
                               0.0F, -64.0F, 0.0F, 0.0F,   1.0F, -64.0F};
     auto object1 = build_object(context, model1, transform1);
+    glm::mat3x4 transform2 = {1.0F, 0.0F,  0.0F, 64.0F, 0.0F, 1.0F,
+                              0.0F, 64.0F, 0.0F, 0.0F,  1.0F, 64.0F};
+    auto object2 = build_object(context, model1, transform2);
+
     auto scene = build_scene(context, {object1});
+    add_object(context, scene, object2);
 
     while (!window->should_close()) {
         window->poll_events();

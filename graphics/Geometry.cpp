@@ -154,7 +154,7 @@ TLAS::TLAS(std::shared_ptr<GPUAllocator> allocator,
            std::vector<VkAccelerationStructureInstanceKHR> instances) {
     instances_buffer_ = std::make_shared<GPUBuffer>(
         allocator,
-        instances.size() * sizeof(VkAccelerationStructureInstanceKHR),
+        (2 * instances.size() + 1) * sizeof(VkAccelerationStructureInstanceKHR),
         round_up_pow2(sizeof(VkAccelerationStructureInstanceKHR)),
         VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR |
             VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT |
@@ -162,11 +162,13 @@ TLAS::TLAS(std::shared_ptr<GPUAllocator> allocator,
         VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, 0);
     timeline_ = std::make_shared<Semaphore>(allocator->get_device(), true);
     timeline_->set_signal_value(1);
-    ring_buffer->copy_to_device(
-        instances_buffer_, 0,
-        std::as_bytes(std::span<VkAccelerationStructureInstanceKHR>(
-            instances.data(), instances.size())),
-        {}, {timeline_});
+    if (instances.size() > 0) {
+	ring_buffer->copy_to_device(
+				    instances_buffer_, 0,
+				    std::as_bytes(std::span<VkAccelerationStructureInstanceKHR>(
+												instances.data(), instances.size())),
+				    {}, {timeline_});
+    }
 
     const VkDeviceSize alignment =
         allocator->get_device()
@@ -254,8 +256,11 @@ TLAS::TLAS(std::shared_ptr<GPUAllocator> allocator,
             reinterpret_cast<const VkAccelerationStructureBuildRangeInfoKHR
                                  *const *>(tlas_build_range_infos));
     });
+
     std::vector<std::shared_ptr<Semaphore>> wait_semaphores;
-    timeline_->increment();
+    if (instances.size() > 0) {
+	timeline_->increment();
+    }
     wait_semaphores.push_back(timeline_);
     for (auto blas : bottom_structures) {
         std::shared_ptr<Semaphore> timeline = blas->get_timeline();
@@ -265,7 +270,6 @@ TLAS::TLAS(std::shared_ptr<GPUAllocator> allocator,
     allocator->get_device()->submit_command(
         build_command, std::move(wait_semaphores), {timeline_});
 
-    contained_structures_ = bottom_structures;
     instances_ = instances;
     command_pool_ = command_pool;
     ring_buffer_ = ring_buffer;
@@ -281,12 +285,20 @@ void TLAS::update_model_sbt_offsets(
     }
     timeline_->increment();
     timeline_->increment();
-    ring_buffer_->copy_to_device(
-        instances_buffer_, 0,
-        std::as_bytes(std::span<VkAccelerationStructureInstanceKHR>(
-            instances_.data(), instances_.size())),
-        {}, {timeline_});
-
+    if (instances_.size() * sizeof(VkAccelerationStructureInstanceKHR) > instances_buffer_->get_size()) {
+	instances_buffer_ = std::make_shared<GPUBuffer>(
+							instances_buffer_->get_allocator(),
+							2 * instances_.size() * sizeof(VkAccelerationStructureInstanceKHR),
+							round_up_pow2(sizeof(VkAccelerationStructureInstanceKHR)),
+							VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR |
+							VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT |
+							VK_BUFFER_USAGE_TRANSFER_DST_BIT,
+							VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, 0);
+    }
+    ring_buffer_->copy_to_device(instances_buffer_, 0,
+				 std::as_bytes(std::span<VkAccelerationStructureInstanceKHR>(instances_.data(), instances_.size())),
+				 {}, {timeline_});
+    
     VkAccelerationStructureGeometryInstancesDataKHR geometry_instances_data{};
     geometry_instances_data.sType =
         VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_INSTANCES_DATA_KHR;
@@ -344,6 +356,8 @@ TLAS::~TLAS() {
 }
 
 VkAccelerationStructureKHR &TLAS::get_tlas() { return tlas_; }
+
+std::vector<VkAccelerationStructureInstanceKHR> &TLAS::get_instances() { return instances_; }
 
 std::shared_ptr<Semaphore> TLAS::get_timeline() { return timeline_; }
 
