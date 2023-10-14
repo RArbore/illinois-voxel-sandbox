@@ -36,7 +36,7 @@ int main(int argc, char *argv[]) {
     auto object2 = build_object(context, model2, transform2);
 
     auto scene = build_scene(context, {object1});
-    add_object(context, scene, object2);
+    add_objects(context, scene, {object2});
 
     while (!window->should_close()) {
         window->poll_events();

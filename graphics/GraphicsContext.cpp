@@ -448,23 +448,27 @@ build_scene(std::shared_ptr<GraphicsContext> context,
     return scene;
 }
 
-void add_object(std::shared_ptr<GraphicsContext> context,
-                std::shared_ptr<GraphicsScene> scene,
-                std::shared_ptr<GraphicsObject> object) {
-    scene->objects_.emplace_back(object);
+void add_objects(std::shared_ptr<GraphicsContext> context,
+		 std::shared_ptr<GraphicsScene> scene,
+		 const std::vector<std::shared_ptr<GraphicsObject>> &objects) {
+    for (const auto object : objects) {
+	scene->objects_.emplace_back(object);
+    }
     std::unordered_map<std::shared_ptr<GraphicsModel>, size_t>
         referenced_models = scene->assemble_models();
 
-    VkTransformMatrixKHR transform{};
-    memcpy(&transform, &object->transform_, sizeof(VkTransformMatrixKHR));
-    uint32_t sbt_offset =
-        object->model_->chunk_->get_state() == VoxelChunk::State::GPU
+    for (const auto object : objects) {
+	VkTransformMatrixKHR transform{};
+	memcpy(&transform, &object->transform_, sizeof(VkTransformMatrixKHR));
+	uint32_t sbt_offset =
+	    object->model_->chunk_->get_state() == VoxelChunk::State::GPU
             ? object->model_->sbt_offset_
             : UNLOADED_SBT_OFFSET;
-    scene->tlas_->get_instances().emplace_back(
-        transform, referenced_models.at(object->model_), 0xFF, sbt_offset, 0,
-        object->model_->blas_->get_device_address());
-
+	scene->tlas_->get_instances().emplace_back(
+						   transform, referenced_models.at(object->model_), 0xFF, sbt_offset, 0,
+						   object->model_->blas_->get_device_address());
+    }
+    
     scene->tlas_->update_model_sbt_offsets({});
     if (scene->num_referenced_models_ != referenced_models.size()) {
         scene->num_referenced_models_ = referenced_models.size();
