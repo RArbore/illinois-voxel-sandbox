@@ -1,6 +1,11 @@
 #include "GPUAllocator.h"
 #include "utils/Assert.h"
 
+#define STB_IMAGE_IMPLEMENTATION
+#include <external/stb_image.h>
+
+#include <filesystem>
+
 GPUAllocator::GPUAllocator(std::shared_ptr<Device> device) : device_(device) {
     VmaAllocatorCreateInfo create_info{};
     create_info.instance = device->get_instance();
