@@ -4,17 +4,9 @@
 #extension GL_GOOGLE_include_directive : enable
 
 #include "common.glsl"
+#include "voxel_bsdf.glsl"
 
 layout(location = 0) rayPayloadInEXT RayPayload payload;
-
-const vec3 voxel_normals[6] = vec3[6](
-				      vec3(-1.0, 0.0, 0.0),
-				      vec3(1.0, 0.0, 0.0),
-				      vec3(0.0, -1.0, 0.0),
-				      vec3(0.0, 1.0, 0.0),
-				      vec3(0.0, 0.0, -1.0),
-				      vec3(0.0, 0.0, 1.0)
-				      );
 
 void main() {
     uint volume_id = gl_InstanceCustomIndexEXT;
