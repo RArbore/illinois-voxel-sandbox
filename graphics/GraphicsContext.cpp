@@ -49,7 +49,6 @@ class GraphicsContext {
     std::shared_ptr<GPUBuffer> unloaded_chunks_buffer_ = nullptr;
     std::span<std::byte> unloaded_chunks_span_;
 
-    VkSampler blue_noise_sampler_;
     std::shared_ptr<GPUImage> blue_noise_ = nullptr;
 
     std::shared_ptr<GPUImage> image_history_ = nullptr;
@@ -168,20 +167,7 @@ GraphicsContext::GraphicsContext(std::shared_ptr<Window> window) {
     image_history_ = std::make_shared<GPUImage>(gpu_allocator_, swapchain_->get_extent(), swapchain_->get_format(), 
         0, VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT, 1, 1);
 
-    // To-do: shift to helper function somewhere?
-    VkSamplerCreateInfo sampler_info{
-        .sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO,
-        .magFilter = VK_FILTER_NEAREST,
-        .minFilter = VK_FILTER_NEAREST,
-        .addressModeU = VK_SAMPLER_ADDRESS_MODE_REPEAT,
-        .addressModeV = VK_SAMPLER_ADDRESS_MODE_REPEAT,
-        .addressModeW = VK_SAMPLER_ADDRESS_MODE_REPEAT,
-    };
-
-    vkCreateSampler(device_->get_device(), &sampler_info, nullptr,
-                    &blue_noise_sampler_);
-
-    blue_noise_ = load_image(gpu_allocator_, command_pool_, "LDR_RGBA_0.png");
+    blue_noise_ = load_image(gpu_allocator_, ring_buffer_, "LDR_RGBA_0.png");
 
     DescriptorSetBuilder wide_builder(descriptor_allocator_);
     wide_builder.bind_buffer(0,
@@ -203,10 +189,10 @@ GraphicsContext::GraphicsContext(std::shared_ptr<Window> window) {
                             VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,
                             VK_SHADER_STAGE_RAYGEN_BIT_KHR);
     wide_builder.bind_image(3,
-                            {.sampler = blue_noise_sampler_,
+                            {.sampler = VK_NULL_HANDLE,
                              .imageView = blue_noise_->get_view(),
-                             .imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL},
-                            VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+                             .imageLayout = VK_IMAGE_LAYOUT_GENERAL},
+                            VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,
                             VK_SHADER_STAGE_RAYGEN_BIT_KHR);
     wide_descriptor_ = wide_builder.build();
 
@@ -242,7 +228,6 @@ GraphicsContext::~GraphicsContext() {
     vkDeviceWaitIdle(device_->get_device());
     unloaded_chunks_buffer_->cpu_unmap();
     camera_buffer_->cpu_unmap();
-    vkDestroySampler(device_->get_device(), blue_noise_sampler_, nullptr);
 }
 
 std::shared_ptr<GraphicsContext> create_graphics_context(std::shared_ptr<Window> window) {

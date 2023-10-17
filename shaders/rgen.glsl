@@ -35,9 +35,9 @@ void main() {
 
     uint t = camera.frames_since_update;
 
-    uvec2 blue_noise_size = textureSize(blue_noise, 0);
-    vec2 blue_noise_uv = ((gl_LaunchIDEXT.xy + ivec2(hash(t), hash(3 * t))) % blue_noise_size) / vec2(blue_noise_size);
-    vec4 random = texture(blue_noise, blue_noise_uv);
+    uvec2 blue_noise_size = imageSize(blue_noise);
+    ivec2 blue_noise_coords = ivec2((gl_LaunchIDEXT.xy + ivec2(hash(t), hash(3 * t))) % blue_noise_size);
+    vec4 random = imageLoad(blue_noise, blue_noise_coords);
 
     vec3 L = vec3(0.0f);
     vec3 weight = vec3(1.0f);
