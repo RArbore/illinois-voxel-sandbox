@@ -48,6 +48,9 @@ VoxelChunk::AttributeSet VoxelChunk::get_attribute_set() const {
 void VoxelChunk::queue_gpu_upload(std::shared_ptr<Device> device,
                                   std::shared_ptr<GPUAllocator> allocator,
                                   std::shared_ptr<RingBuffer> ring_buffer) {
+    if (state_ == State::GPU) {
+	return;
+    }
     ASSERT(state_ == State::CPU, "Tried to upload CPU data of voxel chunk to "
                                  "GPU without CPU data resident.");
     std::cout << "INFO: Queued upload to GPU for voxel chunk " << this
@@ -86,12 +89,49 @@ void VoxelChunk::queue_gpu_upload(std::shared_ptr<Device> device,
     timeline_->increment();
 }
 
+void VoxelChunk::queue_cpu_download(std::shared_ptr<Device> device,
+                                    std::shared_ptr<RingBuffer> ring_buffer) {
+    if (state_ == State::CPU) {
+	return;
+    }
+    ASSERT(state_ == State::GPU, "Tried to download GPU data of voxel chunk to "
+                                 "CPU without GPU data resident.");
+    std::cout << "INFO: Queued download to CPU for voxel chunk " << this
+              << ", which has the following dimensions: (" << width_ << ", "
+              << height_ << ", " << depth_ << ").\n";
+    switch (format_) {
+    case Format::Raw: {
+        volume_data_ = nullptr;
+        break;
+    }
+    case Format::SVO: {
+        buffer_data_ = nullptr;
+        break;
+    }
+    default: {
+        ASSERT(false, "GPU download for format is unimplemented.");
+    }
+    }
+    state_ = State::CPU;
+}
+
 VoxelChunk &VoxelChunkPtr::operator*() {
     return manager_->chunks_.at(chunk_idx_);
 }
 
 VoxelChunk *VoxelChunkPtr::operator->() {
     return &manager_->chunks_.at(chunk_idx_);
+}
+
+ChunkManager::ChunkManager() {
+    std::stringstream string_pointer;
+    string_pointer << this;
+    chunks_directory_ = "disk_chunks_" + string_pointer.str();
+    std::filesystem::create_directory(chunks_directory_);
+}
+
+ChunkManager::~ChunkManager() {
+    std::filesystem::remove_all(chunks_directory_);
 }
 
 VoxelChunkPtr ChunkManager::add_chunk(std::vector<std::byte> &&data,

@@ -10,3 +10,6 @@
 [submodule "external/libmorton"]
 	path = external/libmorton
 	url = https://github.com/Forceflow/libmorton.git
+[submodule "external/CTPL"]
+	path = external/CTPL
+	url = https://github.com/vit-vit/CTPL.git

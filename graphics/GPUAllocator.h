@@ -22,8 +22,14 @@ class GPUAllocator {
     VmaAllocator get_vma();
     std::shared_ptr<Device> get_device();
 
+    void bookkeep_alloc(VkDeviceSize size);
+    void bookkeep_free(VkDeviceSize size);
+    VkDeviceSize bookkeep_count();
+
   private:
     VmaAllocator allocator_;
+
+    VkDeviceSize num_bytes_allocated_ = 0;
 
     std::shared_ptr<Device> device_ = nullptr;
 };

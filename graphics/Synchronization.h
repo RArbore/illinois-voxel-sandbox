@@ -13,6 +13,7 @@ class Fence {
 
     void wait();
     void reset();
+    bool has_finished();
 
     VkFence get_fence();
 
@@ -30,6 +31,7 @@ class Semaphore {
     VkSemaphore get_semaphore();
 
     bool is_timeline();
+    bool has_reached_wait();
 
     uint64_t get_wait_value();
     uint64_t get_signal_value();

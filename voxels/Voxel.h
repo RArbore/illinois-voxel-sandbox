@@ -1,5 +1,6 @@
 #pragma once
 
+#include <filesystem>
 #include <set>
 #include <span>
 #include <unordered_set>
@@ -17,6 +18,7 @@ class VoxelChunk {
     enum class State {
         CPU,
         GPU,
+        Disk,
     };
 
     enum class Format {
@@ -46,6 +48,8 @@ class VoxelChunk {
     void queue_gpu_upload(std::shared_ptr<Device> device,
                           std::shared_ptr<GPUAllocator> allocator,
                           std::shared_ptr<RingBuffer> ring_buffer);
+    void queue_cpu_download(std::shared_ptr<Device> device,
+                            std::shared_ptr<RingBuffer> ring_buffer);
 
   private:
     std::vector<std::byte> cpu_data_;
@@ -75,12 +79,16 @@ class VoxelChunkPtr {
 
 class ChunkManager {
   public:
+    ChunkManager();
+    ~ChunkManager();
+
     VoxelChunkPtr add_chunk(std::vector<std::byte> &&data, uint32_t width,
                             uint32_t height, uint32_t depth,
                             VoxelChunk::Format format,
                             VoxelChunk::AttributeSet attribute_set);
 
   private:
+    std::filesystem::path chunks_directory_;
     std::vector<VoxelChunk> chunks_;
 
     friend class VoxelChunk;

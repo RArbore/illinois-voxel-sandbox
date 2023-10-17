@@ -24,9 +24,12 @@ class Camera {
     void mark_rendered() { frames_since_update_++; };
 
     void recompute_vectors();
+    void reset_frames_since_update();
 
     glm::mat4 get_view_inverse() const;
     CameraUB get_uniform_buffer() const;
+    glm::vec3 get_front() const;
+    glm::vec3 get_position() const;
 
   private:
     std::shared_ptr<Window> window_;
@@ -38,4 +41,5 @@ class Camera {
 
 std::shared_ptr<Camera> create_camera(std::shared_ptr<Window> window,
                                       const glm::vec3 &initial_pos, float pitch,
-                                      float yaw, float speed, float sensitivity);
+                                      float yaw, float speed,
+                                      float sensitivity);

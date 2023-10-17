@@ -9,7 +9,7 @@
 
 layout(location = 0) rayPayloadEXT RayPayload payload;
 
-const int MAX_BOUNCES = 8;
+const int MAX_BOUNCES = 3;
 
 uint hash(uint x) {
     x += (x << 10u);
@@ -33,7 +33,7 @@ void main() {
     vec3 ray_origin = (camera.view_inv * vec4(0.0f, 0.0f, 0.0f, 1.0f)).xyz;
     vec3 ray_direction = normalize((camera.view_inv * vec4(pixel_ndc.xy, 1.0f, 0.0)).xyz);
 
-    uint t = camera.frames_since_update;
+    uint t = camera.frames_since_update + uint(elapsed_ms);
 
     uvec2 blue_noise_size = imageSize(blue_noise);
     ivec2 blue_noise_coords = ivec2((gl_LaunchIDEXT.xy + ivec2(hash(t), hash(3 * t))) % blue_noise_size);
