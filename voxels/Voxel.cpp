@@ -48,6 +48,9 @@ VoxelChunk::AttributeSet VoxelChunk::get_attribute_set() const {
 void VoxelChunk::queue_gpu_upload(std::shared_ptr<Device> device,
                                   std::shared_ptr<GPUAllocator> allocator,
                                   std::shared_ptr<RingBuffer> ring_buffer) {
+    if (state_ == State::GPU) {
+	return;
+    }
     ASSERT(state_ == State::CPU, "Tried to upload CPU data of voxel chunk to "
                                  "GPU without CPU data resident.");
     std::cout << "INFO: Queued upload to GPU for voxel chunk " << this
@@ -88,6 +91,9 @@ void VoxelChunk::queue_gpu_upload(std::shared_ptr<Device> device,
 
 void VoxelChunk::queue_cpu_download(std::shared_ptr<Device> device,
                                     std::shared_ptr<RingBuffer> ring_buffer) {
+    if (state_ == State::CPU) {
+	return;
+    }
     ASSERT(state_ == State::GPU, "Tried to download GPU data of voxel chunk to "
                                  "CPU without GPU data resident.");
     std::cout << "INFO: Queued download to CPU for voxel chunk " << this

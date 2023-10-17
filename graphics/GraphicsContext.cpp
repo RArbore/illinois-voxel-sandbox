@@ -241,6 +241,9 @@ double render_frame(std::shared_ptr<GraphicsContext> context,
                     std::shared_ptr<GraphicsScene> scene,
                     glm::vec3 camera_position, glm::vec3 camera_front,
                     CameraUB camera_info) {
+    context->frame_fence_->wait();
+    context->frame_fence_->reset();
+
     std::vector<std::shared_ptr<Semaphore>> render_wait_semaphores{
         context->acquire_semaphore_};
     const bool changed_scenes = context->current_scene_ != scene;
@@ -259,8 +262,6 @@ double render_frame(std::shared_ptr<GraphicsContext> context,
         context->current_scene_ = scene;
     }
 
-    context->frame_fence_->wait();
-
     if (!changed_scenes) {
         context->check_chunk_request_buffer(render_wait_semaphores);
         if (context->frame_index_ % 512 == 0) {
@@ -269,8 +270,6 @@ double render_frame(std::shared_ptr<GraphicsContext> context,
             context->ring_buffer_->reap_in_flight_copies();
         }
     }
-
-    context->frame_fence_->reset();
 
     // To-do: histories should be recreated if the swapchain was recreated.
     // Alternatively, we can size the history to the max size somehow
@@ -416,8 +415,10 @@ build_scene(std::shared_ptr<GraphicsContext> context,
     for (const auto &object : objects) {
         VkTransformMatrixKHR transform{};
         memcpy(&transform, &object->transform_, sizeof(VkTransformMatrixKHR));
-        instances.emplace_back(transform, referenced_models.at(object->model_),
-                               0xFF, UNLOADED_SBT_OFFSET, 0,
+	auto model_idx = referenced_models.at(object->model_);
+	bool model_on_gpu = object->model_->chunk_->get_state() == VoxelChunk::State::GPU && !context->uploading_models_.contains(model_idx) && !context->downloading_models_.contains(model_idx);
+        instances.emplace_back(transform, model_idx,
+                               0xFF, model_on_gpu ? object->model_->sbt_offset_ : UNLOADED_SBT_OFFSET, 0,
                                object->model_->blas_->get_device_address());
     }
     std::shared_ptr<TLAS> tlas = std::make_shared<TLAS>(
