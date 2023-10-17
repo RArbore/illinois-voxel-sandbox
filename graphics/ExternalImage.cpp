@@ -28,7 +28,6 @@ std::shared_ptr<GPUImage> load_image(std::shared_ptr<GPUAllocator> allocator,
     auto image_span = std::span<std::byte>(reinterpret_cast<std::byte *>(pixels), image_size);
     ring_buffer->copy_to_device(texture_image, VK_IMAGE_LAYOUT_GENERAL, image_span, {}, {});
     
-    vkDeviceWaitIdle(allocator->get_device()->get_device());
     stbi_image_free(pixels);
 
     return texture_image;
