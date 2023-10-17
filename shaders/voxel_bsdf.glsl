@@ -26,15 +26,11 @@ const vec3 voxel_bitangents[6] = vec3[6](
                       );
 
 // Need to transform between local direction sampled from hemisphere and world normal
-vec3 local_to_world(const vec3 wo, uint voxel_face) {
-    vec3 normal = voxel_normals[voxel_face];
-    vec3 tangent = voxel_tangents[voxel_face];
-    vec3 bitangent = voxel_bitangents[voxel_face];
-
+vec3 local_to_world(const vec3 wo, const vec3 normal, const vec3 tangent, const vec3 bitangent) {
     return vec3(
         tangent.x * wo.x + normal.x * wo.y + bitangent.x * wo.z,
         tangent.y * wo.x + normal.y * wo.y + bitangent.y * wo.z,
-        tangent.y * wo.z + normal.z * wo.z + bitangent.z * wo.z
+        tangent.z * wo.x + normal.z * wo.y + bitangent.z * wo.z
     );
 }
 

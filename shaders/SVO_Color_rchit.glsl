@@ -17,6 +17,8 @@ void main() {
     payload.hit = true;
     payload.world_position = gl_WorldRayOriginEXT + gl_WorldRayDirectionEXT * gl_HitTEXT;
     payload.world_normal = gl_ObjectToWorldEXT * vec4(voxel_normals[gl_HitKindEXT], 0.0);
+    payload.tangent = gl_ObjectToWorldEXT * vec4(voxel_tangents[gl_HitKindEXT], 0.0);
+    payload.bitangent = gl_ObjectToWorldEXT * vec4(voxel_bitangents[gl_HitKindEXT], 0.0);
     payload.color = vec4(
 	       float(int(color.red_)) / 255.0,
 	       float(int(color.green_)) / 255.0,
