@@ -83,14 +83,16 @@ std::shared_ptr<GPUImage> load_image(std::shared_ptr<GPUAllocator> allocator,
     stbi_image_free(pixels);
 
     VkFormat format = VK_FORMAT_R8G8B8A8_UNORM;
-    VkExtent2D extent = {.width = width, .height = height};
+    VkExtent2D extent = {.width = static_cast<uint32_t>(width), .height = static_cast<uint32_t>(height)};
     VkImageUsageFlags image_flags =
         VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
     VkMemoryPropertyFlags memory_flags = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
 
     std::shared_ptr<GPUImage> texture_image = std::make_shared<GPUImage>(
-        allocator, extent, format, image_flags, memory_flags, 0, 1, 1);
+        allocator, extent, format, 0, image_flags, memory_flags, 0, 1, 1);
 
     copy_buffer_to_image(command_pool, staging_buffer, texture_image, width, height);
+
+    return texture_image;
 }
 

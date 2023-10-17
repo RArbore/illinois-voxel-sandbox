@@ -8,6 +8,8 @@
 
 layout(location = 0) rayPayloadEXT RayPayload payload;
 
+const int MAX_BOUNCES = 2;
+
 void main() {
     float t = float(elapsed_ms);
 
@@ -19,7 +21,6 @@ void main() {
     vec3 direction = normalize((camera.view_inv * vec4(pixel_ndc.xy, 1.0f, 0.0)).xyz);
     traceRayEXT(tlas, gl_RayFlagsOpaqueEXT, 0xFF, 0, 0, 0, origin, 0.001f, direction, 10000.0f, 0);
 
-    // Temporary accumulation test
     vec4 L = vec4(0.0f, 0.0f, 0.0f, 1.0f);
     if (payload.hit) {
         // If we've hit something, we send another ray in a random direction.
@@ -42,7 +43,7 @@ void main() {
             L = color;
         //}
     }
-    L = payload.color;
+    L = texture(blue_noise, pixel_uv);
 
     if (camera.frames_since_update == 0) {
         imageStore(image_history, ivec2(gl_LaunchIDEXT), L);

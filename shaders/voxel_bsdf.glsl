@@ -13,7 +13,7 @@ const vec3 voxel_tangents[6] = vec3[6](
                       vec3(1.0, 0.0, 0.0), // tangent for -y
                       vec3(1.0, 0.0, 0.0), // tangent for y
                       vec3(0.0, 1.0, 0.0), // tangent for -z
-                      vec3(0.0, 1.0, 0.0), // tangent for z
+                      vec3(0.0, 1.0, 0.0) // tangent for z
                       );
 
 const vec3 voxel_bitangents[6] = vec3[6](
@@ -34,7 +34,7 @@ vec3 local_to_world(const vec3 wo, int voxel_face) {
     return vec3(
         tangent.x * wo.x + bitangent.x * wo.y + normal.x * wo.z,
         tangent.y * wo.x + bitangent.y * wo.y + normal.y * wo.z,
-        tangent.y * wo.z + bitangent.z * wo.z + normal.z * wo.z,
+        tangent.y * wo.z + bitangent.z * wo.z + normal.z * wo.z
     );
 }
 
