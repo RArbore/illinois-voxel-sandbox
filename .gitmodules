@@ -13,3 +13,6 @@
 [submodule "external/CTPL"]
 	path = external/CTPL
 	url = https://github.com/vit-vit/CTPL.git
+[submodule "external/enkimi"]
+	path = external/enkimi
+	url = https://github.com/dougbinks/enkiMI
