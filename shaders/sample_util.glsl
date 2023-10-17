@@ -4,12 +4,6 @@ const float PI_2 = 1.57079632679f;
 const float PI_4 = 0.78539816339f;
 const float INV_PI = 0.31830988618f;
 
-// Temporary pseudo-random implementation for GLSL adapted from
-// https://stackoverflow.com/questions/4200224/random-noise-functions-for-glsl
-float rand(vec2 co){
-    return fract(sin(dot(co, vec2(12.9898, 78.233))) * 43758.5453);
-}
-
 // Utility to sample different distributions
 // given a random value where each component is uniformly sampled from [0, 1]/
 // Reference implementations from PBRTv3.

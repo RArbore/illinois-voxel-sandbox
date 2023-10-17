@@ -14,7 +14,7 @@ hitAttributeEXT uint voxel_normal_id;
 void main() {
     uint svo_id = gl_InstanceCustomIndexEXT;
     SVOLeaf_Color color = svo_leaf_color_buffers[svo_id].nodes[leaf_id];
-    payload.hit = false;
+    payload.hit = true;
     payload.world_position = gl_WorldRayOriginEXT + gl_WorldRayDirectionEXT * gl_HitTEXT;
     payload.world_normal = gl_ObjectToWorldEXT * vec4(voxel_normals[gl_HitKindEXT], 0.0);
     payload.color = vec4(
@@ -23,4 +23,5 @@ void main() {
 	       float(int(color.blue_)) / 255.0,
 	       float(int(color.alpha_)) / 255.0
 	       );
+    payload.voxel_face = gl_HitKindEXT;
 }

@@ -5,55 +5,69 @@
 
 #include "common.glsl"
 #include "sample_util.glsl"
+#include "voxel_bsdf.glsl"
 
 layout(location = 0) rayPayloadEXT RayPayload payload;
 
-const int MAX_BOUNCES = 2;
+const int MAX_BOUNCES = 8;
+
+uint hash(uint x) {
+    x += (x << 10u);
+    x ^= (x >> 6u);
+    x += (x << 3u);
+    x ^= (x >> 11u);
+    x += (x << 15u);
+    return x;
+}
 
 void main() {
-    float t = float(elapsed_ms);
-
     // Setup and shoot the camera ray first
     const vec2 pixel_center = vec2(gl_LaunchIDEXT.xy) + 0.5;
     const vec2 pixel_uv = pixel_center / vec2(gl_LaunchSizeEXT.xy);
     const vec2 pixel_ndc = 2.0f * pixel_uv - 1.0f;
-    vec3 origin = (camera.view_inv * vec4(0.0f, 0.0f, 0.0f, 1.0f)).xyz;
-    vec3 direction = normalize((camera.view_inv * vec4(pixel_ndc.xy, 1.0f, 0.0)).xyz);
-    traceRayEXT(tlas, gl_RayFlagsOpaqueEXT, 0xFF, 0, 0, 0, origin, 0.001f, direction, 10000.0f, 0);
+    vec3 ray_origin = (camera.view_inv * vec4(0.0f, 0.0f, 0.0f, 1.0f)).xyz;
+    vec3 ray_direction = normalize((camera.view_inv * vec4(pixel_ndc.xy, 1.0f, 0.0)).xyz);
 
-    vec4 L = vec4(0.0f, 0.0f, 0.0f, 1.0f);
-    if (payload.hit) {
+    uint t = camera.frames_since_update;
+
+    uvec2 blue_noise_size = textureSize(blue_noise, 0);
+    uvec2 blue_noise_uv = (gl_LaunchIDEXT.xy + ivec2(hash(t), hash(3 * t))) % blue_noise_size;
+    vec4 random = texture(blue_noise, blue_noise_uv);
+
+    vec3 L = vec3(0.0f);
+    vec3 weight = vec3(1.0f);
+    for (int bounce = 0; bounce < MAX_BOUNCES; bounce++) {
+        traceRayEXT(tlas, gl_RayFlagsOpaqueEXT, 0xFF, 0, 0, 0, ray_origin, 0.001f, ray_direction, 10000.0f, 0);
+
         // If we've hit something, we send another ray in a random direction.
-        // If the next bounce hits the sky, we get the sky color.
-        // Otherwise, we terminate the path to fake an ambient occlusion.
-        vec4 color = payload.color;
-    
-        // Hack: super weird, not a great random number generator,
-        // and we're sampling a unit sphere instead of local hemisphere,
-        // so there's basically a 50% chance of getting a self-intersection.
-        vec2 rand_uv = vec2(rand(vec2(pixel_uv * pixel_uv * t)), rand(vec2(pixel_uv * t * t)));
-        rand_uv.x *= PI;
-        rand_uv.y *= 2.0f * PI;
+        // Otherwise assume we hit the sky.
+        // Note that this is **only** doing indirect lighting.
+        if (payload.hit) {
+            // Choose a new direction and evaluate the BRDF/PDF
+            blue_noise_uv = (blue_noise_uv + ivec2(hash(4 * t + bounce), hash(2 * t + 3 * bounce))) % blue_noise_size;
+            random = texture(blue_noise, blue_noise_uv);
 
-        vec3 new_direction = vec3(sin(rand_uv.x) * cos(rand_uv.y), cos(rand_uv.x), sin(rand_uv.x) * sin(rand_uv.y));
-        vec3 new_origin = payload.world_position;
-        traceRayEXT(tlas, gl_RayFlagsOpaqueEXT, 0xFF, 0, 0, 0, new_origin, 0.001f, new_direction, 10.0f, 0);
+            vec3 new_local_direction = cosine_sample_hemisphere(random.xy);
+            float pdf = dot(vec3(0.0f, 1.0f, 0.0f), new_local_direction) * INV_PI; // cosine-weighted sampling
+            vec3 bsdf = payload.color.xyz * INV_PI;
 
-        //if (!payload.hit) {
-            L = color;
-        //}
+            // Set up the new ray
+            vec3 new_direction = local_to_world(payload.world_normal, payload.voxel_face);
+            weight *= bsdf * abs(dot(-ray_direction, payload.world_normal)) / pdf;
+            ray_origin = payload.world_position;
+            ray_direction = new_direction;
+        } else {
+            L += weight * payload.color.xyz; // add the sky color if the first ray is a miss
+            break;
+        }
     }
-    L = texture(blue_noise, pixel_uv);
+    vec4 final_radiance = vec4(L, 1.0f);
 
     if (camera.frames_since_update == 0) {
-        imageStore(image_history, ivec2(gl_LaunchIDEXT), L);
+        imageStore(image_history, ivec2(gl_LaunchIDEXT), final_radiance);
     } else {
         vec4 history = imageLoad(image_history, ivec2(gl_LaunchIDEXT));
-        // vec4 final_color = mix(history, L, 1.0f / (camera.frames_since_update + 1));
-        vec4 final_color = history;
-        if (L.x > 0 || L.y > 0 || L.z > 0) {
-            final_color = L;
-        }
-        imageStore(image_history, ivec2(gl_LaunchIDEXT), L);
+        vec4 final_color = mix(history, final_radiance, 1.0f / (camera.frames_since_update + 1));
+        imageStore(image_history, ivec2(gl_LaunchIDEXT), final_radiance);
     }
 }

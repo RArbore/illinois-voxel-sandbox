@@ -28,6 +28,7 @@ struct RayPayload {
     vec4 color;
     vec3 world_position;
     vec3 world_normal;
+    uint voxel_face;
     bool hit;
 };
 

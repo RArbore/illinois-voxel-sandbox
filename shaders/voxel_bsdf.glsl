@@ -26,7 +26,7 @@ const vec3 voxel_bitangents[6] = vec3[6](
                       );
 
 // Need to transform between local direction sampled from hemisphere and world normal
-vec3 local_to_world(const vec3 wo, int voxel_face) {
+vec3 local_to_world(const vec3 wo, uint voxel_face) {
     vec3 normal = voxel_normals[voxel_face];
     vec3 tangent = voxel_tangents[voxel_face];
     vec3 bitangent = voxel_bitangents[voxel_face];
@@ -39,7 +39,7 @@ vec3 local_to_world(const vec3 wo, int voxel_face) {
 }
 
 // Want to evaluate incoming light direction in local space
-vec3 world_to_local(const vec3 wi, int voxel_face) {
+vec3 world_to_local(const vec3 wi, uint voxel_face) {
     vec3 normal = voxel_normals[voxel_face];
     vec3 tangent = voxel_tangents[voxel_face];
     vec3 bitangent = voxel_bitangents[voxel_face];
