@@ -19,6 +19,12 @@ class RingBuffer {
                    std::vector<std::shared_ptr<Semaphore>> signal_semaphores);
 
     void
+    copy_to_device(std::shared_ptr<GPUImage> dst, VkImageLayout dst_layout,
+                   std::span<const std::byte> src,
+                   std::vector<std::shared_ptr<Semaphore>> wait_semaphores,
+                   std::vector<std::shared_ptr<Semaphore>> signal_semaphores);
+
+    void
     copy_to_device(std::shared_ptr<GPUVolume> dst, VkImageLayout dst_layout,
                    std::span<const std::byte> src,
                    std::vector<std::shared_ptr<Semaphore>> wait_semaphores,

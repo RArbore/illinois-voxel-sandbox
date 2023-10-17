@@ -28,6 +28,9 @@ struct RayPayload {
     vec4 color;
     vec3 world_position;
     vec3 world_normal;
+    vec3 tangent;
+    vec3 bitangent;
+    uint voxel_face;
     bool hit;
 };
 
@@ -60,7 +63,7 @@ layout(set = 2, binding = 0) buffer chunk_request_buffer_ {
 
 struct Camera {
     mat4 view_inv; // view space to world space
-    int frames_since_update; // accumulated frames since the camera hasn't moved
+    highp int frames_since_update; // accumulated frames since the camera hasn't moved
 };
 
 layout(set = 2, binding = 1) uniform camera_ {
@@ -68,5 +71,7 @@ layout(set = 2, binding = 1) uniform camera_ {
 };
 
 layout(set = 2, binding = 2, rgba8) uniform image2D image_history;
+
+layout(set = 2, binding = 3, rgba8) uniform image2D blue_noise;
 
 const float FAR_AWAY = 1000.0;

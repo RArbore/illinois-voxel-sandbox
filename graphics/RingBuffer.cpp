@@ -107,6 +107,75 @@ void RingBuffer::copy_to_device(
 }
 
 void RingBuffer::copy_to_device(
+    std::shared_ptr<GPUImage> dst, VkImageLayout dst_layout,
+    std::span<const std::byte> src,
+    std::vector<std::shared_ptr<Semaphore>> wait_semaphores,
+    std::vector<std::shared_ptr<Semaphore>> signal_semaphores) {
+    const VkDeviceSize size = buffer_->get_size();
+    ASSERT(src.size() <= size, "Copy size is too large for ring buffer.");
+
+    const bool wraparound_necessary =
+        ((virtual_counter_ % size) + src.size()) > size;
+    if (wraparound_necessary) {
+        virtual_counter_ += size - (virtual_counter_ % size);
+    }
+
+    const bool blocked = !in_flight_copies_.empty() &&
+                         (in_flight_copies_.front().virtual_counter_ + size) <
+                             virtual_counter_ + src.size();
+    if (blocked) {
+        in_flight_copies_.front().fence_->wait();
+        in_flight_copies_.front().fence_->reset();
+        free_copy_resources_.emplace_back(in_flight_copies_.front().command_,
+                                          in_flight_copies_.front().fence_);
+        in_flight_copies_.pop_front();
+    } else if (free_copy_resources_.empty()) {
+        free_copy_resources_.emplace_back(
+            std::make_shared<Command>(command_pool_),
+            std::make_shared<Fence>(device_, false));
+    }
+
+    const auto [command, fence] = free_copy_resources_.back();
+    free_copy_resources_.pop_back();
+
+    void *const dst_ptr = buffer_map_.data() + (virtual_counter_ % size);
+    memcpy(dst_ptr, src.data(), src.size());
+
+    Barrier layout_barrier(
+        device_, VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT,
+        VK_ACCESS_2_MEMORY_READ_BIT | VK_ACCESS_2_MEMORY_WRITE_BIT,
+        VK_PIPELINE_STAGE_2_COPY_BIT, VK_ACCESS_2_MEMORY_WRITE_BIT,
+        dst->get_image(), VK_IMAGE_LAYOUT_UNDEFINED, dst_layout);
+
+    command->record([&](VkCommandBuffer command) {
+        layout_barrier.record(command);
+
+        VkBufferImageCopy copy{};
+        copy.bufferOffset = virtual_counter_ % size;
+        copy.bufferRowLength = 0;
+        copy.bufferImageHeight = 0;
+        copy.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+        copy.imageSubresource.layerCount = 1;
+        copy.imageOffset = {0, 0, 0};
+        copy.imageExtent.width = dst->get_extent().width;
+        copy.imageExtent.height = dst->get_extent().height;
+        copy.imageExtent.depth = 1;
+        vkCmdCopyBufferToImage(command, buffer_->get_buffer(), dst->get_image(),
+                               dst_layout, 1, &copy);
+    });
+    device_->submit_command(command, wait_semaphores, signal_semaphores, fence);
+
+    InFlightCopy copy{};
+    copy.command_ = command;
+    copy.fence_ = fence;
+    copy.virtual_counter_ = virtual_counter_;
+    copy.size_ = src.size();
+    copy.gpu_image_ = dst;
+    in_flight_copies_.push_back(copy);
+    virtual_counter_ += src.size();
+}
+
+void RingBuffer::copy_to_device(
     std::shared_ptr<GPUVolume> dst, VkImageLayout dst_layout,
     std::span<const std::byte> src,
     std::vector<std::shared_ptr<Semaphore>> wait_semaphores,
