@@ -29,11 +29,6 @@ vec2 concentric_sample_disc(const vec2 uv) {
 
 vec3 cosine_sample_hemisphere(const vec2 uv) {
     const vec2 disc = concentric_sample_disc(uv);
-<<<<<<< HEAD
     float up = sqrt(max(0.0f, 1 - disc.x * disc.x - disc.y * disc.y));
     return normalize(vec3(disc.x, up, disc.y));
-=======
-    float z = sqrt(max(0.0f, 1 - disc.x * disc.x - disc.y * disc.y));
-    return vec3(disc.x, disc.y, z);
->>>>>>> main
 }
