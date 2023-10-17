@@ -17,8 +17,8 @@ const vec3 voxel_tangents[6] = vec3[6](
                       );
 
 const vec3 voxel_bitangents[6] = vec3[6](
-                      vec3(0.0, 0.0, 1.0),  // bitangent for -x
-                      vec3(0.0, 0.0, -1.0), // bitangent for x
+                      vec3(0.0, 0.0, -1.0),  // bitangent for -x
+                      vec3(0.0, 0.0, 1.0), // bitangent for x
                       vec3(0.0, 0.0, 1.0),  // bitangent for -y
                       vec3(0.0, 0.0, -1.0), // bitangent for y
                       vec3(1.0, 0.0, 0.0),  // bitangent for -z
@@ -32,9 +32,9 @@ vec3 local_to_world(const vec3 wo, uint voxel_face) {
     vec3 bitangent = voxel_bitangents[voxel_face];
 
     return vec3(
-        tangent.x * wo.x + bitangent.x * wo.y + normal.x * wo.z,
-        tangent.y * wo.x + bitangent.y * wo.y + normal.y * wo.z,
-        tangent.y * wo.z + bitangent.z * wo.z + normal.z * wo.z
+        tangent.x * wo.x + normal.x * wo.y + bitangent.x * wo.z,
+        tangent.y * wo.x + normal.y * wo.y + bitangent.y * wo.z,
+        tangent.y * wo.z + normal.z * wo.z + bitangent.z * wo.z
     );
 }
 
@@ -44,5 +44,5 @@ vec3 world_to_local(const vec3 wi, uint voxel_face) {
     vec3 tangent = voxel_tangents[voxel_face];
     vec3 bitangent = voxel_bitangents[voxel_face];
 
-    return vec3(dot(wi, tangent), dot(wi, bitangent), dot(wi, normal));
+    return vec3(dot(wi, tangent), dot(wi, normal), dot(wi, bitangent));
 }

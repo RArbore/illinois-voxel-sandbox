@@ -5,7 +5,7 @@ const float PI_4 = 0.78539816339f;
 const float INV_PI = 0.31830988618f;
 
 // Utility to sample different distributions
-// given a random value where each component is uniformly sampled from [0, 1]/
+// given a random value where each component is uniformly sampled from [0, 1].
 // Reference implementations from PBRTv3.
 
 vec2 concentric_sample_disc(const vec2 uv) {
@@ -29,6 +29,6 @@ vec2 concentric_sample_disc(const vec2 uv) {
 
 vec3 cosine_sample_hemisphere(const vec2 uv) {
     const vec2 disc = concentric_sample_disc(uv);
-    float z = sqrt(max(0.0f, 1 - disc.x * disc.x - disc.y * disc.y));
-    return vec3(disc.x, disc.y, z);
+    float up = sqrt(max(0.0f, 1 - disc.x * disc.x - disc.y * disc.y));
+    return normalize(vec3(disc.x, up, disc.y));
 }

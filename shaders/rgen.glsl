@@ -20,6 +20,12 @@ uint hash(uint x) {
     return x;
 }
 
+vec2 slice_2_from_4(vec4 random, uint num) {
+    uint slice = (num + camera.frames_since_update) % 4;
+    return random.xy * float(slice == 0) + random.yz * float(slice == 1) + random.zw * float(slice == 2) + random.wx * float(slice == 3);
+}
+
+
 void main() {
     // Setup and shoot the camera ray first
     const vec2 pixel_center = vec2(gl_LaunchIDEXT.xy) + 0.5;
@@ -47,7 +53,7 @@ void main() {
             blue_noise_uv = (blue_noise_uv + ivec2(hash(4 * t + bounce), hash(2 * t + 3 * bounce))) % blue_noise_size;
             random = texture(blue_noise, blue_noise_uv);
 
-            vec3 new_local_direction = cosine_sample_hemisphere(random.xy);
+            vec3 new_local_direction = cosine_sample_hemisphere(slice_2_from_4(random, bounce));
             float pdf = dot(vec3(0.0f, 1.0f, 0.0f), new_local_direction) * INV_PI; // cosine-weighted sampling
             vec3 bsdf = payload.color.xyz * INV_PI;
 
@@ -68,6 +74,6 @@ void main() {
     } else {
         vec4 history = imageLoad(image_history, ivec2(gl_LaunchIDEXT));
         vec4 final_color = mix(history, final_radiance, 1.0f / (camera.frames_since_update + 1));
-        imageStore(image_history, ivec2(gl_LaunchIDEXT), final_radiance);
+        imageStore(image_history, ivec2(gl_LaunchIDEXT), final_color);
     }
 }
