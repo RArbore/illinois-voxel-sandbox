@@ -6,13 +6,15 @@
 
 class AnvilLoader {
 public:
-    explicit AnvilLoader(const std::string &filePath);
+    AnvilLoader(const std::string &filePath, std::shared_ptr<GraphicsContext> context, const ChunkManager &chunkManager);
 
-    std::vector<GraphicsModel> build_models();
+    std::vector<std::pair<glm::mat3x4, std::shared_ptr<GraphicsModel>>> build_models();
+
+    std::shared_ptr<GraphicsScene> build_scene();
 private:
-    void loadRegion();
-
     std::string filePath;
+    std::shared_ptr<GraphicsContext> context;
+    ChunkManager chunk_manager;
 };
 
 #endif // ILLINOIS_VOXEL_SANDBOX_ANVILLOADER_H

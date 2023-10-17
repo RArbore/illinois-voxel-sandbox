@@ -21,4 +21,5 @@ endfunction()
 
 DEFINE_EXE(ivs)
 DEFINE_EXE(model_viewer)
+DEFINE_EXE(minecraft_viewer)
 DEFINE_EXE(benchmark_graphics)
