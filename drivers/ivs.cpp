@@ -41,6 +41,7 @@ int main(int argc, char *argv[]) {
 	    transform1[1][3] -= 8.0F;
 	    object1 = build_object(context, model1, transform1);
 	    scene = build_scene(context, {object1});
+	    camera->reset_frames_since_update();
 	    elapsed = 0.0;
 	}
     }

@@ -24,6 +24,7 @@ class Camera {
     void mark_rendered() { frames_since_update_++; };
 
     void recompute_vectors();
+    void reset_frames_since_update();
 
     glm::mat4 get_view_inverse() const;
     CameraUB get_uniform_buffer() const;

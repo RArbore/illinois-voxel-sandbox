@@ -46,8 +46,8 @@ class GraphicsContext {
     std::shared_ptr<GPUBuffer> camera_buffer_ = nullptr;
     std::span<std::byte> camera_span_;
 
-    std::shared_ptr<GPUBuffer> unloaded_chunks_buffer_ = nullptr;
-    std::span<std::byte> unloaded_chunks_span_;
+    std::shared_ptr<GPUBuffer> chunk_request_buffer_ = nullptr;
+    std::span<std::byte> chunk_request_span_;
 
     std::shared_ptr<GPUImage> blue_noise_ = nullptr;
 
@@ -152,16 +152,16 @@ GraphicsContext::GraphicsContext(std::shared_ptr<Window> window) {
                                VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR |
                                    VK_SHADER_STAGE_INTERSECTION_BIT_KHR);
 
-    unloaded_chunks_buffer_ = std::make_shared<GPUBuffer>(
+    chunk_request_buffer_ = std::make_shared<GPUBuffer>(
         gpu_allocator_, MAX_NUM_CHUNKS_LOADED_PER_FRAME * sizeof(uint64_t),
         sizeof(uint64_t), VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
         VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
             VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
         VMA_ALLOCATION_CREATE_HOST_ACCESS_RANDOM_BIT);
-    unloaded_chunks_span_ = unloaded_chunks_buffer_->cpu_map();
-    uint64_t *crb = reinterpret_cast<uint64_t *>(unloaded_chunks_span_.data());
+    chunk_request_span_ = chunk_request_buffer_->cpu_map();
+    uint64_t *crb = reinterpret_cast<uint64_t *>(chunk_request_span_.data());
     for (uint32_t i = 0; i < MAX_NUM_CHUNKS_LOADED_PER_FRAME; ++i) {
-        crb[i] = 0xFFFFFFFF;
+        crb[i] = 0x00000000FFFFFFFF;
     }
 
     camera_buffer_ = std::make_shared<GPUBuffer>(
@@ -182,9 +182,9 @@ GraphicsContext::GraphicsContext(std::shared_ptr<Window> window) {
 
     DescriptorSetBuilder wide_builder(descriptor_allocator_);
     wide_builder.bind_buffer(0,
-                             {.buffer = unloaded_chunks_buffer_->get_buffer(),
+                             {.buffer = chunk_request_buffer_->get_buffer(),
                               .offset = 0,
-                              .range = unloaded_chunks_buffer_->get_size()},
+                              .range = chunk_request_buffer_->get_size()},
                              VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
                              VK_SHADER_STAGE_INTERSECTION_BIT_KHR);
     wide_builder.bind_buffer(1,
@@ -237,7 +237,7 @@ GraphicsContext::GraphicsContext(std::shared_ptr<Window> window) {
 
 GraphicsContext::~GraphicsContext() {
     vkDeviceWaitIdle(device_->get_device());
-    unloaded_chunks_buffer_->cpu_unmap();
+    chunk_request_buffer_->cpu_unmap();
     camera_buffer_->cpu_unmap();
 }
 
@@ -452,16 +452,19 @@ build_scene(std::shared_ptr<GraphicsContext> context,
 
 void GraphicsContext::check_chunk_request_buffer(
     std::vector<std::shared_ptr<Semaphore>> &render_wait_semaphores) {
-    uint64_t *crb = reinterpret_cast<uint64_t *>(unloaded_chunks_span_.data());
+    uint32_t *crb = reinterpret_cast<uint32_t *>(chunk_request_span_.data());
     std::unordered_map<uint64_t, uint32_t> deduplicated_requests;
     std::vector<std::shared_ptr<GraphicsModel>> scene_models =
         current_scene_->assemble_models_in_order();
     for (uint32_t i = 0; i < MAX_NUM_CHUNKS_LOADED_PER_FRAME; ++i) {
-        if (crb[i] != 0xFFFFFFFF) {
-            deduplicated_requests.emplace(crb[i],
-                                          scene_models.at(crb[i])->sbt_offset_);
-            crb[i] = 0xFFFFFFFF;
+	uint32_t num_rays = 2 * i;
+	uint32_t crb_model = 2 * i + 1;
+        if (crb[crb_model] != 0xFFFFFFFF && crb[num_rays] >= 128) {
+            deduplicated_requests.emplace(crb[crb_model],
+                                          scene_models.at(crb[crb_model])->sbt_offset_);
         }
+	crb[num_rays] = 0;
+	crb[crb_model] = 0xFFFFFFFF;
     }
     for (auto [model_idx, sbt_offset] : deduplicated_requests) {
         if (!uploading_models_.contains(model_idx) &&

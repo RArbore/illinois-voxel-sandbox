@@ -50,6 +50,10 @@ void Camera::recompute_vectors() {
     right_ = glm::normalize(glm::cross(front_, world_up_));
 }
 
+void Camera::reset_frames_since_update() {
+    frames_since_update_ = 0;
+}
+
 void Camera::handle_keys(float delta_t) {
     auto glfw_window = window_->get_window();
     if (glfwGetKey(glfw_window, GLFW_KEY_W) == GLFW_PRESS) {
