@@ -4,14 +4,8 @@ const float PI_2 = 1.57079632679f;
 const float PI_4 = 0.78539816339f;
 const float INV_PI = 0.31830988618f;
 
-// Temporary pseudo-random implementation for GLSL adapted from
-// https://stackoverflow.com/questions/4200224/random-noise-functions-for-glsl
-float rand(vec2 co){
-    return fract(sin(dot(co, vec2(12.9898, 78.233))) * 43758.5453);
-}
-
 // Utility to sample different distributions
-// given a random value where each component is uniformly sampled from [0, 1]/
+// given a random value where each component is uniformly sampled from [0, 1].
 // Reference implementations from PBRTv3.
 
 vec2 concentric_sample_disc(const vec2 uv) {
@@ -35,6 +29,6 @@ vec2 concentric_sample_disc(const vec2 uv) {
 
 vec3 cosine_sample_hemisphere(const vec2 uv) {
     const vec2 disc = concentric_sample_disc(uv);
-    float z = sqrt(max(0.0f, 1 - disc.x * disc.x - disc.y * disc.y));
-    return vec3(disc.x, disc.y, z);
+    float up = sqrt(max(0.0f, 1 - disc.x * disc.x - disc.y * disc.y));
+    return normalize(vec3(disc.x, up, disc.y));
 }

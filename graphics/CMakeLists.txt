@@ -6,6 +6,7 @@ set(GRAPHICS_SRC
   Window.cpp
   Device.cpp
   GPUAllocator.cpp
+  ExternalImage.cpp
   Swapchain.cpp
   Command.cpp
   Pipeline.cpp
@@ -26,3 +27,5 @@ if (UNIX)
     find_package(glfw3 REQUIRED)
 endif ()
 target_link_libraries(graphics PUBLIC glfw)
+
+target_compile_definitions(graphics PRIVATE ASSET_DIRECTORY="${CMAKE_SOURCE_DIR}/assets")

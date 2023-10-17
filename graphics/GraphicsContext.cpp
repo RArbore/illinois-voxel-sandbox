@@ -6,6 +6,7 @@
 #include "Command.h"
 #include "Descriptor.h"
 #include "Device.h"
+#include "ExternalImage.h"
 #include "GPUAllocator.h"
 #include "Geometry.h"
 #include "GraphicsContext.h"
@@ -47,6 +48,8 @@ class GraphicsContext {
 
     std::shared_ptr<GPUBuffer> unloaded_chunks_buffer_ = nullptr;
     std::span<std::byte> unloaded_chunks_span_;
+
+    std::shared_ptr<GPUImage> blue_noise_ = nullptr;
 
     std::shared_ptr<GPUImage> image_history_ = nullptr;
 
@@ -164,6 +167,8 @@ GraphicsContext::GraphicsContext(std::shared_ptr<Window> window) {
     image_history_ = std::make_shared<GPUImage>(gpu_allocator_, swapchain_->get_extent(), swapchain_->get_format(), 
         0, VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT, 1, 1);
 
+    blue_noise_ = load_image(gpu_allocator_, ring_buffer_, "LDR_RGBA_0.png");
+
     DescriptorSetBuilder wide_builder(descriptor_allocator_);
     wide_builder.bind_buffer(0,
                              {.buffer = unloaded_chunks_buffer_->get_buffer(),
@@ -180,6 +185,12 @@ GraphicsContext::GraphicsContext(std::shared_ptr<Window> window) {
     wide_builder.bind_image(2,
                             {.sampler = VK_NULL_HANDLE,
                              .imageView = image_history_->get_view(),
+                             .imageLayout = VK_IMAGE_LAYOUT_GENERAL},
+                            VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,
+                            VK_SHADER_STAGE_RAYGEN_BIT_KHR);
+    wide_builder.bind_image(3,
+                            {.sampler = VK_NULL_HANDLE,
+                             .imageView = blue_noise_->get_view(),
                              .imageLayout = VK_IMAGE_LAYOUT_GENERAL},
                             VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,
                             VK_SHADER_STAGE_RAYGEN_BIT_KHR);

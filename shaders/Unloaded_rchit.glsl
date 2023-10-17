@@ -8,6 +8,6 @@
 layout(location = 0) rayPayloadInEXT RayPayload hit;
 
 void main() {
-    hit.hit = false;
+    hit.hit = true;
     hit.color = vec4(0.0, 0.0, 0.0, 1.0);
 }
