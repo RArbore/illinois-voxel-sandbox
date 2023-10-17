@@ -8,7 +8,7 @@ int main(int argc, char *argv[]) {
     auto context = create_graphics_context();
 
     const std::string modelsDirectory = MODELS_DIRECTORY;
-    const std::string filePath = modelsDirectory + "/carsmodified.vox";
+    const std::string filePath = modelsDirectory + "/nature.vox";
     auto test_scene = load_vox_scene(filePath, chunk_manager, context);
 
     while (!should_exit(context)) {
