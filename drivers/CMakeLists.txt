@@ -15,6 +15,7 @@ function(DEFINE_EXE NAME)
   target_link_libraries(${NAME} LINK_PUBLIC ogt)
   target_link_libraries(${NAME} PRIVATE Vulkan::Vulkan)
   target_link_libraries(${NAME} PRIVATE glfw)
+  #target_link_libraries(${NAME} PRIVATE -fsanitize=address)
   add_dependencies(${NAME} shaders)
 endfunction()
 

@@ -469,9 +469,6 @@ void GraphicsContext::check_chunk_request_buffer(
     for (auto [model_idx, sbt_offset] : deduplicated_requests) {
         if (!uploading_models_.contains(model_idx) &&
             !downloading_models_.contains(model_idx)) {
-            auto &model = scene_models.at(model_idx);
-            model->chunk_->tick_gpu_upload(device_, gpu_allocator_,
-                                            ring_buffer_);
             uploading_models_.emplace(model_idx, sbt_offset);
         }
     }
@@ -479,7 +476,9 @@ void GraphicsContext::check_chunk_request_buffer(
     deduplicated_requests.clear();
     for (auto [model_idx, sbt_offset] : uploading_models_) {
         auto &model = scene_models.at(model_idx);
-        if (model->chunk_->get_timeline()->has_reached_wait()) {
+	model->chunk_->tick_gpu_upload(device_, gpu_allocator_,
+				       ring_buffer_);
+        if (!model->chunk_->uploading()) {
             deduplicated_requests.emplace(model_idx, sbt_offset);
         }
     }
@@ -539,7 +538,6 @@ void GraphicsContext::download_offscreen_models(
             !downloading_models_.contains(model_idx) &&
             !onscreen_models.contains(model) &&
             model->chunk_->get_state() == VoxelChunk::State::GPU) {
-            model->chunk_->tick_cpu_download(device_, ring_buffer_);
             downloading_models_.insert(model_idx);
         }
     }
@@ -547,7 +545,8 @@ void GraphicsContext::download_offscreen_models(
     std::unordered_map<uint64_t, uint32_t> new_sbt_offsets;
     for (auto model_idx : downloading_models_) {
         auto &model = scene_models.at(model_idx);
-        if (model->chunk_->get_timeline()->has_reached_wait()) {
+	model->chunk_->tick_disk_download(device_, ring_buffer_);
+        if (!model->chunk_->downloading()) {
             new_sbt_offsets.emplace(model_idx, 0);
         }
     }

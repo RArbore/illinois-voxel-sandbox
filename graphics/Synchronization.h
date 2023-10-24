@@ -31,6 +31,7 @@ class Semaphore {
     VkSemaphore get_semaphore();
 
     bool is_timeline();
+    void wait();
     bool has_reached_wait();
 
     uint64_t get_wait_value();
