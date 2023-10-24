@@ -7,9 +7,9 @@
 int main(int argc, char *argv[]) {
     auto test_proc_data1 = generate_basic_procedural_chunk(128, 128, 128);
     std::cout << "Raw size: " << test_proc_data1.size() << " bytes.\n";
-    auto test_svo_data1 =
+    /*auto test_svo_data1 =
         convert_raw_to_svo(std::move(test_proc_data1), 128, 128, 128, 4);
-    std::cout << "SVO size: " << test_svo_data1.size() << " bytes.\n";
+	std::cout << "SVO size: " << test_svo_data1.size() << " bytes.\n";*/
 
     ChunkManager chunk_manager;
     auto window = create_window();
@@ -18,7 +18,7 @@ int main(int argc, char *argv[]) {
     auto camera = create_camera(window, camera_pos, 0.0f, 0.0f, 0.1f, 0.25f);
 
     VoxelChunkPtr test_proc1 = chunk_manager.add_chunk(
-        std::move(test_svo_data1), 128, 128, 128, VoxelChunk::Format::SVO,
+        std::move(test_proc_data1), 128, 128, 128, VoxelChunk::Format::Raw,
         VoxelChunk::AttributeSet::Color);
 
     auto model1 = build_model(context, test_proc1);

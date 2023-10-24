@@ -1,10 +1,14 @@
 #pragma once
 
-#include <filesystem>
-#include <set>
-#include <span>
 #include <unordered_set>
+#include <filesystem>
+#include <atomic>
 #include <vector>
+#include <list>
+#include <span>
+#include <set>
+
+#include <external/CTPL/ctpl_stl.h>
 
 #include <graphics/Command.h>
 #include <graphics/GPUAllocator.h>
@@ -45,10 +49,10 @@ class VoxelChunk {
     State get_state() const;
     Format get_format() const;
     AttributeSet get_attribute_set() const;
-    void queue_gpu_upload(std::shared_ptr<Device> device,
+    void tick_gpu_upload(std::shared_ptr<Device> device,
                           std::shared_ptr<GPUAllocator> allocator,
                           std::shared_ptr<RingBuffer> ring_buffer);
-    void queue_cpu_download(std::shared_ptr<Device> device,
+    void tick_cpu_download(std::shared_ptr<Device> device,
                             std::shared_ptr<RingBuffer> ring_buffer);
 
   private:
@@ -59,7 +63,7 @@ class VoxelChunk {
     uint32_t width_;
     uint32_t height_;
     uint32_t depth_;
-    State state_;
+    std::atomic<State> state_;
     Format format_;
     AttributeSet attribute_set_;
 
@@ -73,7 +77,7 @@ class VoxelChunkPtr {
 
   private:
     ChunkManager *manager_;
-    uint64_t chunk_idx_;
+    std::list<VoxelChunk>::iterator it_;
     friend class ChunkManager;
 };
 
@@ -89,7 +93,8 @@ class ChunkManager {
 
   private:
     std::filesystem::path chunks_directory_;
-    std::vector<VoxelChunk> chunks_;
+    std::list<VoxelChunk> chunks_;
+    ctpl::thread_pool pool_;
 
     friend class VoxelChunk;
     friend class VoxelChunkPtr;

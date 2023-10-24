@@ -470,7 +470,7 @@ void GraphicsContext::check_chunk_request_buffer(
         if (!uploading_models_.contains(model_idx) &&
             !downloading_models_.contains(model_idx)) {
             auto &model = scene_models.at(model_idx);
-            model->chunk_->queue_gpu_upload(device_, gpu_allocator_,
+            model->chunk_->tick_gpu_upload(device_, gpu_allocator_,
                                             ring_buffer_);
             uploading_models_.emplace(model_idx, sbt_offset);
         }
@@ -539,7 +539,7 @@ void GraphicsContext::download_offscreen_models(
             !downloading_models_.contains(model_idx) &&
             !onscreen_models.contains(model) &&
             model->chunk_->get_state() == VoxelChunk::State::GPU) {
-            model->chunk_->queue_cpu_download(device_, ring_buffer_);
+            model->chunk_->tick_cpu_download(device_, ring_buffer_);
             downloading_models_.insert(model_idx);
         }
     }

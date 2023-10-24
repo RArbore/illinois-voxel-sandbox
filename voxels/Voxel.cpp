@@ -45,7 +45,7 @@ VoxelChunk::AttributeSet VoxelChunk::get_attribute_set() const {
     return attribute_set_;
 }
 
-void VoxelChunk::queue_gpu_upload(std::shared_ptr<Device> device,
+void VoxelChunk::tick_gpu_upload(std::shared_ptr<Device> device,
                                   std::shared_ptr<GPUAllocator> allocator,
                                   std::shared_ptr<RingBuffer> ring_buffer) {
     if (state_ == State::GPU) {
@@ -89,7 +89,7 @@ void VoxelChunk::queue_gpu_upload(std::shared_ptr<Device> device,
     timeline_->increment();
 }
 
-void VoxelChunk::queue_cpu_download(std::shared_ptr<Device> device,
+void VoxelChunk::tick_cpu_download(std::shared_ptr<Device> device,
                                     std::shared_ptr<RingBuffer> ring_buffer) {
     if (state_ == State::CPU) {
 	return;
@@ -116,14 +116,14 @@ void VoxelChunk::queue_cpu_download(std::shared_ptr<Device> device,
 }
 
 VoxelChunk &VoxelChunkPtr::operator*() {
-    return manager_->chunks_.at(chunk_idx_);
+    return *it_;
 }
 
 VoxelChunk *VoxelChunkPtr::operator->() {
-    return &manager_->chunks_.at(chunk_idx_);
+    return &*it_;
 }
 
-ChunkManager::ChunkManager() {
+ChunkManager::ChunkManager(): pool_(8) {
     std::stringstream string_pointer;
     string_pointer << this;
     chunks_directory_ = "disk_chunks_" + string_pointer.str();
@@ -140,8 +140,8 @@ VoxelChunkPtr ChunkManager::add_chunk(std::vector<std::byte> &&data,
                                       VoxelChunk::AttributeSet attribute_set) {
     VoxelChunkPtr ptr;
     ptr.manager_ = this;
-    ptr.chunk_idx_ = chunks_.size();
-    chunks_.emplace_back(std::move(data), width, height, depth,
-                         VoxelChunk::State::CPU, format, attribute_set);
+    chunks_.emplace_front(std::move(data), width, height, depth,
+				   VoxelChunk::State::CPU, format, attribute_set);
+    ptr.it_ = chunks_.begin();
     return ptr;
 }
