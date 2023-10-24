@@ -98,6 +98,8 @@ class ChunkManager {
                             VoxelChunk::Format format,
                             VoxelChunk::AttributeSet attribute_set);
 
+    void debug_print();
+
   private:
     std::filesystem::path chunks_directory_;
     std::list<VoxelChunk> chunks_;
@@ -105,4 +107,20 @@ class ChunkManager {
 
     friend class VoxelChunk;
     friend class VoxelChunkPtr;
+};
+
+const static std::unordered_map<VoxelChunk::State, std::string_view> state_names {
+    {VoxelChunk::State::CPU, "CPU"},
+    {VoxelChunk::State::GPU, "GPU"},
+    {VoxelChunk::State::Disk, "Disk"},
+};
+
+const static std::unordered_map<VoxelChunk::Format, std::string_view> format_names {
+    {VoxelChunk::Format::Raw, "Raw"},
+    {VoxelChunk::Format::SVO, "SVO"},
+};
+
+const static std::unordered_map<VoxelChunk::AttributeSet, std::string_view> attribute_set_names {
+    {VoxelChunk::AttributeSet::Color, "Color"},
+    {VoxelChunk::AttributeSet::ColorNormal, "ColorNormal"},
 };

@@ -96,7 +96,6 @@ void VoxelChunk::tick_gpu_upload(std::shared_ptr<Device> device,
 	state_ = State::GPU;
 	timeline_->increment();
     } else if (state_ == State::GPU && timeline_->has_reached_wait()) {
-	std::cout << "INFO: Finished uploading chunk " << this << ", which has the following dimensions: (" << width_ << ", " << height_ << ", " << depth_ << ").\n";
 	uploading_ = false;
     }
 }
@@ -111,13 +110,14 @@ void VoxelChunk::tick_disk_download(std::shared_ptr<Device> device,
 	manager_->pool_.push([this](int _id){
 	    std::stringstream string_pointer;
 	    string_pointer << this;
-	    disk_path_ = manager_->chunks_directory_ / std::filesystem::path("chunk_" + string_pointer.str());
+	    if (disk_path_.empty()) {
+		disk_path_ = manager_->chunks_directory_ / std::filesystem::path("chunk_" + string_pointer.str());
+	    }
 	    std::ofstream stream(disk_path_,
 				 std::ios::out | std::ios::binary);
 	    stream.write(reinterpret_cast<char*>(cpu_data_.data()), cpu_data_.size());
 	    cpu_data_.clear();
 	    
-	    std::cout << "INFO: Finished downloading chunk " << this << ", which has the following dimensions: (" << width_ << ", " << height_ << ", " << depth_ << ").\n";
 	    state_ = State::Disk;
 	    downloading_ = false;
 	});
@@ -133,7 +133,30 @@ bool VoxelChunk::downloading() {
 }
 
 void VoxelChunk::debug_print() {
-
+    std::cout << "DEBUG PRINT FOR CHUNK " << this << "\n";
+    std::cout << "  disk_path_: " << disk_path_ << "\n";
+    std::cout << "  cpu_data_: vector with size " << cpu_data_.size() << "\n";
+    if (buffer_data_) {
+	std::cout << "  buffer_data_: GPUBuffer with size " << buffer_data_->get_size() << "\n";
+    } else {
+	std::cout << "  buffer_data_: (null)\n";
+    }
+    if (volume_data_) {
+	std::cout << "  volume_data_: GPUVolume with dimensions (" << volume_data_->get_extent().width << ", " << volume_data_->get_extent().height << ", " << volume_data_->get_extent().depth << ")\n";
+    } else {
+	std::cout << "  volume_data_: (null)\n";
+    }
+    std::cout << "  timeline_: " << timeline_ << "\n";
+    std::cout << "  width_: " << width_ << "\n";
+    std::cout << "  height_: " << height_ << "\n";
+    std::cout << "  depth_: " << depth_ << "\n";
+    std::cout << "  state_: " << state_names.at(state_) << "\n";
+    std::cout << "  format_: " << format_names.at(format_) << "\n";
+    std::cout << "  attribute_: set_" << attribute_set_names.at(attribute_set_) << "\n";
+    std::cout << "  uploading_: " << uploading_ << "\n";
+    std::cout << "  downloading_: " << downloading_ << "\n";
+    std::cout << "  manager_: " << manager_ << "\n";
+    std::cout << "\n";
 }
 
 VoxelChunk &VoxelChunkPtr::operator*() {
@@ -164,4 +187,10 @@ VoxelChunkPtr ChunkManager::add_chunk(std::vector<std::byte> &&data,
 			  VoxelChunk::State::CPU, format, attribute_set, this);
     ptr.it_ = chunks_.begin();
     return ptr;
+}
+
+void ChunkManager::debug_print() {
+    for (auto &chunk : chunks_) {
+	chunk.debug_print();
+    }
 }
