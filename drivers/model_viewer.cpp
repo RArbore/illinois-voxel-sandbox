@@ -8,7 +8,7 @@ int main(int argc, char *argv[]) {
     ChunkManager chunk_manager;
     const std::string modelsDirectory = MODELS_DIRECTORY;
     uint32_t chunk_width, chunk_height, chunk_depth;
-    auto tree = raw_voxelize_obj(modelsDirectory + "/hairball/hairball.obj", 0.02f, chunk_width, chunk_height, chunk_depth);
+    auto tree = raw_voxelize_obj(modelsDirectory + "/white_oak/white_oak.obj", 10.0f, chunk_width, chunk_height, chunk_depth);
     auto svdag_tree = convert_raw_to_svdag(tree, chunk_width, chunk_height, chunk_depth, 4);
     std::cout << "SVDAG Size: " << svdag_tree.size() << "\n";
 
