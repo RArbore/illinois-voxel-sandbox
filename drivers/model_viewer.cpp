@@ -8,7 +8,11 @@ int main(int argc, char *argv[]) {
     ChunkManager chunk_manager;
     const std::string modelsDirectory = MODELS_DIRECTORY;
     uint32_t chunk_width, chunk_height, chunk_depth;
-    auto tree = raw_voxelize_obj(modelsDirectory + "/white_oak/white_oak.obj", 5.0f, chunk_width, chunk_height, chunk_depth);
+    auto tree = raw_voxelize_obj(modelsDirectory + "/white_oak/white_oak.obj", 100.0f, chunk_width, chunk_height, chunk_depth);
+    auto svo_tree = convert_raw_to_svo(tree, chunk_width, chunk_height, chunk_depth, 4);
+    debug_print_svo(svo_tree, 4);
+    auto svdag_tree = convert_raw_to_svdag(tree, chunk_width, chunk_height, chunk_depth, 4);
+    debug_print_svdag(svdag_tree, 4);
 
     VoxelChunkPtr test_tree = chunk_manager.add_chunk(
 							std::move(tree), chunk_width, chunk_height, chunk_depth, VoxelChunk::Format::Raw,
