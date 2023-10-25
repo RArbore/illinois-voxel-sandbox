@@ -53,7 +53,7 @@ void main() {
 	while (steps < max_steps && all(greaterThanEqual(obj_ray_voxel, ivec3(0))) && all(lessThan(obj_ray_voxel, volume_size))) {
 	    float palette = imageLoad(volumes[volume_id], obj_ray_voxel).a;
 	    
-	    if (palette > 0.0) {
+	    if (palette != 0.0) {
 		aabb_intersect_result r = hit_aabb(obj_ray_voxel, obj_ray_voxel + 1, obj_ray_pos, obj_ray_dir);
 		float intersect_time = length(gl_ObjectToWorldEXT * vec4(obj_ray_pos + obj_ray_dir * r.front_t, 1.0) - gl_ObjectToWorldEXT * vec4(obj_ray_pos, 1.0));
 		reportIntersectionEXT(intersect_time, r.k);

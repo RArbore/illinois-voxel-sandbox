@@ -210,14 +210,21 @@ void RingBuffer::copy_to_device(
     void *const dst_ptr = buffer_map_.data() + (virtual_counter_ % size);
     memcpy(dst_ptr, src.data(), src.size());
 
-    Barrier layout_barrier(
+    Barrier transfer_layout_barrier(
         device_, VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT,
         VK_ACCESS_2_MEMORY_READ_BIT | VK_ACCESS_2_MEMORY_WRITE_BIT,
         VK_PIPELINE_STAGE_2_COPY_BIT, VK_ACCESS_2_MEMORY_WRITE_BIT,
-        dst->get_image(), VK_IMAGE_LAYOUT_UNDEFINED, dst_layout);
+        dst->get_image(), VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+
+    Barrier desired_layout_barrier(
+        device_, VK_PIPELINE_STAGE_2_COPY_BIT,
+        VK_ACCESS_2_MEMORY_WRITE_BIT,
+        VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT,
+	VK_ACCESS_2_MEMORY_READ_BIT | VK_ACCESS_2_MEMORY_WRITE_BIT,
+        dst->get_image(), VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, dst_layout);
 
     command->record([&](VkCommandBuffer command) {
-        layout_barrier.record(command);
+        transfer_layout_barrier.record(command);
 
         VkBufferImageCopy copy{};
         copy.bufferOffset = virtual_counter_ % size;
@@ -228,7 +235,9 @@ void RingBuffer::copy_to_device(
         copy.imageOffset = {0, 0, 0};
         copy.imageExtent = dst->get_extent();
         vkCmdCopyBufferToImage(command, buffer_->get_buffer(), dst->get_image(),
-                               dst_layout, 1, &copy);
+                               VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &copy);
+
+	desired_layout_barrier.record(command);
     });
     device_->submit_command(command, wait_semaphores, signal_semaphores, fence);
 
