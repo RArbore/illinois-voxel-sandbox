@@ -8,21 +8,27 @@ int main(int argc, char *argv[]) {
     ChunkManager chunk_manager;
     const std::string modelsDirectory = MODELS_DIRECTORY;
     uint32_t chunk_width, chunk_height, chunk_depth;
-    auto dragon = raw_voxelize_obj(modelsDirectory + "/dragon.obj", 0.001f, chunk_width, chunk_height, chunk_depth);
-    dragon = convert_raw_to_svo(std::move(dragon), chunk_width, chunk_height, chunk_depth, 4);
-    std::cout << "SVO Size: " << dragon.size() << "\n";
+    auto tree = raw_voxelize_obj(modelsDirectory + "/white_oak/white_oak.obj", 5.0f, chunk_width, chunk_height, chunk_depth);
 
-    VoxelChunkPtr test_dragon = chunk_manager.add_chunk(
-							std::move(dragon), chunk_width, chunk_height, chunk_depth, VoxelChunk::Format::SVO,
+    VoxelChunkPtr test_tree = chunk_manager.add_chunk(
+							std::move(tree), chunk_width, chunk_height, chunk_depth, VoxelChunk::Format::Raw,
 							VoxelChunk::AttributeSet::Color);
 
     auto window = create_window();
     auto context = create_graphics_context(window);
-    auto dragon_model = build_model(context, test_dragon);
-    glm::mat3x4 dragon_transform = {1.0F, 0.0F, 0.0F, 0.0F, 0.0F, 1.0F,
+    auto tree_model = build_model(context, test_tree);
+    glm::mat3x4 tree_transform = {1.0F, 0.0F, 0.0F, 0.0F, 0.0F, 1.0F,
 				    0.0F, 0.0F, 0.0F, 0.0F, 1.0F, 0.0F};
-    auto dragon_object = build_object(context, dragon_model, dragon_transform);
-    auto scene = build_scene(context, {dragon_object});
+    std::vector<std::shared_ptr<GraphicsObject>> objects;
+    for (int x = 0; x < 10; ++x) {
+	for (int z = 0; z < 10; ++z) {
+	    tree_transform[0][3] = x * 150;
+	    tree_transform[2][3] = z * 150;
+	    auto tree_object = build_object(context, tree_model, tree_transform);
+	    objects.emplace_back(std::move(tree_object));
+	}
+    }
+    auto scene = build_scene(context, objects);
 
     glm::vec3 camera_pos = glm::vec3(0.0f, 0.0f, -250.0f);
     auto camera = create_camera(window, camera_pos, 0.0f, 0.0f, 0.1f, 0.25f);

@@ -140,7 +140,7 @@ GraphicsContext::GraphicsContext(std::shared_ptr<Window> window) {
     swapchain_ =
         std::make_shared<Swapchain>(device_, window, descriptor_allocator_);
     ring_buffer_ =
-        std::make_shared<RingBuffer>(gpu_allocator_, command_pool_, 1 << 26);
+        std::make_shared<RingBuffer>(gpu_allocator_, command_pool_, 1 << 24);
 
     DescriptorSetBuilder scene_builder(descriptor_allocator_);
     scene_builder.bind_acceleration_structure(0, {},
