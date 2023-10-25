@@ -7,7 +7,7 @@
 
 hitAttributeEXT uint leaf_id;
 
-#define MAX_DEPTH 32
+#define MAX_DEPTH 16
 
 struct aabb_intersect_result {
     float front_t;
@@ -50,21 +50,21 @@ uint round_up_p2(uint x) {
 /*
 const vec3 subpositions[8] = vec3[8](
 				     vec3(0.0, 0.0, 0.0),
-				     vec3(0.5, 0.0, 0.0),
-				     vec3(0.0, 0.5, 0.0),
-				     vec3(0.5, 0.5, 0.0),
-				     vec3(0.0, 0.0, 0.5),
-				     vec3(0.5, 0.0, 0.5),
-				     vec3(0.0, 0.5, 0.5),
-				     vec3(0.5, 0.5, 0.5)
+				     vec3(1.0, 0.0, 0.0),
+				     vec3(0.0, 1.0, 0.0),
+				     vec3(1.0, 1.0, 0.0),
+				     vec3(0.0, 0.0, 1.0),
+				     vec3(1.0, 0.0, 1.0),
+				     vec3(0.0, 1.0, 1.0),
+				     vec3(1.0, 1.0, 1.0)
 				     );
 */
 
 vec3 subpositions(uint child) {
     return vec3(
-		bool(child % 2) ? 0.5 : 0.0,
-		bool((child / 2) % 2) ? 0.5 : 0.0,
-		bool((child / 4) % 2) ? 0.5 : 0.0
+		bool(child % 2) ? 1.0 : 0.0,
+		bool((child / 2) % 2) ? 1.0 : 0.0,
+		bool((child / 4) % 2) ? 1.0 : 0.0
 		);
 }
 
@@ -86,10 +86,7 @@ uint children_iteration_order(uint kind, uint child) {
 }
 
 struct SVDAGMarchStackFrame {
-    uint node_id;
-    uint left_off;
-    vec3 low;
-    vec3 high;
+    vec4 info;
 };
 
 void main() {
@@ -106,21 +103,20 @@ void main() {
     if (bounding.front_t != -FAR_AWAY) {
 	int level = 0;
 	SVDAGMarchStackFrame stack[MAX_DEPTH];
-	stack[level].node_id = svdag_buffers[svdag_id].num_nodes - 1;
-	stack[level].left_off = 0;
-	stack[level].low = first_low;
+	stack[level].info = vec4(first_low, uintBitsToFloat((svdag_buffers[svdag_id].num_nodes - 1) & 0x0FFFFFFF));
 	uint high_p2 = round_up_p2(max(svdag_buffers[svdag_id].voxel_width, max(svdag_buffers[svdag_id].voxel_height, svdag_buffers[svdag_id].voxel_depth)));
-	stack[level].high = vec3(high_p2);
 	while (level >= 0 && level < MAX_DEPTH) {
 	    SVDAGMarchStackFrame stack_frame = stack[level];
-	    SVDAGNode curr_node = svdag_buffers[svdag_id].nodes[stack_frame.node_id];
-	    for (uint idx = stack_frame.left_off; idx < 8; ++idx) {
+	    vec3 stack_frame_low = stack_frame.info.xyz;
+	    uint stack_frame_node_info = floatBitsToUint(stack_frame.info.w);
+	    SVDAGNode curr_node = svdag_buffers[svdag_id].nodes[stack_frame_node_info & 0x0FFFFFFF];
+	    for (uint idx = stack_frame_node_info >> 28; idx < 8; ++idx) {
 		uint child = children_iteration_order(direction_kind, idx);
 		uint offset = curr_node.child_offsets_[child];
 		if (offset != SVDAG_INVALID_OFFSET) {
-		    vec3 diff = stack_frame.high - stack_frame.low;
-		    vec3 sub_low = stack_frame.low + subpositions(child) * diff;
-		    vec3 sub_high = sub_low + diff * 0.5;
+		    float diff = float(high_p2) * pow(0.5, level + 1);
+		    vec3 sub_low = stack_frame_low + subpositions(child) * diff;
+		    vec3 sub_high = sub_low + diff;
 		    aabb_intersect_result hit = hit_aabb(sub_low, sub_high, obj_ray_pos, obj_ray_dir);
 		    if (hit.front_t != -FAR_AWAY) {
 			uint leaf = offset >> 31;
@@ -132,12 +128,9 @@ void main() {
 			    reportIntersectionEXT(intersect_time, hit.k);
 			    return;
 			} else {
-			    stack[level].left_off = idx + 1;
+			    stack[level].info = vec4(stack_frame_low, uintBitsToFloat((stack_frame_node_info & 0x0FFFFFFF) | ((idx + 1) << 28)));
 			    ++level;
-			    stack[level].node_id = child_node_id;
-			    stack[level].left_off = 0;
-			    stack[level].low = sub_low;
-			    stack[level].high = sub_high;
+			    stack[level].info = vec4(sub_low, uintBitsToFloat(child_node_id & 0x0FFFFFFF));
 			    ++level;
 			    break;
 			}
