@@ -8,10 +8,12 @@ int main(int argc, char *argv[]) {
     ChunkManager chunk_manager;
     const std::string modelsDirectory = MODELS_DIRECTORY;
     uint32_t chunk_width, chunk_height, chunk_depth;
-    auto dragon = raw_voxelize_obj(modelsDirectory + "/dragon.obj", 0.005f, chunk_width, chunk_height, chunk_depth);
+    auto dragon = raw_voxelize_obj(modelsDirectory + "/dragon.obj", 0.001f, chunk_width, chunk_height, chunk_depth);
+    dragon = convert_raw_to_svo(std::move(dragon), chunk_width, chunk_height, chunk_depth, 4);
+    std::cout << "SVO Size: " << dragon.size() << "\n";
 
     VoxelChunkPtr test_dragon = chunk_manager.add_chunk(
-							std::move(dragon), chunk_width, chunk_height, chunk_depth, VoxelChunk::Format::Raw,
+							std::move(dragon), chunk_width, chunk_height, chunk_depth, VoxelChunk::Format::SVO,
 							VoxelChunk::AttributeSet::Color);
 
     auto window = create_window();

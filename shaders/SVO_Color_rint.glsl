@@ -36,6 +36,17 @@ aabb_intersect_result hit_aabb(const vec3 minimum, const vec3 maximum, const vec
     return r;
 }
 
+uint round_up_p2(uint x) {
+    --x;
+    x |= x >> 1;
+    x |= x >> 2;
+    x |= x >> 4;
+    x |= x >> 8;
+    x |= x >> 16;
+    ++x;
+    return x;
+}
+
 const vec3 subpositions[8] = vec3[8](
 				     vec3(0.0, 0.0, 0.0),
 				     vec3(0.5, 0.0, 0.0),
@@ -75,14 +86,15 @@ void main() {
 
     vec3 first_low = vec3(0.0);
     vec3 first_high = vec3(svo_buffers[svo_id].voxel_width, svo_buffers[svo_id].voxel_height, svo_buffers[svo_id].voxel_depth);
-    float bounding = hit_aabb(first_low, first_high, obj_ray_pos, obj_ray_dir).front_t;
-    if (bounding != -FAR_AWAY) {
+    aabb_intersect_result bounding = hit_aabb(first_low, first_high, obj_ray_pos, obj_ray_dir);
+    if (bounding.front_t != -FAR_AWAY) {
 	int level = 0;
 	SVOMarchStackFrame stack[MAX_DEPTH];
 	stack[level].node_id = svo_buffers[svo_id].num_nodes - 1;
 	stack[level].left_off = 0;
 	stack[level].low = first_low;
-	stack[level].high = first_high;
+	uint high_p2 = round_up_p2(max(svo_buffers[svo_id].voxel_width, max(svo_buffers[svo_id].voxel_height, svo_buffers[svo_id].voxel_depth)));
+	stack[level].high = vec3(high_p2);
 	while (level >= 0 && level < MAX_DEPTH) {
 	    uint curr_node = stack[level].node_id;
 	    int valid_mask = svo_buffers[svo_id].nodes[curr_node].valid_mask_;
@@ -105,7 +117,7 @@ void main() {
 				++num_valid;
 			    }
 			}
-			uint child_node_id = svo_buffers[svo_id].nodes[curr_node].child_pointer_ + num_valid;
+			uint child_node_id = curr_node - svo_buffers[svo_id].nodes[curr_node].child_offset_ + num_valid;
 			if (bool(leaf)) {
 			    vec3 obj_ray_voxel_intersect_point = obj_ray_pos + obj_ray_dir * max(hit.front_t, 0.0);
 			    float intersect_time = length(gl_ObjectToWorldEXT * vec4(obj_ray_voxel_intersect_point, 1.0) - gl_ObjectToWorldEXT * vec4(obj_ray_pos, 1.0));

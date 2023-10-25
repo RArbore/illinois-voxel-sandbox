@@ -6,7 +6,7 @@
 #extension GL_EXT_shader_atomic_int64 : require
 
 struct SVONode {
-    uint32_t child_pointer_;
+    uint32_t child_offset_;
     uint8_t valid_mask_;
     uint8_t leaf_mask_;
     uint8_t _padding_[2];

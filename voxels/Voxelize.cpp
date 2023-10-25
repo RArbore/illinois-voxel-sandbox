@@ -97,16 +97,17 @@ bool tri_aabb(const Triangle &triangle, glm::vec3 aabb_center, glm::vec3 aabb_ex
 std::vector<std::byte> raw_voxelize_obj(std::string_view filepath, float voxel_size, uint32_t &out_chunk_width, uint32_t &out_chunk_height, uint32_t &out_chunk_depth) {
     std::cout << filepath << " " << voxel_size << "\n";
 
-    tinyobj::attrib_t attrib;
-    std::vector<tinyobj::shape_t> shapes;
-    std::vector<tinyobj::material_t> materials;
-    std::string warn;
-    std::string err;
-    bool ret = tinyobj::LoadObj(&attrib, &shapes, &materials, &warn, &err, filepath.data());
-
-    ASSERT(warn.empty(), warn);
-    ASSERT(err.empty(), err);
-
+    std::string inputfile(filepath);
+    tinyobj::ObjReaderConfig reader_config;
+    tinyobj::ObjReader reader;
+    
+    ASSERT(reader.ParseFromFile(inputfile, reader_config), reader.Error());
+    ASSERT(reader.Warning().empty(), reader.Warning());
+    
+    auto& attrib = reader.GetAttrib();
+    auto& shapes = reader.GetShapes();
+    auto& materials = reader.GetMaterials();
+    
     glm::vec3 min(0.0f, 0.0f, 0.0f), max(0.0f, 0.0f, 0.0f);
     for (int64_t i = 0; i < attrib.vertices.size(); i += 3) {
 	min.x = fmin(min.x, attrib.vertices[i]);

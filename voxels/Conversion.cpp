@@ -6,7 +6,7 @@
 #include "utils/Assert.h"
 
 struct SVONode {
-    uint32_t child_pointer_;
+    uint32_t child_offset_;
     uint32_t valid_mask_ : 8;
     uint32_t leaf_mask_ : 8;
 };
@@ -52,7 +52,11 @@ std::vector<std::byte> convert_raw_to_svo(const std::vector<std::byte> &raw,
     memcpy(&svo.at(sizeof(uint32_t)), &height, sizeof(uint32_t));
     memcpy(&svo.at(sizeof(uint32_t) * 2), &depth, sizeof(uint32_t));
 
-    auto push_node_to_svo = [&](SVONode node) {
+    auto push_node_to_svo = [&](SVONode node, bool internal) {
+	if (internal) {
+	    uint32_t new_size = static_cast<uint32_t>((svo.size() - sizeof(uint32_t) * 4) / sizeof(SVONode));
+	    node.child_offset_ = new_size - node.child_offset_;
+	}
         for (uint32_t i = 0; i < sizeof(SVONode); ++i) {
             svo.emplace_back();
         }
@@ -78,7 +82,7 @@ std::vector<std::byte> convert_raw_to_svo(const std::vector<std::byte> &raw,
         uint32_t d = num_queues - 1;
         while (d > 0 && queues.at(d).size() == queue_size) {
             SVONode node{};
-            node.child_pointer_ = static_cast<uint32_t>(
+            node.child_offset_ = static_cast<uint32_t>(
                 (svo.size() - sizeof(uint32_t) * 4) / sizeof(SVONode));
             node.valid_mask_ = 0;
             node.leaf_mask_ = 0;
@@ -102,7 +106,7 @@ std::vector<std::byte> convert_raw_to_svo(const std::vector<std::byte> &raw,
                 for (uint32_t i = 0; i < queue_size; ++i) {
                     const SVONode &child = queues.at(d).at(i).first;
                     if (!is_node_empty(child)) {
-                        push_node_to_svo(child);
+                        push_node_to_svo(child, !static_cast<bool>(node.leaf_mask_ & (1 << (7 - i))));
                     }
                 }
             }
@@ -113,7 +117,7 @@ std::vector<std::byte> convert_raw_to_svo(const std::vector<std::byte> &raw,
             --d;
         }
     }
-    push_node_to_svo(queues.at(0).at(0).first);
+    push_node_to_svo(queues.at(0).at(0).first, true);
 
     const uint32_t num_nodes = static_cast<uint32_t>(
         (svo.size() - sizeof(uint32_t) * 4) / sizeof(SVONode));
@@ -162,22 +166,20 @@ static void debug_print_internal_helper(const std::span<const std::byte> &svo,
             std::cout << "0";
         }
     }
-    std::cout << " " << node.child_pointer_ << "\n";
+    std::cout << " " << node.child_offset_ << "\n";
 
-    uint32_t adjusted_child_pointer =
-        node.child_pointer_ * sizeof(SVONode) + sizeof(uint32_t) * 4;
     for (uint32_t i = 0, j = 0; i < 8; ++i) {
+	uint32_t length = svo.size() + j * sizeof(SVONode) - node.child_offset_ * sizeof(SVONode);
         if (node.valid_mask_ & (1 << (7 - i)) &&
             node.leaf_mask_ & (1 << (7 - i))) {
-            debug_print_leaf_helper(svo.subspan(0, j++ * sizeof(SVONode) +
-                                                       adjusted_child_pointer +
-                                                       sizeof(SVONode)),
+            debug_print_leaf_helper(svo.subspan(0, length),
                                     bytes_per_voxel, level + 1);
+	    ++j;
         } else if (node.valid_mask_ & (1 << (7 - i))) {
             debug_print_internal_helper(
-                svo.subspan(0, j++ * sizeof(SVONode) + adjusted_child_pointer +
-                                   sizeof(SVONode)),
+                svo.subspan(0, length),
                 bytes_per_voxel, level + 1);
+	    ++j;
         }
     }
 }
