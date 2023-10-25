@@ -9,6 +9,8 @@ set(GLSL_SHADER_FILES
   Raw_Color_rint.glsl
   SVO_Color_rchit.glsl
   SVO_Color_rint.glsl
+  SVDAG_Color_rchit.glsl
+  SVDAG_Color_rint.glsl
   Unloaded_rchit.glsl
   Unloaded_rint.glsl
 )

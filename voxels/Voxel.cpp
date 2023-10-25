@@ -79,7 +79,8 @@ void VoxelChunk::tick_gpu_upload(std::shared_ptr<Device> device,
 					get_cpu_data(), {timeline_}, {timeline_});
 	    break;
 	}
-	case Format::SVO: {
+	case Format::SVO:
+	case Format::SVDAG: {
 	    buffer_data_ =
 		std::make_shared<GPUBuffer>(allocator, get_cpu_data().size(), 8,
 					    VK_BUFFER_USAGE_TRANSFER_DST_BIT |

@@ -21,6 +21,7 @@ const std::map<std::pair<VoxelChunk::Format, VoxelChunk::AttributeSet>,
     FORMAT_TO_SBT_OFFSET = {
         {{VoxelChunk::Format::Raw, VoxelChunk::AttributeSet::Color}, 1},
         {{VoxelChunk::Format::SVO, VoxelChunk::AttributeSet::Color}, 2},
+        {{VoxelChunk::Format::SVDAG, VoxelChunk::AttributeSet::Color}, 3},
 };
 const uint64_t MAX_NUM_CHUNKS_LOADED_PER_FRAME = 32;
 
@@ -215,12 +216,15 @@ GraphicsContext::GraphicsContext(std::shared_ptr<Window> window) {
     auto raw_color_rint = std::make_shared<Shader>(device_, "Raw_Color_rint");
     auto svo_color_rchit = std::make_shared<Shader>(device_, "SVO_Color_rchit");
     auto svo_color_rint = std::make_shared<Shader>(device_, "SVO_Color_rint");
+    auto svdag_color_rchit = std::make_shared<Shader>(device_, "SVDAG_Color_rchit");
+    auto svdag_color_rint = std::make_shared<Shader>(device_, "SVDAG_Color_rint");
     std::vector<std::vector<std::shared_ptr<Shader>>> shader_groups = {
         {rgen},
         {rmiss},
         {unloaded_rchit, unloaded_rint},
         {raw_color_rchit, raw_color_rint},
         {svo_color_rchit, svo_color_rint},
+        {svdag_color_rchit, svdag_color_rint},
     };
     std::vector<VkDescriptorSetLayout> layouts = {
         swapchain_->get_image_descriptor(0)->get_layout(),
@@ -579,7 +583,7 @@ void GraphicsContext::bind_scene_descriptors(
         VK_SHADER_STAGE_RAYGEN_BIT_KHR);
 
     std::vector<std::pair<VkDescriptorImageInfo, uint32_t>> raw_volume_infos;
-    std::vector<std::pair<VkDescriptorBufferInfo, uint32_t>> svo_buffer_infos;
+    std::vector<std::pair<VkDescriptorBufferInfo, uint32_t>> sparse_buffer_infos;
     for (size_t i = 0; i < models.size(); ++i) {
         const auto &model = models.at(i);
         if (model->chunk_->get_state() == VoxelChunk::State::GPU &&
@@ -591,19 +595,20 @@ void GraphicsContext::bind_scene_descriptors(
             raw_volume_info.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
             raw_volume_infos.emplace_back(raw_volume_info, i);
         } else if (model->chunk_->get_state() == VoxelChunk::State::GPU &&
-                   model->chunk_->get_format() == VoxelChunk::Format::SVO) {
+                   (model->chunk_->get_format() == VoxelChunk::Format::SVO ||
+		    model->chunk_->get_format() == VoxelChunk::Format::SVDAG)) {
             auto buffer = model->chunk_->get_gpu_buffer();
-            VkDescriptorBufferInfo svo_buffer_info{};
-            svo_buffer_info.buffer = buffer->get_buffer();
-            svo_buffer_info.offset = 0;
-            svo_buffer_info.range = buffer->get_size();
-            svo_buffer_infos.emplace_back(svo_buffer_info, i);
+            VkDescriptorBufferInfo sparse_buffer_info{};
+            sparse_buffer_info.buffer = buffer->get_buffer();
+            sparse_buffer_info.offset = 0;
+            sparse_buffer_info.range = buffer->get_size();
+            sparse_buffer_infos.emplace_back(sparse_buffer_info, i);
         }
     }
     builder.bind_images(1, raw_volume_infos, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,
                         VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR |
                             VK_SHADER_STAGE_INTERSECTION_BIT_KHR);
-    builder.bind_buffers(2, svo_buffer_infos, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
+    builder.bind_buffers(2, sparse_buffer_infos, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
                          VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR |
                              VK_SHADER_STAGE_INTERSECTION_BIT_KHR);
 }

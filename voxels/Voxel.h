@@ -28,6 +28,7 @@ class VoxelChunk {
     enum class Format {
         Raw,
         SVO,
+	SVDAG,
     };
 
     enum class AttributeSet {
@@ -118,6 +119,7 @@ const static std::unordered_map<VoxelChunk::State, std::string_view> state_names
 const static std::unordered_map<VoxelChunk::Format, std::string_view> format_names {
     {VoxelChunk::Format::Raw, "Raw"},
     {VoxelChunk::Format::SVO, "SVO"},
+    {VoxelChunk::Format::SVDAG, "SVDAG"},
 };
 
 const static std::unordered_map<VoxelChunk::AttributeSet, std::string_view> attribute_set_names {

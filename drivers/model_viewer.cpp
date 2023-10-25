@@ -8,14 +8,12 @@ int main(int argc, char *argv[]) {
     ChunkManager chunk_manager;
     const std::string modelsDirectory = MODELS_DIRECTORY;
     uint32_t chunk_width, chunk_height, chunk_depth;
-    auto tree = raw_voxelize_obj(modelsDirectory + "/white_oak/white_oak.obj", 100.0f, chunk_width, chunk_height, chunk_depth);
-    auto svo_tree = convert_raw_to_svo(tree, chunk_width, chunk_height, chunk_depth, 4);
-    debug_print_svo(svo_tree, 4);
+    auto tree = raw_voxelize_obj(modelsDirectory + "/hairball/hairball.obj", 0.02f, chunk_width, chunk_height, chunk_depth);
     auto svdag_tree = convert_raw_to_svdag(tree, chunk_width, chunk_height, chunk_depth, 4);
-    debug_print_svdag(svdag_tree, 4);
+    std::cout << "SVDAG Size: " << svdag_tree.size() << "\n";
 
     VoxelChunkPtr test_tree = chunk_manager.add_chunk(
-							std::move(tree), chunk_width, chunk_height, chunk_depth, VoxelChunk::Format::Raw,
+							std::move(svdag_tree), chunk_width, chunk_height, chunk_depth, VoxelChunk::Format::SVDAG,
 							VoxelChunk::AttributeSet::Color);
 
     auto window = create_window();
@@ -24,10 +22,10 @@ int main(int argc, char *argv[]) {
     glm::mat3x4 tree_transform = {1.0F, 0.0F, 0.0F, 0.0F, 0.0F, 1.0F,
 				    0.0F, 0.0F, 0.0F, 0.0F, 1.0F, 0.0F};
     std::vector<std::shared_ptr<GraphicsObject>> objects;
-    for (int x = 0; x < 10; ++x) {
-	for (int z = 0; z < 10; ++z) {
-	    tree_transform[0][3] = x * 150;
-	    tree_transform[2][3] = z * 150;
+    for (int x = 0; x < 1; ++x) {
+	for (int z = 0; z < 1; ++z) {
+	    tree_transform[0][3] = x * 1000;
+	    tree_transform[2][3] = z * 1000;
 	    auto tree_object = build_object(context, tree_model, tree_transform);
 	    objects.emplace_back(std::move(tree_object));
 	}

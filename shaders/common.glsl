@@ -20,6 +20,20 @@ struct SVOLeaf_Color {
     uint8_t _padding_[4];
 };
 
+struct SVDAGNode {
+    uint32_t child_offsets_[8];
+};
+
+struct SVDAGLeaf_Color {
+    uint8_t red_;
+    uint8_t green_;
+    uint8_t blue_;
+    uint8_t alpha_;
+    uint8_t _padding_[28];
+};
+
+const uint SVDAG_INVALID_OFFSET = 0xFFFFFFFF;
+
 layout (push_constant) uniform PushConstants {
     uint64_t elapsed_ms;
 };
@@ -54,6 +68,20 @@ layout(set = 1, binding = 2) buffer SVOBuffer_Color {
     uint32_t num_nodes;
     SVOLeaf_Color nodes[];
 } svo_leaf_color_buffers[];
+layout(set = 1, binding = 2) buffer SVDAGBuffer {
+    uint32_t voxel_width;
+    uint32_t voxel_height;
+    uint32_t voxel_depth;
+    uint32_t num_nodes;
+    SVDAGNode nodes[];
+} svdag_buffers[];
+layout(set = 1, binding = 2) buffer SVDAGBuffer_Color {
+    uint32_t voxel_width;
+    uint32_t voxel_height;
+    uint32_t voxel_depth;
+    uint32_t num_nodes;
+    SVDAGLeaf_Color nodes[];
+} svdag_leaf_color_buffers[];
 
 // Set 2 is not swapped out - it is for GraphicsContext-wide data.
 #define MAX_NUM_CHUNKS_LOADED_PER_FRAME 32
