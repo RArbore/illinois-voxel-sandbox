@@ -254,7 +254,7 @@ std::vector<std::byte> convert_raw_to_svdag(const std::vector<std::byte> &raw,
         log2(static_cast<double>(width > height ? width > depth ? width : depth
                                  : height > depth ? height
                                                   : depth)));
-    const uint32_t bounded_edge_length = 1 << power_of_two;
+    const uint64_t bounded_edge_length = 1 << power_of_two;
 
     const uint32_t queue_size = 8;
     const uint32_t num_queues = power_of_two + 1;

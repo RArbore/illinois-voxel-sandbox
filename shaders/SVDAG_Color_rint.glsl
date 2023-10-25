@@ -111,10 +111,10 @@ void main() {
 	    uint stack_frame_node_info = floatBitsToUint(stack_frame.info.w);
 	    uint left_off = stack_frame_node_info >> 28;
 	    SVDAGNode curr_node = svdag_buffers[svdag_id].nodes[stack_frame_node_info & 0x0FFFFFFF];
+	    float diff = float(high_p2) * pow(0.5, level + 1);
 	    for (uint idx = left_off; idx < 8; ++idx) {
 		uint child = children_iteration_order(direction_kind, idx);
 		uint offset = curr_node.child_offsets_[child];
-		float diff = float(high_p2) * pow(0.5, level + 1);
 		vec3 sub_low = stack_frame_low + subpositions(child) * diff;
 		vec3 sub_high = sub_low + diff;
 		aabb_intersect_result hit = hit_aabb(sub_low, sub_high, obj_ray_pos, obj_ray_dir);
@@ -122,16 +122,18 @@ void main() {
 		if (intersects_valid_voxel) {
 		    uint leaf = offset >> 31;
 		    uint child_node_id = offset & 0x7FFFFFFF;
-		    if (intersects_valid_voxel && bool(leaf)) {
+		    if (bool(leaf)) {
 			vec3 obj_ray_voxel_intersect_point = obj_ray_pos + obj_ray_dir * max(hit.front_t, 0.0);
 			float intersect_time = length(gl_ObjectToWorldEXT * vec4(obj_ray_voxel_intersect_point, 1.0) - gl_ObjectToWorldEXT * vec4(obj_ray_pos, 1.0));
 			leaf_id = child_node_id;
 			reportIntersectionEXT(intersect_time, hit.k);
 			return;
-		    } else if (intersects_valid_voxel) {
-			stack[level].info = vec4(stack_frame_low, uintBitsToFloat((stack_frame_node_info & 0x0FFFFFFF) | ((idx + 1) << 28)));
+		    } else {
+			vec4 new_this_frame = vec4(stack_frame_low, uintBitsToFloat((stack_frame_node_info & 0x0FFFFFFF) | ((idx + 1) << 28)));
+			vec4 new_next_frame = vec4(sub_low, uintBitsToFloat(child_node_id & 0x0FFFFFFF));
+			stack[level].info = new_this_frame;
 			++level;
-			stack[level].info = vec4(sub_low, uintBitsToFloat(child_node_id & 0x0FFFFFFF));
+			stack[level].info = new_next_frame;
 			++level;
 			break;
 		    }
