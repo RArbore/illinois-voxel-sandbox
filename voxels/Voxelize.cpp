@@ -119,7 +119,6 @@ std::vector<std::byte> raw_voxelize_obj(std::string_view filepath, float voxel_s
     }
     std::cout << "Bottom corner: (" << min.x << ", " << min.y << ", " << min.z << ")\n";
     std::cout << "Top corner: (" << max.x << ", " << max.y << ", " << max.z << ")\n";
-    std::cout << shapes[0].mesh.indices.size() / 3 << " triangles\n";
 
     uint32_t chunk_width = static_cast<uint32_t>(ceil((max.x - min.x) / voxel_size));
     uint32_t chunk_height = static_cast<uint32_t>(ceil((max.y - min.y) / voxel_size));
@@ -127,15 +126,18 @@ std::vector<std::byte> raw_voxelize_obj(std::string_view filepath, float voxel_s
     std::cout << "Chunk size: (" << chunk_width << ", " << chunk_height << ", " << chunk_depth << ")\n";
 
     std::vector<Triangle> triangles;
-    for (int64_t i = 0; i < shapes[0].mesh.indices.size(); i += 3) {
-	auto index_a = shapes[0].mesh.indices[i].vertex_index;
-	auto index_b = shapes[0].mesh.indices[i + 1].vertex_index;
-	auto index_c = shapes[0].mesh.indices[i + 2].vertex_index;
-	triangles.emplace_back(
-			       glm::vec3(attrib.vertices[3 * index_a], attrib.vertices[3 * index_a + 1], attrib.vertices[3 * index_a + 2]),
-			       glm::vec3(attrib.vertices[3 * index_b], attrib.vertices[3 * index_b + 1], attrib.vertices[3 * index_b + 2]),
-			       glm::vec3(attrib.vertices[3 * index_c], attrib.vertices[3 * index_c + 1], attrib.vertices[3 * index_c + 2])
-			       );
+    for (const auto &shape : shapes) {
+	std::cout << shape.mesh.indices.size() / 3 << " triangles\n";
+	for (int64_t i = 0; i < shape.mesh.indices.size(); i += 3) {
+	    auto index_a = shape.mesh.indices[i].vertex_index;
+	    auto index_b = shape.mesh.indices[i + 1].vertex_index;
+	    auto index_c = shape.mesh.indices[i + 2].vertex_index;
+	    triangles.emplace_back(
+				   glm::vec3(attrib.vertices[3 * index_a], attrib.vertices[3 * index_a + 1], attrib.vertices[3 * index_a + 2]),
+				   glm::vec3(attrib.vertices[3 * index_b], attrib.vertices[3 * index_b + 1], attrib.vertices[3 * index_b + 2]),
+				   glm::vec3(attrib.vertices[3 * index_c], attrib.vertices[3 * index_c + 1], attrib.vertices[3 * index_c + 2])
+				   );
+	}
     }
 
     std::vector<std::byte> data(static_cast<size_t>(chunk_width) *
