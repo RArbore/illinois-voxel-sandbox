@@ -47,6 +47,7 @@ uint round_up_p2(uint x) {
     return x;
 }
 
+/*
 const vec3 subpositions[8] = vec3[8](
 				     vec3(0.0, 0.0, 0.0),
 				     vec3(0.5, 0.0, 0.0),
@@ -57,17 +58,32 @@ const vec3 subpositions[8] = vec3[8](
 				     vec3(0.0, 0.5, 0.5),
 				     vec3(0.5, 0.5, 0.5)
 				     );
+*/
 
+vec3 subpositions(uint child) {
+    return vec3(
+		bool(child % 2) ? 0.5 : 0.0,
+		bool((child / 2) % 2) ? 0.5 : 0.0,
+		bool((child / 4) % 2) ? 0.5 : 0.0
+		);
+}
+
+/*
 const uint children_iteration_order[8][8] = uint[8][8](
-						       uint[8](0, 1, 2, 3, 4, 5, 6, 7),
-						       uint[8](1, 0, 3, 2, 5, 4, 7, 6),
-						       uint[8](2, 3, 0, 1, 6, 7, 4, 5),
-						       uint[8](3, 2, 1, 0, 7, 6, 5, 4),
-						       uint[8](4, 5, 6, 7, 0, 1, 2, 3),
-						       uint[8](5, 4, 7, 6, 1, 0, 3, 2),
-						       uint[8](6, 7, 4, 5, 2, 3, 0, 1),
-						       uint[8](7, 6, 5, 4, 3, 2, 1, 0)
+						       uint[8](0, 1, 2, 3, 4, 5, 6, 7), = child ^ 00000000
+						       uint[8](1, 0, 3, 2, 5, 4, 7, 6), = child ^ 00000001
+						       uint[8](2, 3, 0, 1, 6, 7, 4, 5), = child ^ 00000010
+						       uint[8](3, 2, 1, 0, 7, 6, 5, 4), = child ^ 00000011
+						       uint[8](4, 5, 6, 7, 0, 1, 2, 3), = child ^ 00000100
+						       uint[8](5, 4, 7, 6, 1, 0, 3, 2), = child ^ 00000101
+						       uint[8](6, 7, 4, 5, 2, 3, 0, 1), = child ^ 00000110
+						       uint[8](7, 6, 5, 4, 3, 2, 1, 0)  = child ^ 00000111
 						       );
+*/
+
+uint children_iteration_order(uint kind, uint child) {
+    return child ^ kind;
+}
 
 struct SVDAGMarchStackFrame {
     uint node_id;
@@ -99,11 +115,11 @@ void main() {
 	    SVDAGMarchStackFrame stack_frame = stack[level];
 	    SVDAGNode curr_node = svdag_buffers[svdag_id].nodes[stack_frame.node_id];
 	    for (uint idx = stack_frame.left_off; idx < 8; ++idx) {
-		uint child = children_iteration_order[direction_kind][idx];
+		uint child = children_iteration_order(direction_kind, idx);
 		uint offset = curr_node.child_offsets_[child];
 		if (offset != SVDAG_INVALID_OFFSET) {
 		    vec3 diff = stack_frame.high - stack_frame.low;
-		    vec3 sub_low = stack_frame.low + subpositions[child] * diff;
+		    vec3 sub_low = stack_frame.low + subpositions(child) * diff;
 		    vec3 sub_high = sub_low + diff * 0.5;
 		    aabb_intersect_result hit = hit_aabb(sub_low, sub_high, obj_ray_pos, obj_ray_dir);
 		    if (hit.front_t != -FAR_AWAY) {
