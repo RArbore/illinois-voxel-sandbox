@@ -8,7 +8,7 @@ int main(int argc, char *argv[]) {
     ChunkManager chunk_manager;
     const std::string modelsDirectory = MODELS_DIRECTORY;
     uint32_t chunk_width, chunk_height, chunk_depth;
-    auto tree = raw_voxelize_obj(modelsDirectory + "/white_oak/white_oak.obj", 10.0f, chunk_width, chunk_height, chunk_depth);
+    auto tree = raw_voxelize_obj(modelsDirectory + "/white_oak/white_oak.obj", 5.0f, chunk_width, chunk_height, chunk_depth);
     auto svdag_tree = convert_raw_to_svdag(tree, chunk_width, chunk_height, chunk_depth, 4);
     std::cout << "SVDAG Size: " << svdag_tree.size() << "\n";
 
@@ -23,9 +23,9 @@ int main(int argc, char *argv[]) {
 				    0.0F, 0.0F, 0.0F, 0.0F, 1.0F, 0.0F};
     std::vector<std::shared_ptr<GraphicsObject>> objects;
     for (int x = 0; x < 10; ++x) {
-	for (int z = 0; z < 10; ++z) {
-	    tree_transform[0][3] = x * 50;
-	    tree_transform[2][3] = z * 50;
+	for (int y = 0; y < 10; ++y) {
+	    tree_transform[0][3] = x * 150 - 750;
+	    tree_transform[1][3] = y * 150 - 750;
 	    auto tree_object = build_object(context, tree_model, tree_transform);
 	    objects.emplace_back(std::move(tree_object));
 	}
