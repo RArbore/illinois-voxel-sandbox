@@ -170,7 +170,7 @@ std::vector<std::byte> raw_voxelize_obj(std::string_view filepath, float voxel_s
 		    float tri_voxel_x = static_cast<float>(x) / chunk_width * (max.x - min.x) + min.x;
 		    float tri_voxel_y = static_cast<float>(y) / chunk_height * (max.y - min.y) + min.y;
 		    float tri_voxel_z = static_cast<float>(z) / chunk_depth * (max.z - min.z) + min.z;
-		    if (tri_aabb(tri, glm::vec3(tri_voxel_x + 0.5f, tri_voxel_y + 0.5f, tri_voxel_z + 0.5f), glm::vec3(1.0f))) {
+		    if (tri_aabb(tri, glm::vec3(tri_voxel_x, tri_voxel_y, tri_voxel_z), glm::vec3(voxel_size))) {
 			size_t voxel_idx = x + (chunk_height - y - 1) * chunk_width + z * chunk_width * chunk_height;
 			data.at(voxel_idx * 4) = red;
 			data.at(voxel_idx * 4 + 1) = green;
