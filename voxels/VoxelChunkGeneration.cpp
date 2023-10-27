@@ -16,94 +16,95 @@
 // Have to include so that can read in vox files for now
 #include <graphics/GraphicsContext.h>
 
+BabyChunk::BabyChunk(uint32_t width, uint32_t height, uint32_t depth) {
+    this->width = width;
+    this->height = height;
+    this->depth = depth;
+    this->data = std::vector<std::byte>(width * height * depth * 4,
+                                        static_cast<std::byte>(0));
+}
+
+std::vector<std::byte> BabyChunk::get_data() {
+    return this->data;
+}
+
+uint32_t BabyChunk::get_width() const {
+    return this->width;
+}
+
+uint32_t BabyChunk::get_height() const {
+    return this->height;
+}
+
+uint32_t BabyChunk::get_depth() const {
+    return this->depth;
+}
+
+void BabyChunk::write_voxel(uint32_t x, uint32_t y, uint32_t z, uint32_t r,
+                       uint32_t g, uint32_t b, uint32_t a) {
+    size_t voxel_idx = x + y * this->width + z * this->width * this->height;
+    this->data.at(voxel_idx * 4) = static_cast<std::byte>(r);
+    this->data.at(voxel_idx * 4 + 1) = static_cast<std::byte>(g);
+    this->data.at(voxel_idx * 4 + 2) = static_cast<std::byte>(b);
+    this->data.at(voxel_idx * 4 + 3) = static_cast<std::byte>(a);
+}
+
+
+
 std::vector<std::byte> generate_basic_sphere_chunk(uint32_t width,
                                                    uint32_t height,
                                                    uint32_t depth,
                                                    float radius) {
-    std::vector<std::byte> data(width * height * depth * 4,
-                                static_cast<std::byte>(0));
-
+    BabyChunk chunk(width, height, depth);
     for (uint32_t x = 0; x < width; ++x) {
         for (uint32_t y = 0; y < height; ++y) {
             for (uint32_t z = 0; z < depth; ++z) {
                 if (std::pow(static_cast<double>(x) - width / 2, 2) +
                         std::pow(static_cast<double>(y) - height / 2, 2) +
                         std::pow(static_cast<double>(z) - depth / 2, 2) <
-                    std::pow(radius, 2)) {
-                    std::byte red = static_cast<std::byte>(x * 4);
-                    std::byte green = static_cast<std::byte>(y * 4);
-                    std::byte blue = static_cast<std::byte>(z * 4);
-                    std::byte alpha = static_cast<std::byte>(255);
-
-                    size_t voxel_idx = x + y * width + z * width * height;
-                    data.at(voxel_idx * 4) = red;
-                    data.at(voxel_idx * 4 + 1) = green;
-                    data.at(voxel_idx * 4 + 2) = blue;
-                    data.at(voxel_idx * 4 + 3) = alpha;
+                        std::pow(radius, 2)) {
+                    chunk.write_voxel(x, y, z, x * 4, y * 4, z * 4, 255);
+                    
                 }
             }
         }
     }
 
-    return data;
+    return chunk.get_data();
 }
 
 std::vector<std::byte>
 generate_basic_filled_chunk(uint32_t width, uint32_t height, uint32_t depth) {
-    std::vector<std::byte> data(width * height * depth * 4,
-                                static_cast<std::byte>(0));
-
+    BabyChunk chunk(width, height, depth);
     for (uint32_t x = 0; x < width; ++x) {
         for (uint32_t y = 0; y < height; ++y) {
             for (uint32_t z = 0; z < depth; ++z) {
-                std::byte red = static_cast<std::byte>(x * 30);
-                std::byte green = static_cast<std::byte>(y * 30);
-                std::byte blue = static_cast<std::byte>(z * 30);
-                std::byte alpha = static_cast<std::byte>(255);
-
-                size_t voxel_idx = x + y * width + z * width * height;
-                data.at(voxel_idx * 4) = red;
-                data.at(voxel_idx * 4 + 1) = green;
-                data.at(voxel_idx * 4 + 2) = blue;
-                data.at(voxel_idx * 4 + 3) = alpha;
+                chunk.write_voxel(x, y, z, x * 30, y * 30, z * 30, 255);
             }
         }
     }
 
-    return data;
+    return chunk.get_data();
 }
 
 std::vector<std::byte> generate_basic_procedural_chunk(uint32_t width,
                                                        uint32_t height,
                                                        uint32_t depth) {
-    std::vector<std::byte> data(static_cast<size_t>(width) *
-                                    static_cast<size_t>(height) *
-                                    static_cast<size_t>(depth) * 4,
-                                static_cast<std::byte>(0));
+    BabyChunk chunk(width, height, depth);
     FastNoiseLite noise;
     noise.SetNoiseType(FastNoiseLite::NoiseType_OpenSimplex2);
-
     for (uint32_t x = 0; x < width; ++x) {
         for (uint32_t y = 0; y < height; ++y) {
             for (uint32_t z = 0; z < depth; ++z) {
                 if (noise.GetNoise(static_cast<float>(x), static_cast<float>(y),
                                    static_cast<float>(z)) > 0.0F) {
-                    std::byte red = static_cast<std::byte>(255);
-                    std::byte green = static_cast<std::byte>(255);
-                    std::byte blue = static_cast<std::byte>(255);
-                    std::byte alpha = static_cast<std::byte>(255);
-
-                    size_t voxel_idx = x + y * width + z * width * height;
-                    data.at(voxel_idx * 4) = red;
-                    data.at(voxel_idx * 4 + 1) = green;
-                    data.at(voxel_idx * 4 + 2) = blue;
-                    data.at(voxel_idx * 4 + 3) = alpha;
+                    chunk.write_voxel(x, y, z, 255, 255, 255, 255);
                 }
             }
         }
     }
 
-    return data;
+    return chunk.get_data();
 }
 
 std::shared_ptr<GraphicsScene>
@@ -190,4 +191,46 @@ load_vox_scene(const std::string &filepath, ChunkManager &chunk_manager,
 
     ogt_vox_destroy_scene(voxscene);
     return gscene;
+}
+
+std::vector<std::byte>
+generate_island_chunk(uint32_t density, uint32_t radius, uint32_t depth) {
+    // generate a conical shaped island
+    FastNoiseLite noise;
+    noise.SetNoiseType(FastNoiseLite::NoiseType_OpenSimplex2);
+    noise.SetSeed(123);
+    BabyChunk chunk(density, density, density);
+    for (uint32_t x = 0; x < density; ++x) {
+        for (uint32_t y = 0; y < density; ++y) {
+            for (uint32_t z = 0; z < density; ++z) {
+                double xz = std::pow(static_cast<double>(x) - density / 2, 2) +
+                            std::pow(static_cast<double>(z) - density / 2, 2);
+                            //std::pow((y * radius/depth) - radius, 2)
+                double constraint = std::pow(radius * static_cast<double>(y) / depth, 2) 
+                                    - 2 * radius * radius * static_cast<double>(y) / depth 
+                                    + radius * radius;
+                double field = constraint - xz;
+                float noisescales[] = {1, 2, 4, 8, 16};
+                float amplitudes[] = {1000, 500, 250, 125, 62.5};
+                for (uint16_t i = 0; i < 5; ++i) {
+                    field += noise.GetNoise(static_cast<float>(x) * noisescales[i], static_cast<float>(y) * noisescales[i],
+                                   static_cast<float>(z) * noisescales[i]) * amplitudes[i];
+                }
+
+                if (0 < field && y < depth) {
+                    chunk.write_voxel(x, y, z, 100, 100, 100, 255);
+                }
+                if(x == 0 && y == 0) {
+                    chunk.write_voxel(x, y, z, 0, 0, 255, 255);
+                }
+                if(y == 0 && z == 0) {
+                    chunk.write_voxel(x, y, z, 255, 0, 0, 255);
+                }
+                if(x == 0 && z == 0) {
+                    chunk.write_voxel(x, y, z, 0, 255, 0, 255);
+                }
+            }
+        }
+    }
+    return chunk.get_data();
 }
