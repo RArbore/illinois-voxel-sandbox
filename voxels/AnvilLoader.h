@@ -2,19 +2,24 @@
 #define ILLINOIS_VOXEL_SANDBOX_ANVILLOADER_H
 
 #include <graphics/GraphicsContext.h>
+#include <map>
 #include <vector>
 
 class AnvilLoader {
 public:
-    AnvilLoader(const std::string &filePath, std::shared_ptr<GraphicsContext> context, const ChunkManager &chunkManager);
+    AnvilLoader(const std::string &filePath, std::shared_ptr<GraphicsContext> context,
+              std::shared_ptr<ChunkManager> chunkManager);
 
     std::vector<std::pair<glm::mat3x4, std::shared_ptr<GraphicsModel>>> build_models();
 
     std::shared_ptr<GraphicsScene> build_scene();
+
+    std::shared_ptr<GraphicsModel> get_model(const std::string &model_id);
 private:
     std::string filePath;
     std::shared_ptr<GraphicsContext> context;
-    ChunkManager chunk_manager;
+    std::shared_ptr<ChunkManager> chunk_manager;
+    std::map<std::string, std::shared_ptr<GraphicsModel>> model_map;
 };
 
 #endif // ILLINOIS_VOXEL_SANDBOX_ANVILLOADER_H
