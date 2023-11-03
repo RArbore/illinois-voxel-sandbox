@@ -38,6 +38,9 @@ class GraphicsContext {
     std::shared_ptr<DescriptorAllocator> descriptor_allocator_ = nullptr;
     std::shared_ptr<RingBuffer> ring_buffer_ = nullptr;
 
+    std::shared_ptr<ComputePipeline> tonemap_pipeline_ = nullptr;
+    std::vector<std::shared_ptr<DescriptorSet>> tonemap_descriptors_; // Needed per swapchain image?
+
     std::shared_ptr<Fence> frame_fence_ = nullptr;
     std::shared_ptr<Semaphore> acquire_semaphore_ = nullptr;
     std::shared_ptr<Semaphore> render_semaphore_ = nullptr;
@@ -233,6 +236,31 @@ GraphicsContext::GraphicsContext(std::shared_ptr<Window> window) {
     acquire_semaphore_ = std::make_shared<Semaphore>(device_);
     render_semaphore_ = std::make_shared<Semaphore>(device_);
     render_command_buffer_ = std::make_shared<Command>(command_pool_);
+
+    auto tonemap_comp = std::make_shared<Shader>(device_, "tonemap_comp");
+    const auto &image_views = swapchain_->get_image_views();
+    for (int image_index = 0; image_index < image_views.size(); image_index++) {
+        DescriptorSetBuilder tonemap_builder(descriptor_allocator_);
+        tonemap_builder.bind_image(0,
+                                   {.sampler = VK_NULL_HANDLE,
+                                    .imageView = image_history_->get_view(),
+                                    .imageLayout = VK_IMAGE_LAYOUT_GENERAL},
+                                   VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,
+                                   VK_SHADER_STAGE_COMPUTE_BIT);
+        tonemap_builder.bind_image(1,
+                                   {.sampler = VK_NULL_HANDLE,
+                                    .imageView = image_views[image_index],
+                                    .imageLayout = VK_IMAGE_LAYOUT_GENERAL},
+                                   VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,
+                                   VK_SHADER_STAGE_COMPUTE_BIT);
+        tonemap_descriptors_.push_back(tonemap_builder.build());
+    }
+
+    std::vector<VkDescriptorSetLayout> tonemap_layouts = {
+        tonemap_descriptors_[0]->get_layout()};
+
+    tonemap_pipeline_ = std::make_shared<ComputePipeline>(
+        gpu_allocator_, tonemap_comp, tonemap_layouts);
 }
 
 GraphicsContext::~GraphicsContext() {
@@ -294,24 +322,18 @@ double render_frame(std::shared_ptr<GraphicsContext> context,
         VK_ACCESS_2_SHADER_WRITE_BIT, context->image_history_->get_image(),
         VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_GENERAL);
 
-    Barrier copy_src_barrier(
-        context->device_, VK_PIPELINE_STAGE_2_RAY_TRACING_SHADER_BIT_KHR, 0,
-        VK_PIPELINE_STAGE_2_TRANSFER_BIT, 0,
-        context->image_history_->get_image(), VK_IMAGE_LAYOUT_GENERAL,
-        VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
-
-    Barrier copy_dst_barrier(
+    Barrier tonemap_barrier(
         context->device_, VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT, 0,
-        VK_PIPELINE_STAGE_2_TRANSFER_BIT, 0,
+        VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, 0,
         context->swapchain_->get_image(swapchain_image_index),
-        VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+        VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_GENERAL);
 
     Barrier epilogue_barrier(
-        context->device_, VK_PIPELINE_STAGE_2_RAY_TRACING_SHADER_BIT_KHR,
+        context->device_, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
         VK_ACCESS_2_SHADER_WRITE_BIT, VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT,
         VK_ACCESS_2_MEMORY_READ_BIT,
         context->swapchain_->get_image(swapchain_image_index),
-        VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
+        VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
 
     std::vector<std::byte> push_constants(128);
     memcpy(push_constants.data(), &context->elapsed_ms_, sizeof(double));
@@ -334,20 +356,15 @@ double render_frame(std::shared_ptr<GraphicsContext> context,
             push_constants_span, extent.width, extent.height, 1);
 
         // Copy the off-screen buffer to the swapchain
-        copy_src_barrier.record(command_buffer);
-        copy_dst_barrier.record(command_buffer);
+        tonemap_barrier.record(command_buffer);
 
-        VkImageCopy copy_region;
-        copy_region.srcSubresource = {VK_IMAGE_ASPECT_COLOR_BIT, 0, 0, 1};
-        copy_region.srcOffset = {0, 0, 0};
-        copy_region.dstSubresource = {VK_IMAGE_ASPECT_COLOR_BIT, 0, 0, 1};
-        copy_region.dstOffset = {0, 0, 0};
-        copy_region.extent = {extent.width, extent.height, 1};
+        int compute_width = (extent.width + 16 - 1) / 16;
+        int compute_height = (extent.height + 16 - 1) / 16;
 
-        vkCmdCopyImage(command_buffer, context->image_history_->get_image(),
-                       VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
-                       context->swapchain_->get_image(swapchain_image_index),
-                       VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &copy_region);
+        context->tonemap_pipeline_->record(
+            command_buffer,
+            {context->tonemap_descriptors_[swapchain_image_index]},
+            compute_width, compute_height, 1);
 
         epilogue_barrier.record(command_buffer);
     });

@@ -321,6 +321,8 @@ ComputePipeline::ComputePipeline(
     std::shared_ptr<GPUAllocator> allocator,
     std::shared_ptr<Shader> compute_shader,
     std::vector<VkDescriptorSetLayout> descriptor_layouts) {
+    device_ = allocator->get_device();
+
     VkPipelineShaderStageCreateInfo compute_info{};
     compute_info.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
     compute_info.stage = VK_SHADER_STAGE_COMPUTE_BIT;
@@ -338,7 +340,7 @@ ComputePipeline::ComputePipeline(
                                   &layout_),
            "Unable to create compute pipeline layout.");
 
-    VkComputePipelineCreateInfo compute_pipeline_info;
+    VkComputePipelineCreateInfo compute_pipeline_info{};
     compute_pipeline_info.sType =
         VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO;
     compute_pipeline_info.layout = layout_;
