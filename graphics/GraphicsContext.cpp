@@ -180,8 +180,6 @@ GraphicsContext::GraphicsContext(std::shared_ptr<Window> window) {
 
     blue_noise_ = load_image(gpu_allocator_, ring_buffer_, "LDR_RGBA_0.png");
 
-    blue_noise_ = load_image(gpu_allocator_, ring_buffer_, "LDR_RGBA_0.png");
-
     DescriptorSetBuilder wide_builder(descriptor_allocator_);
     wide_builder.bind_buffer(0,
                              {.buffer = chunk_request_buffer_->get_buffer(),
