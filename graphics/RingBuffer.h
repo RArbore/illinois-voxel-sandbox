@@ -30,6 +30,8 @@ class RingBuffer {
                    std::vector<std::shared_ptr<Semaphore>> wait_semaphores,
                    std::vector<std::shared_ptr<Semaphore>> signal_semaphores);
 
+    void reap_in_flight_copies();
+
   private:
     struct InFlightCopy {
         std::shared_ptr<Command> command_ = nullptr;

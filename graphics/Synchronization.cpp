@@ -20,6 +20,15 @@ void Fence::wait() {
 
 void Fence::reset() { vkResetFences(device_->get_device(), 1, &fence_); }
 
+bool Fence::has_finished() {
+    VkResult result = vkGetFenceStatus(device_->get_device(), fence_);
+    if (result == VK_NOT_READY) {
+        return false;
+    }
+    ASSERT(result, "Unable to check if fence has finished.");
+    return true;
+}
+
 VkFence Fence::get_fence() { return fence_; }
 
 Fence::~Fence() { vkDestroyFence(device_->get_device(), fence_, nullptr); }
@@ -53,6 +62,34 @@ Semaphore::~Semaphore() {
 VkSemaphore Semaphore::get_semaphore() { return semaphore_; }
 
 bool Semaphore::is_timeline() { return timeline_; }
+
+
+void Semaphore::wait() {
+    VkSemaphoreWaitInfo wait_info{};
+    wait_info.sType = VK_STRUCTURE_TYPE_SEMAPHORE_WAIT_INFO;
+    wait_info.pNext = nullptr;
+    wait_info.flags = 0;
+    wait_info.semaphoreCount = 1;
+    wait_info.pSemaphores = &semaphore_;
+    wait_info.pValues = &wait_value_;
+    VkResult result = vkWaitSemaphores(device_->get_device(), &wait_info, UINT64_MAX);
+    ASSERT(result, "Failed to wait on semaphore.");
+}
+bool Semaphore::has_reached_wait() {
+    VkSemaphoreWaitInfo wait_info{};
+    wait_info.sType = VK_STRUCTURE_TYPE_SEMAPHORE_WAIT_INFO;
+    wait_info.pNext = nullptr;
+    wait_info.flags = 0;
+    wait_info.semaphoreCount = 1;
+    wait_info.pSemaphores = &semaphore_;
+    wait_info.pValues = &wait_value_;
+    VkResult result = vkWaitSemaphores(device_->get_device(), &wait_info, 0);
+    if (result == VK_TIMEOUT) {
+        return false;
+    }
+    ASSERT(result, "Failed to wait on semaphore.");
+    return true;
+}
 
 uint64_t Semaphore::get_wait_value() {
     ASSERT(timeline_, "Must be a timeline semaphore to get a wait value.");

@@ -3,7 +3,6 @@
 #include "Descriptor.h"
 #include "utils/Assert.h"
 
-static const uint32_t MAX_MODELS = 256;
 static const uint32_t SETS_PER_POOL = 1000;
 static const std::vector<VkDescriptorPoolSize> POOL_SIZES = {
     {VK_DESCRIPTOR_TYPE_SAMPLER, SETS_PER_POOL},

@@ -1,5 +1,5 @@
 #include <algorithm>
-#include <iostream> 
+#include <iostream>
 
 #include <external/glm/glm/gtc/matrix_transform.hpp>
 #include <external/glm/glm/gtx/string_cast.hpp>
@@ -8,7 +8,7 @@
 
 static void mouse_callback(GLFWwindow *window, double x, double y) {
     Camera *camera =
-        reinterpret_cast<Camera*>(glfwGetWindowUserPointer(window));
+        reinterpret_cast<Camera *>(glfwGetWindowUserPointer(window));
     if (camera) {
         camera->handle_mouse(
             x, y,
@@ -17,7 +17,7 @@ static void mouse_callback(GLFWwindow *window, double x, double y) {
 }
 
 Camera::Camera(std::shared_ptr<Window> window, const glm::vec3 &initial_pos,
-               float pitch, float yaw, float speed, float sensitivity) 
+               float pitch, float yaw, float speed, float sensitivity)
     : window_{window}, origin_{initial_pos}, pitch_{pitch}, yaw_{yaw},
       speed_{speed}, sensitivity_{sensitivity} {
     auto glfw_window = window->get_window();
@@ -30,12 +30,12 @@ Camera::Camera(std::shared_ptr<Window> window, const glm::vec3 &initial_pos,
     frames_since_update_ = 0;
 }
 
-std::shared_ptr<Camera>
-create_camera(std::shared_ptr<Window> window, const glm::vec3 &initial_pos,
-              float pitch, float yaw, float speed, float sensitivity)
-{
-    auto camera =
-        std::shared_ptr<Camera>(new Camera(window, initial_pos, pitch, yaw, speed, sensitivity));
+std::shared_ptr<Camera> create_camera(std::shared_ptr<Window> window,
+                                      const glm::vec3 &initial_pos, float pitch,
+                                      float yaw, float speed,
+                                      float sensitivity) {
+    auto camera = std::shared_ptr<Camera>(
+        new Camera(window, initial_pos, pitch, yaw, speed, sensitivity));
     return camera;
 }
 
@@ -48,6 +48,10 @@ void Camera::recompute_vectors() {
         glm::vec3(cos_pitch * sin_yaw, sin_pitch, cos_pitch * cos_yaw));
 
     right_ = glm::normalize(glm::cross(front_, world_up_));
+}
+
+void Camera::reset_frames_since_update() {
+    frames_since_update_ = 0;
 }
 
 void Camera::handle_keys(float delta_t) {
@@ -133,9 +137,13 @@ glm::mat4 Camera::get_view_inverse() const {
     return view_inverse;
 }
 
-CameraUB Camera::get_uniform_buffer() const { 
+CameraUB Camera::get_uniform_buffer() const {
     CameraUB uniform;
     uniform.view_inv = get_view_inverse();
     uniform.frames_since_update = frames_since_update_;
     return uniform;
 }
+
+glm::vec3 Camera::get_front() const { return front_; }
+
+glm::vec3 Camera::get_position() const { return origin_; }

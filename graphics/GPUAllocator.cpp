@@ -18,6 +18,18 @@ VmaAllocator GPUAllocator::get_vma() { return allocator_; }
 
 std::shared_ptr<Device> GPUAllocator::get_device() { return device_; }
 
+void GPUAllocator::bookkeep_alloc(VkDeviceSize size) {
+    num_bytes_allocated_ += size;
+}
+
+void GPUAllocator::bookkeep_free(VkDeviceSize size) {
+    ASSERT(num_bytes_allocated_ >= size,
+           "Bookkeeping count of number of bytes allocated is wrong.");
+    num_bytes_allocated_ -= size;
+}
+
+VkDeviceSize GPUAllocator::bookkeep_count() { return num_bytes_allocated_; }
+
 GPUBuffer::GPUBuffer(std::shared_ptr<GPUAllocator> allocator, VkDeviceSize size,
                      VkDeviceSize alignment, VkBufferUsageFlags usage,
                      VkMemoryPropertyFlags memory_flags,
@@ -45,9 +57,20 @@ GPUBuffer::GPUBuffer(std::shared_ptr<GPUAllocator> allocator, VkDeviceSize size,
     usage_ = usage;
     memory_flags_ = memory_flags;
     vma_flags_ = vma_flags;
+
+    if (size > 0) {
+        VmaAllocationInfo allocation_info;
+        vmaGetAllocationInfo(allocator_->get_vma(), allocation_,
+                             &allocation_info);
+        allocator_->bookkeep_alloc(allocation_info.size);
+    }
 }
 
 GPUBuffer::~GPUBuffer() {
+    VmaAllocationInfo allocation_info;
+    vmaGetAllocationInfo(allocator_->get_vma(), allocation_, &allocation_info);
+    allocator_->bookkeep_free(allocation_info.size);
+
     vmaDestroyBuffer(allocator_->get_vma(), buffer_, allocation_);
 }
 
@@ -136,9 +159,17 @@ GPUImage::GPUImage(std::shared_ptr<GPUAllocator> allocator, VkExtent2D extent,
     ASSERT(vkCreateImageView(allocator_->get_device()->get_device(),
                              &image_view_create_info, nullptr, &view_),
            "Unable to create image view.");
+
+    VmaAllocationInfo allocation_info;
+    vmaGetAllocationInfo(allocator_->get_vma(), allocation_, &allocation_info);
+    allocator_->bookkeep_alloc(allocation_info.size);
 }
 
 GPUImage::~GPUImage() {
+    VmaAllocationInfo allocation_info;
+    vmaGetAllocationInfo(allocator_->get_vma(), allocation_, &allocation_info);
+    allocator_->bookkeep_free(allocation_info.size);
+
     vkDestroyImageView(allocator_->get_device()->get_device(), view_, nullptr);
     vmaDestroyImage(allocator_->get_vma(), image_, allocation_);
 }
@@ -209,9 +240,17 @@ GPUVolume::GPUVolume(std::shared_ptr<GPUAllocator> allocator, VkExtent3D extent,
     ASSERT(vkCreateImageView(allocator_->get_device()->get_device(),
                              &image_view_create_info, nullptr, &view_),
            "Unable to create image view.");
+
+    VmaAllocationInfo allocation_info;
+    vmaGetAllocationInfo(allocator_->get_vma(), allocation_, &allocation_info);
+    allocator_->bookkeep_alloc(allocation_info.size);
 }
 
 GPUVolume::~GPUVolume() {
+    VmaAllocationInfo allocation_info;
+    vmaGetAllocationInfo(allocator_->get_vma(), allocation_, &allocation_info);
+    allocator_->bookkeep_free(allocation_info.size);
+
     vkDestroyImageView(allocator_->get_device()->get_device(), view_, nullptr);
     vmaDestroyImage(allocator_->get_vma(), image_, allocation_);
 }

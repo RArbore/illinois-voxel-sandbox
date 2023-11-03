@@ -58,7 +58,7 @@ layout(set = 1, binding = 2) buffer SVOBuffer_Color {
 // Set 2 is not swapped out - it is for GraphicsContext-wide data.
 #define MAX_NUM_CHUNKS_LOADED_PER_FRAME 32
 layout(set = 2, binding = 0) buffer chunk_request_buffer_ {
-    uint64_t chunk_request_buffer[];
+    uint32_t chunk_request_buffer[MAX_NUM_CHUNKS_LOADED_PER_FRAME];
 };
 
 struct Camera {
