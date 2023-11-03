@@ -316,3 +316,58 @@ void RayTracePipeline::record(
     vkCmdTraceRays(command, &rgen_sbt_region_, &miss_sbt_region_,
                    &hit_sbt_region_, &call_sbt_region_, width, height, depth);
 }
+
+ComputePipeline::ComputePipeline(
+    std::shared_ptr<GPUAllocator> allocator,
+    std::shared_ptr<Shader> compute_shader,
+    std::vector<VkDescriptorSetLayout> descriptor_layouts) {
+    VkPipelineShaderStageCreateInfo compute_info{};
+    compute_info.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+    compute_info.stage = VK_SHADER_STAGE_COMPUTE_BIT;
+    compute_info.module = compute_shader->get_module();
+    compute_info.pName = "main";
+
+    VkPipelineLayoutCreateInfo pipeline_layout_create_info{};
+    pipeline_layout_create_info.sType =
+        VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+    pipeline_layout_create_info.setLayoutCount =
+        static_cast<uint32_t>(descriptor_layouts.size());
+    pipeline_layout_create_info.pSetLayouts = descriptor_layouts.data();
+    ASSERT(vkCreatePipelineLayout(device_->get_device(),
+                                  &pipeline_layout_create_info, nullptr,
+                                  &layout_),
+           "Unable to create compute pipeline layout.");
+
+    VkComputePipelineCreateInfo compute_pipeline_info;
+    compute_pipeline_info.sType =
+        VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO;
+    compute_pipeline_info.layout = layout_;
+    compute_pipeline_info.stage = compute_info;
+    ASSERT(vkCreateComputePipelines(device_->get_device(), VK_NULL_HANDLE, 1,
+                                    &compute_pipeline_info, nullptr,
+                                    &pipeline_),
+           "Unabled to create compute pipeline.");
+}
+
+ComputePipeline::~ComputePipeline() {
+    vkDestroyPipeline(device_->get_device(), pipeline_, nullptr);
+    vkDestroyPipelineLayout(device_->get_device(), layout_, nullptr);
+}
+
+void ComputePipeline::record(
+    VkCommandBuffer command,
+    std::vector<std::shared_ptr<DescriptorSet>> descriptor_sets, uint32_t width,
+    uint32_t height, uint32_t depth) {
+
+    std::vector<VkDescriptorSet> vk_descriptor_sets;
+    for (auto set : descriptor_sets) {
+        vk_descriptor_sets.push_back(set->get_set());
+    }
+
+    vkCmdBindPipeline(command, VK_PIPELINE_BIND_POINT_COMPUTE, pipeline_);
+    vkCmdBindDescriptorSets(command, VK_PIPELINE_BIND_POINT_COMPUTE, layout_, 0,
+                            static_cast<uint32_t>(vk_descriptor_sets.size()),
+                            vk_descriptor_sets.data(), 0, nullptr);
+
+    vkCmdDispatch(command, width, height, depth);
+}
