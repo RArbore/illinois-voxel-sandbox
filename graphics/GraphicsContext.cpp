@@ -51,8 +51,6 @@ class GraphicsContext {
 
     std::shared_ptr<GPUImage> blue_noise_ = nullptr;
 
-    std::shared_ptr<GPUImage> blue_noise_ = nullptr;
-
     std::shared_ptr<GPUImage> image_history_ = nullptr;
 
     std::shared_ptr<DescriptorSet> wide_descriptor_ = nullptr;
