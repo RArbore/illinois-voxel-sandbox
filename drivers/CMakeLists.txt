@@ -22,4 +22,5 @@ endfunction()
 
 DEFINE_EXE(ivs)
 DEFINE_EXE(model_viewer)
+DEFINE_EXE(convert_model)
 DEFINE_EXE(benchmark_graphics)

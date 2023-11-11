@@ -289,6 +289,7 @@ std::vector<std::byte> convert_raw_to_svdag(const std::vector<std::byte> &raw,
 
     const uint64_t num_voxels =
         bounded_edge_length * bounded_edge_length * bounded_edge_length;
+    uint32_t num_printed = 0;
     for (uint64_t morton = 0; morton < num_voxels; ++morton) {
         uint_fast32_t x = 0, y = 0, z = 0;
         libmorton::morton3D_64_decode(morton, x, y, z);
@@ -330,6 +331,10 @@ std::vector<std::byte> convert_raw_to_svdag(const std::vector<std::byte> &raw,
             queues.at(d).clear();
             --d;
         }
+	if (morton * 100 / num_voxels - num_printed >= 10) {
+	    num_printed = morton * 100 / num_voxels;
+	    std::cout << num_printed << "% finished.\n";
+	}
     }
     uint32_t root = push_node_to_svdag(queues.at(0).at(0).first);
 

@@ -1,3 +1,5 @@
+#include <fstream>
+
 #include <graphics/GraphicsContext.h>
 #include <voxels/Conversion.h>
 #include <voxels/Voxel.h>
@@ -5,33 +7,32 @@
 #include <voxels/VoxelChunkGeneration.h>
 
 int main(int argc, char *argv[]) {
+    ASSERT(argv[1], "Must provide a SVDAG model to render.");
+    std::string model_path(argv[1]);
+
     ChunkManager chunk_manager;
-    const std::string modelsDirectory = MODELS_DIRECTORY;
+    std::ifstream stream(model_path,
+			 std::ios::in | std::ios::binary);
+    const auto size = std::filesystem::file_size(model_path);
+    std::vector<std::byte> svdag = std::vector<std::byte>(size);
+    stream.read(reinterpret_cast<char*>(svdag.data()), size);
+    std::cout << "SVDAG Size: " << svdag.size() << "\n";
+
     uint32_t chunk_width, chunk_height, chunk_depth;
-    auto tree = raw_voxelize_obj(modelsDirectory + "/sponza/sponza.obj", 2.0f, chunk_width, chunk_height, chunk_depth);
-    auto svdag_tree = convert_raw_to_svdag(tree, chunk_width, chunk_height, chunk_depth, 4);
-    std::cout << "SVDAG Size: " << svdag_tree.size() << "\n";
-
-    VoxelChunkPtr test_tree = chunk_manager.add_chunk(
-							std::move(svdag_tree), chunk_width, chunk_height, chunk_depth, VoxelChunk::Format::SVDAG,
-							VoxelChunk::AttributeSet::Color);
-
+    VoxelChunkPtr chunk = chunk_manager.add_chunk(
+						  std::move(svdag), chunk_width, chunk_height, chunk_depth, VoxelChunk::Format::SVDAG,
+						  VoxelChunk::AttributeSet::Color);
+    
     auto window = create_window();
     auto context = create_graphics_context(window);
-    auto tree_model = build_model(context, test_tree);
-    glm::mat3x4 tree_transform = {1.0F, 0.0F, 0.0F, 0.0F, 0.0F, 1.0F,
-				    0.0F, 0.0F, 0.0F, 0.0F, 1.0F, 0.0F};
+    auto model = build_model(context, chunk);
+    glm::mat3x4 transform = {1.0F, 0.0F, 0.0F, 0.0F, 0.0F, 1.0F,
+			     0.0F, 0.0F, 0.0F, 0.0F, 1.0F, 0.0F};
     std::vector<std::shared_ptr<GraphicsObject>> objects;
-    for (int x = 0; x < 1; ++x) {
-	for (int y = 0; y < 1; ++y) {
-	    tree_transform[0][3] = x * 150;// - 750;
-	    tree_transform[1][3] = y * 150;// - 750;
-	    auto tree_object = build_object(context, tree_model, tree_transform);
-	    objects.emplace_back(std::move(tree_object));
-	}
-    }
+    auto object = build_object(context, model, transform);
+    objects.emplace_back(std::move(object));
     auto scene = build_scene(context, objects);
-
+    
     glm::vec3 camera_pos = glm::vec3(0.0f, 0.0f, -250.0f);
     auto camera = create_camera(window, camera_pos, 0.0f, 0.0f, 0.1f, 0.25f);
 
