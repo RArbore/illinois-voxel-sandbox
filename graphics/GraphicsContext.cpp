@@ -23,6 +23,7 @@ const std::map<std::pair<VoxelChunk::Format, VoxelChunk::AttributeSet>,
         {{VoxelChunk::Format::SVO, VoxelChunk::AttributeSet::Color}, 2},
         {{VoxelChunk::Format::SVDAG, VoxelChunk::AttributeSet::Color}, 3},
 };
+const uint64_t MAX_NUM_CHUNKS_LOADED_PER_FRAME = 32;
 
 class GraphicsContext {
   public:
@@ -107,14 +108,12 @@ class GraphicsScene {
     GraphicsScene(std::shared_ptr<GraphicsContext> context,
                   std::shared_ptr<TLAS> tlas,
                   std::vector<std::shared_ptr<GraphicsObject>> objects,
-                  std::shared_ptr<DescriptorSet> scene_descriptor,
-		  std::shared_ptr<GPUBuffer> chunk_dimensions)
-        : tlas_(tlas), objects_(objects), scene_descriptor_(scene_descriptor), chunk_dimensions_(chunk_dimensions) {}
+                  std::shared_ptr<DescriptorSet> scene_descriptor)
+        : tlas_(tlas), objects_(objects), scene_descriptor_(scene_descriptor) {}
 
     std::shared_ptr<TLAS> tlas_;
     std::vector<std::shared_ptr<GraphicsObject>> objects_;
     std::shared_ptr<DescriptorSet> scene_descriptor_ = nullptr;
-    std::shared_ptr<GPUBuffer> chunk_dimensions_ = nullptr;
 
     std::vector<std::shared_ptr<GraphicsModel>> assemble_models_in_order() {
         std::unordered_map<std::shared_ptr<GraphicsModel>, size_t>
@@ -153,20 +152,17 @@ GraphicsContext::GraphicsContext(std::shared_ptr<Window> window) {
     scene_builder.bind_buffers(2, {}, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
                                VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR |
                                    VK_SHADER_STAGE_INTERSECTION_BIT_KHR);
-    scene_builder.bind_buffer(3, {}, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
-			      VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR |
-			      VK_SHADER_STAGE_INTERSECTION_BIT_KHR);
-    
+
     chunk_request_buffer_ = std::make_shared<GPUBuffer>(
-        gpu_allocator_, MAX_MODELS * sizeof(uint32_t),
+        gpu_allocator_, MAX_NUM_CHUNKS_LOADED_PER_FRAME * sizeof(uint64_t),
         sizeof(uint64_t), VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
         VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
             VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
         VMA_ALLOCATION_CREATE_HOST_ACCESS_RANDOM_BIT);
     chunk_request_span_ = chunk_request_buffer_->cpu_map();
     uint64_t *crb = reinterpret_cast<uint64_t *>(chunk_request_span_.data());
-    for (uint32_t i = 0; i < MAX_MODELS; ++i) {
-        crb[i] = 0x00000000;
+    for (uint32_t i = 0; i < MAX_NUM_CHUNKS_LOADED_PER_FRAME; ++i) {
+        crb[i] = 0x00000000FFFFFFFF;
     }
 
     camera_buffer_ = std::make_shared<GPUBuffer>(
@@ -451,23 +447,8 @@ build_scene(std::shared_ptr<GraphicsContext> context,
         scene_models.at(idx) = std::move(model);
     }
 
-    std::shared_ptr<GPUBuffer> chunk_dimensions = std::make_shared<GPUBuffer>(
-									      context->gpu_allocator_, MAX_MODELS * sizeof(uint32_t) * 3,
-									      sizeof(uint64_t), VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
-									      VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
-									      VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
-									      VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT);
-    auto chunk_dimensions_span = chunk_dimensions->cpu_map();
-    uint32_t *chunk_dimensions_ptr = reinterpret_cast<uint32_t *>(chunk_dimensions_span.data());
-    for (uint32_t i = 0; i < scene_models.size(); ++i) {
-	chunk_dimensions_ptr[i * 3] = scene_models[i]->chunk_->get_width();
-	chunk_dimensions_ptr[i * 3 + 1] = scene_models[i]->chunk_->get_height();
-	chunk_dimensions_ptr[i * 3 + 2] = scene_models[i]->chunk_->get_depth();
-    }
-    chunk_dimensions->cpu_unmap();
-    
     auto scene =
-        std::make_shared<GraphicsScene>(context, tlas, objects, nullptr, chunk_dimensions);
+        std::make_shared<GraphicsScene>(context, tlas, objects, nullptr);
     context->bind_scene_descriptors(builder, scene, std::move(scene_models));
     scene->scene_descriptor_ = builder.build();
     return scene;
@@ -479,12 +460,15 @@ void GraphicsContext::check_chunk_request_buffer(
     std::unordered_map<uint64_t, uint32_t> deduplicated_requests;
     std::vector<std::shared_ptr<GraphicsModel>> scene_models =
         current_scene_->assemble_models_in_order();
-    for (uint32_t i = 0; i < MAX_MODELS; ++i) {
-        if (crb[i] >= 128) {
-	    std::cout << "INFO: Chunk with ID " << i << " is requested, with " << crb[i] << " rays.\n";
-            deduplicated_requests.emplace(i, scene_models.at(i)->sbt_offset_);
+    for (uint32_t i = 0; i < MAX_NUM_CHUNKS_LOADED_PER_FRAME; ++i) {
+	uint32_t num_rays = 2 * i;
+	uint32_t crb_model = 2 * i + 1;
+        if (crb[crb_model] != 0xFFFFFFFF && crb[num_rays] >= 128) {
+            deduplicated_requests.emplace(crb[crb_model],
+                                          scene_models.at(crb[crb_model])->sbt_offset_);
         }
-	crb[i] = 0;
+	crb[num_rays] = 0;
+	crb[crb_model] = 0xFFFFFFFF;
     }
     for (auto [model_idx, sbt_offset] : deduplicated_requests) {
         if (!uploading_models_.contains(model_idx) &&
@@ -627,12 +611,4 @@ void GraphicsContext::bind_scene_descriptors(
     builder.bind_buffers(2, sparse_buffer_infos, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
                          VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR |
                              VK_SHADER_STAGE_INTERSECTION_BIT_KHR);
-
-    VkDescriptorBufferInfo chunk_dimensions_info{};
-    chunk_dimensions_info.buffer = scene->chunk_dimensions_->get_buffer();
-    chunk_dimensions_info.offset = 0;
-    chunk_dimensions_info.range = scene->chunk_dimensions_->get_size();
-    builder.bind_buffer(3, chunk_dimensions_info, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
-			VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR |
-			VK_SHADER_STAGE_INTERSECTION_BIT_KHR);
 }

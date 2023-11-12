@@ -18,8 +18,7 @@ int main(int argc, char *argv[]) {
     stream.read(reinterpret_cast<char*>(svdag.data()), size);
     std::cout << "SVDAG Size: " << svdag.size() << "\n";
 
-    uint32_t *svdag_ptr = reinterpret_cast<uint32_t *>(svdag.data());
-    uint32_t chunk_width = svdag_ptr[0], chunk_height = svdag_ptr[1], chunk_depth = svdag_ptr[2];
+    uint32_t chunk_width, chunk_height, chunk_depth;
     VoxelChunkPtr chunk = chunk_manager.add_chunk(
 						  std::move(svdag), chunk_width, chunk_height, chunk_depth, VoxelChunk::Format::SVDAG,
 						  VoxelChunk::AttributeSet::Color);
