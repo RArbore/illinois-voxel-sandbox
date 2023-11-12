@@ -10,6 +10,7 @@ add_subdirectory(glm)
 add_library(vma VmaImpl.cpp)
 add_library(ogt OgtImpl.cpp)
 add_library(tinyobj TinyOBJImpl.cpp)
+add_library(stbimage STBImageImpl.cpp)
 
 find_package(Vulkan REQUIRED)
 target_link_libraries(vma PRIVATE Vulkan::Vulkan)

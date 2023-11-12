@@ -1,7 +1,9 @@
 #include <filesystem>
+#include <cmath>
 
-#include <external/glm/glm/glm.hpp>
 #include <external/tinyobjloader/tiny_obj_loader.h>
+#include <external/glm/glm/glm.hpp>
+#include <external/stb_image.h>
 
 #include "Voxelize.h"
 #include "Conversion.h"
@@ -9,6 +11,7 @@
 
 struct Triangle {
     glm::vec3 a, b, c;
+    glm::vec2 t_a, t_b, t_c;
 
     float min_x() const {
 	return fmin(a.x, fmin(b.x, c.x));
@@ -104,9 +107,17 @@ std::vector<std::byte> raw_voxelize_obj(std::string_view filepath, float voxel_s
     ASSERT(reader.ParseFromFile(inputfile, reader_config), reader.Error());
     ASSERT(reader.Warning().empty(), reader.Warning());
     
-    auto& attrib = reader.GetAttrib();
-    auto& shapes = reader.GetShapes();
-    auto& materials = reader.GetMaterials();
+    auto &attrib = reader.GetAttrib();
+    auto &shapes = reader.GetShapes();
+    auto &materials = reader.GetMaterials();
+
+    std::string directory(filepath);
+    const auto last_slash = directory.find_last_of("/");
+    if (last_slash == std::string::npos) {
+	directory = "";
+    } else {
+	directory = directory.substr(0, last_slash + 1);
+    }
     
     glm::vec3 min(0.0f, 0.0f, 0.0f), max(0.0f, 0.0f, 0.0f);
     for (int64_t i = 0; i < attrib.vertices.size(); i += 3) {
@@ -125,61 +136,119 @@ std::vector<std::byte> raw_voxelize_obj(std::string_view filepath, float voxel_s
     uint32_t chunk_depth = static_cast<uint32_t>(ceil((max.z - min.z) / voxel_size));
     std::cout << "Chunk size: (" << chunk_width << ", " << chunk_height << ", " << chunk_depth << ")\n";
 
-    std::vector<Triangle> triangles;
-    for (const auto &shape : shapes) {
-	std::cout << shape.mesh.indices.size() / 3 << " triangles\n";
-	for (int64_t i = 0; i < shape.mesh.indices.size(); i += 3) {
-	    auto index_a = shape.mesh.indices[i].vertex_index;
-	    auto index_b = shape.mesh.indices[i + 1].vertex_index;
-	    auto index_c = shape.mesh.indices[i + 2].vertex_index;
-	    triangles.emplace_back(
-				   glm::vec3(attrib.vertices[3 * index_a], attrib.vertices[3 * index_a + 1], attrib.vertices[3 * index_a + 2]),
-				   glm::vec3(attrib.vertices[3 * index_b], attrib.vertices[3 * index_b + 1], attrib.vertices[3 * index_b + 2]),
-				   glm::vec3(attrib.vertices[3 * index_c], attrib.vertices[3 * index_c + 1], attrib.vertices[3 * index_c + 2])
-				   );
-	}
-    }
-
+    std::unordered_map<int, std::tuple<stbi_uc *, int, int>> loaded_textures;
     std::vector<std::byte> data(static_cast<size_t>(chunk_width) *
                                     static_cast<size_t>(chunk_height) *
                                     static_cast<size_t>(chunk_depth) * 4,
                                 static_cast<std::byte>(0));
-    std::byte red = static_cast<std::byte>(255);
-    std::byte green = static_cast<std::byte>(255);
-    std::byte blue = static_cast<std::byte>(255);
-    std::byte alpha = static_cast<std::byte>(255);
-    for (const auto &tri : triangles) {
-	uint32_t min_voxel_x = static_cast<uint32_t>(floor(((tri.min_x() - min.x) / (max.x - min.x)) * static_cast<float>(chunk_width)));
-	uint32_t min_voxel_y = static_cast<uint32_t>(floor(((tri.min_y() - min.y) / (max.y - min.y)) * static_cast<float>(chunk_height)));
-	uint32_t min_voxel_z = static_cast<uint32_t>(floor(((tri.min_z() - min.z) / (max.z - min.z)) * static_cast<float>(chunk_depth)));
-	uint32_t max_voxel_x = static_cast<uint32_t>(ceil(((tri.max_x() - min.x) / (max.x - min.x)) * static_cast<float>(chunk_width)));
-	uint32_t max_voxel_y = static_cast<uint32_t>(ceil(((tri.max_y() - min.y) / (max.y - min.y)) * static_cast<float>(chunk_height)));
-	uint32_t max_voxel_z = static_cast<uint32_t>(ceil(((tri.max_z() - min.z) / (max.z - min.z)) * static_cast<float>(chunk_depth)));
-	if (max_voxel_x >= chunk_width) {
-	    max_voxel_x = chunk_width - 1;
-	}
-	if (max_voxel_y >= chunk_height) {
-	    max_voxel_y = chunk_height - 1;
-	}
-	if (max_voxel_z >= chunk_depth) {
-	    max_voxel_z = chunk_depth - 1;
-	}
-	for (uint32_t x = min_voxel_x; x <= max_voxel_x; ++x) {
-	    for (uint32_t y = min_voxel_y; y <= max_voxel_y; ++y) {
-		for (uint32_t z = min_voxel_z; z <= max_voxel_z; ++z) {
-		    float tri_voxel_x = static_cast<float>(x) / chunk_width * (max.x - min.x) + min.x;
-		    float tri_voxel_y = static_cast<float>(y) / chunk_height * (max.y - min.y) + min.y;
-		    float tri_voxel_z = static_cast<float>(z) / chunk_depth * (max.z - min.z) + min.z;
-		    if (tri_aabb(tri, glm::vec3(tri_voxel_x, tri_voxel_y, tri_voxel_z), glm::vec3(voxel_size))) {
-			size_t voxel_idx = x + (chunk_height - y - 1) * chunk_width + z * chunk_width * chunk_height;
-			data.at(voxel_idx * 4) = red;
-			data.at(voxel_idx * 4 + 1) = green;
-			data.at(voxel_idx * 4 + 2) = blue;
-			data.at(voxel_idx * 4 + 3) = alpha;
+    for (const auto &shape : shapes) {
+	std::cout << shape.mesh.indices.size() / 3 << " triangles\n";
+	uint32_t num_printed = 0;
+	for (int64_t i = 0; i < shape.mesh.indices.size(); i += 3) {
+	    auto index_a = shape.mesh.indices[i].vertex_index;
+	    auto index_b = shape.mesh.indices[i + 1].vertex_index;
+	    auto index_c = shape.mesh.indices[i + 2].vertex_index;
+	    auto tex_index_a = shape.mesh.indices[i].texcoord_index;
+	    auto tex_index_b = shape.mesh.indices[i + 1].texcoord_index;
+	    auto tex_index_c = shape.mesh.indices[i + 2].texcoord_index;
+
+	    const Triangle tri(
+			       glm::vec3(attrib.vertices.at(3 * index_a), attrib.vertices.at(3 * index_a + 1), attrib.vertices.at(3 * index_a + 2)),
+			       glm::vec3(attrib.vertices.at(3 * index_b), attrib.vertices.at(3 * index_b + 1), attrib.vertices.at(3 * index_b + 2)),
+			       glm::vec3(attrib.vertices.at(3 * index_c), attrib.vertices.at(3 * index_c + 1), attrib.vertices.at(3 * index_c + 2)),
+			       glm::vec2(attrib.texcoords.at(2 * tex_index_a), attrib.texcoords.at(2 * tex_index_a + 1)),
+			       glm::vec2(attrib.texcoords.at(2 * tex_index_b), attrib.texcoords.at(2 * tex_index_b + 1)),
+			       glm::vec2(attrib.texcoords.at(2 * tex_index_c), attrib.texcoords.at(2 * tex_index_c + 1))
+			       );
+
+	    glm::mat3 tri_matrix(tri.a, tri.b, tri.c);
+	    glm::mat3 inverse_tri_matrix = glm::inverse(tri_matrix);
+	    glm::vec3 unit_plane = glm::normalize(glm::cross(tri.a - tri.c, tri.b - tri.c));
+	    if (!std::isfinite(inverse_tri_matrix[0][0]) || !std::isfinite(inverse_tri_matrix[0][1]) || !std::isfinite(inverse_tri_matrix[0][2]) ||
+		!std::isfinite(inverse_tri_matrix[1][0]) || !std::isfinite(inverse_tri_matrix[1][1]) || !std::isfinite(inverse_tri_matrix[1][2]) ||
+		!std::isfinite(inverse_tri_matrix[2][0]) || !std::isfinite(inverse_tri_matrix[2][1]) || !std::isfinite(inverse_tri_matrix[2][2])) {
+		continue;
+	    }
+
+	    int face_mat_id = shape.mesh.material_ids[i / 3];
+	    int texture_width, texture_height;
+	    stbi_uc *texture_pixels;
+	    if (loaded_textures.contains(face_mat_id)) {
+		auto texture = loaded_textures[face_mat_id];
+		texture_pixels = std::get<0>(texture);
+		texture_width = std::get<1>(texture);
+		texture_height = std::get<2>(texture);
+	    } else {
+		const tinyobj::material_t &mat = materials[face_mat_id];
+		const std::string &diffuse_texname = mat.diffuse_texname;
+		int channels;
+		texture_pixels = stbi_load((directory + diffuse_texname).c_str(), &texture_width, &texture_height, &channels, STBI_rgb_alpha);
+		loaded_textures[face_mat_id] = {texture_pixels, texture_width, texture_height};
+	    }
+
+	    uint32_t min_voxel_x = static_cast<uint32_t>(floor(((tri.min_x() - min.x) / (max.x - min.x)) * static_cast<float>(chunk_width)));
+	    uint32_t min_voxel_y = static_cast<uint32_t>(floor(((tri.min_y() - min.y) / (max.y - min.y)) * static_cast<float>(chunk_height)));
+	    uint32_t min_voxel_z = static_cast<uint32_t>(floor(((tri.min_z() - min.z) / (max.z - min.z)) * static_cast<float>(chunk_depth)));
+	    uint32_t max_voxel_x = static_cast<uint32_t>(ceil(((tri.max_x() - min.x) / (max.x - min.x)) * static_cast<float>(chunk_width)));
+	    uint32_t max_voxel_y = static_cast<uint32_t>(ceil(((tri.max_y() - min.y) / (max.y - min.y)) * static_cast<float>(chunk_height)));
+	    uint32_t max_voxel_z = static_cast<uint32_t>(ceil(((tri.max_z() - min.z) / (max.z - min.z)) * static_cast<float>(chunk_depth)));
+	    if (max_voxel_x >= chunk_width) {
+		max_voxel_x = chunk_width - 1;
+	    }
+	    if (max_voxel_y >= chunk_height) {
+		max_voxel_y = chunk_height - 1;
+	    }
+	    if (max_voxel_z >= chunk_depth) {
+		max_voxel_z = chunk_depth - 1;
+	    }
+
+	    for (uint32_t x = min_voxel_x; x <= max_voxel_x; ++x) {
+		for (uint32_t y = min_voxel_y; y <= max_voxel_y; ++y) {
+		    for (uint32_t z = min_voxel_z; z <= max_voxel_z; ++z) {
+			float tri_voxel_x = static_cast<float>(x) / chunk_width * (max.x - min.x) + min.x;
+			float tri_voxel_y = static_cast<float>(y) / chunk_height * (max.y - min.y) + min.y;
+			float tri_voxel_z = static_cast<float>(z) / chunk_depth * (max.z - min.z) + min.z;
+			if (tri_aabb(tri, glm::vec3(tri_voxel_x, tri_voxel_y, tri_voxel_z), glm::vec3(voxel_size))) {
+			    glm::vec3 plane_point = glm::vec3(tri_voxel_x, tri_voxel_y, tri_voxel_z);
+			    plane_point -= unit_plane * (glm::dot(unit_plane, plane_point - tri.a));
+			    glm::vec3 barycentric_coords = inverse_tri_matrix * plane_point;
+			    glm::vec2 uv = tri.t_a * barycentric_coords.x + tri.t_b * barycentric_coords.y + tri.t_c * barycentric_coords.z;
+			    int tex_x = static_cast<int>(uv.x * texture_width);
+			    int tex_y = static_cast<int>(uv.y * texture_height);
+			    while (tex_x < 0) {
+				tex_x += texture_width;
+			    }
+			    while (tex_x >= texture_width) {
+				tex_x -= texture_width;
+			    }
+			    while (tex_y < 0) {
+				tex_y += texture_height;
+			    }
+			    while (tex_y >= texture_height) {
+				tex_y -= texture_height;
+			    }
+			    int linear_coord = tex_x + tex_y * texture_width;
+			    size_t voxel_idx = x + (chunk_height - y - 1) * chunk_width + z * chunk_width * chunk_height;
+			    if (texture_pixels[linear_coord * 4 + 3]) {
+				data.at(voxel_idx * 4) = static_cast<std::byte>(texture_pixels[linear_coord * 4]);
+				data.at(voxel_idx * 4 + 1) = static_cast<std::byte>(texture_pixels[linear_coord * 4 + 1]);
+				data.at(voxel_idx * 4 + 2) = static_cast<std::byte>(texture_pixels[linear_coord * 4 + 2]);
+				data.at(voxel_idx * 4 + 3) = static_cast<std::byte>(255);
+			    }
+			}
 		    }
 		}
 	    }
+	    if (i * 100 / shape.mesh.indices.size() - num_printed >= 10) {
+		num_printed = i * 100 / shape.mesh.indices.size();
+		std::cout << num_printed << "% finished.\n";
+	    }
 	}
+    }
+    std::cout << "100% finished.\n";
+
+    for (auto [_, tex] : loaded_textures) {
+	stbi_image_free(std::get<0>(tex));
     }
 
     out_chunk_width = chunk_width;

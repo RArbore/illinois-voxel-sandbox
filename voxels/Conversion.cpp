@@ -336,6 +336,7 @@ std::vector<std::byte> convert_raw_to_svdag(const std::vector<std::byte> &raw,
 	    std::cout << num_printed << "% finished.\n";
 	}
     }
+    std::cout << "100% finished.\n";
     uint32_t root = push_node_to_svdag(queues.at(0).at(0).first);
 
     const uint32_t num_nodes = static_cast<uint32_t>(
