@@ -24,6 +24,8 @@ const std::map<std::pair<VoxelChunk::Format, VoxelChunk::AttributeSet>,
         {{VoxelChunk::Format::SVDAG, VoxelChunk::AttributeSet::Color}, 3},
 };
 
+const uint32_t MAX_NUM_CHUNKS_LOADED_PER_FRAME = 32;
+
 class GraphicsContext {
   public:
     GraphicsContext() = delete;
@@ -158,7 +160,7 @@ GraphicsContext::GraphicsContext(std::shared_ptr<Window> window) {
 			      VK_SHADER_STAGE_INTERSECTION_BIT_KHR);
     
     chunk_request_buffer_ = std::make_shared<GPUBuffer>(
-        gpu_allocator_, MAX_MODELS * sizeof(uint32_t),
+        gpu_allocator_, MAX_NUM_CHUNKS_LOADED_PER_FRAME * sizeof(uint64_t),
         sizeof(uint64_t), VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
         VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
             VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
@@ -166,7 +168,7 @@ GraphicsContext::GraphicsContext(std::shared_ptr<Window> window) {
     chunk_request_span_ = chunk_request_buffer_->cpu_map();
     uint64_t *crb = reinterpret_cast<uint64_t *>(chunk_request_span_.data());
     for (uint32_t i = 0; i < MAX_MODELS; ++i) {
-        crb[i] = 0x00000000;
+        crb[i] = 0x00000000FFFFFFFF;
     }
 
     camera_buffer_ = std::make_shared<GPUBuffer>(
@@ -479,12 +481,15 @@ void GraphicsContext::check_chunk_request_buffer(
     std::unordered_map<uint64_t, uint32_t> deduplicated_requests;
     std::vector<std::shared_ptr<GraphicsModel>> scene_models =
         current_scene_->assemble_models_in_order();
-    for (uint32_t i = 0; i < MAX_MODELS; ++i) {
-        if (crb[i] >= 128) {
-	    std::cout << "INFO: Chunk with ID " << i << " is requested, with " << crb[i] << " rays.\n";
-            deduplicated_requests.emplace(i, scene_models.at(i)->sbt_offset_);
+    for (uint32_t i = 0; i < MAX_NUM_CHUNKS_LOADED_PER_FRAME; ++i) {
+	uint32_t num_rays = 2 * i;
+	uint32_t crb_model = 2 * i + 1;
+        if (crb[crb_model] != 0xFFFFFFFF && crb[num_rays] >= 128) {
+            deduplicated_requests.emplace(crb[crb_model],
+                                          scene_models.at(crb[crb_model])->sbt_offset_);
         }
-	crb[i] = 0;
+	crb[num_rays] = 0;
+	crb[crb_model] = 0xFFFFFFFF;
     }
     for (auto [model_idx, sbt_offset] : deduplicated_requests) {
         if (!uploading_models_.contains(model_idx) &&

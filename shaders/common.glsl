@@ -6,6 +6,7 @@
 #extension GL_EXT_shader_atomic_int64 : require
 
 #define MAX_MODELS (2 << 16)
+#define MAX_NUM_CHUNKS_LOADED_PER_FRAME 32
 
 struct SVONode {
     uint32_t child_offset_;
@@ -96,7 +97,7 @@ layout(set = 1, binding = 3) buffer chunk_dimensions_ {
 
 // Set 2 is not swapped out - it is for GraphicsContext-wide data.
 layout(set = 2, binding = 0) buffer chunk_request_buffer_ {
-    uint32_t chunk_request_buffer[MAX_MODELS];
+    uint32_t chunk_request_buffer[MAX_NUM_CHUNKS_LOADED_PER_FRAME];
 };
 
 struct Camera {
