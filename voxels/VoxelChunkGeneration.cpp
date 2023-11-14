@@ -24,6 +24,11 @@ BabyChunk::BabyChunk(uint32_t width, uint32_t height, uint32_t depth) {
                                         static_cast<std::byte>(0));
 }
 
+std::byte BabyChunk::get_voxel(uint32_t x, uint32_t y, uint32_t z) const {
+    size_t voxel_idx = x + y * this->width + z * this->width * this->height;
+    return this->data.at(voxel_idx * 4);
+}
+
 std::vector<std::byte> BabyChunk::get_data() {
     return this->data;
 }
@@ -119,7 +124,7 @@ load_vox_scene(const std::string &filepath, ChunkManager &chunk_manager,
     fstream.read(reinterpret_cast<char *>(buffer.data()), buffer.size());
 
     const ogt_vox_scene *voxscene =
-        ogt_vox_read_scene(buffer.data(), buffer.size());
+        ogt_vox_read_scene(buffer.data(), static_cast<std::uint32_t>(buffer.size()));
 
     std::cout << "Number of models: " << voxscene->num_models << std::endl;
     ASSERT(voxscene->num_models > 0,
@@ -198,7 +203,7 @@ generate_island_chunk(uint32_t density, uint32_t radius, uint32_t depth) {
     // generate a conical shaped island
     FastNoiseLite noise;
     noise.SetNoiseType(FastNoiseLite::NoiseType_OpenSimplex2);
-    noise.SetSeed(123);
+    noise.SetSeed(456);
     BabyChunk chunk(density, density, density);
     for (uint32_t x = 0; x < density; ++x) {
         for (uint32_t y = 0; y < density; ++y) {
@@ -210,6 +215,7 @@ generate_island_chunk(uint32_t density, uint32_t radius, uint32_t depth) {
                                     - 2 * radius * radius * static_cast<double>(y) / depth 
                                     + radius * radius;
                 double field = constraint - xz;
+                // double field = 0;
                 float noisescales[] = {1, 2, 4, 8, 16};
                 float amplitudes[] = {1000, 500, 250, 125, 62.5};
                 for (uint16_t i = 0; i < 5; ++i) {
@@ -217,7 +223,7 @@ generate_island_chunk(uint32_t density, uint32_t radius, uint32_t depth) {
                                    static_cast<float>(z) * noisescales[i]) * amplitudes[i];
                 }
 
-                if (0 < field && y < depth) {
+                if (0 < field ) {
                     chunk.write_voxel(x, y, z, 100, 100, 100, 255);
                 }
                 if(x == 0 && y == 0) {
@@ -232,5 +238,55 @@ generate_island_chunk(uint32_t density, uint32_t radius, uint32_t depth) {
             }
         }
     }
+    // for (uint32_t x = 0; x < density; ++x) {
+    //     for (uint32_t z = 0; z < density; ++z) {
+    //         if ()
+    //     }
+    // }
+    return chunk.get_data();
+}
+
+std::vector<std::byte> generate_procedural_rock(uint32_t width,
+                                                       uint32_t height,
+                                                       uint32_t depth,
+                                                       uint32_t scale) {
+    BabyChunk chunk(width, height, depth);
+    FastNoiseLite noise;
+    noise.SetSeed(456);
+    noise.SetNoiseType(FastNoiseLite::NoiseType_OpenSimplex2);
+    for (uint32_t x = 0; x < width; ++x) {
+        for (uint32_t y = 0; y < height; ++y) {
+            for (uint32_t z = 0; z < depth; ++z) {
+                double density = static_cast<double>(scale);
+                density -= (std::pow(static_cast<double>(x) - width / 2, 2) +
+                            std::pow(static_cast<double>(y) - height / 2, 2) +
+                            std::pow(static_cast<double>(z) - depth / 2, 2));
+                float noisescales[] = {1, 2, 4};
+                float amplitudes[] = {1000, 500, 250};
+                for (uint16_t i = 0; i < 3; ++i) {
+                    density += noise.GetNoise(static_cast<float>(x) * noisescales[i], static_cast<float>(y) * noisescales[i],
+                                   static_cast<float>(z) * noisescales[i]) * amplitudes[i];
+                }
+                density += scale;
+                float colorscale = 3;
+                if (density > 0) {
+                    uint32_t color = static_cast<uint32_t>((noise.GetNoise(static_cast<float>(x) * colorscale,
+                                                  static_cast<float>(y) * colorscale,
+                                                  static_cast<float>(z) * colorscale) + 1) * 50 + 50);
+                    chunk.write_voxel(x, y, z, color, color, color, 255);
+                }
+                // if(x == 0 && y == 0) {
+                //     chunk.write_voxel(x, y, z, 0, 0, 255, 255);
+                // }
+                // if(y == 0 && z == 0) {
+                //     chunk.write_voxel(x, y, z, 255, 0, 0, 255);
+                // }
+                // if(x == 0 && z == 0) {
+                //     chunk.write_voxel(x, y, z, 0, 255, 0, 255);
+                // }
+            }
+        }
+    }
+
     return chunk.get_data();
 }

@@ -28,17 +28,55 @@ int main(int argc, char *argv[]) {
 
 
     int size = 128;
-    auto test_island_data = generate_island_chunk(size, 50, 100);
-    VoxelChunkPtr test_island = chunk_manager.add_chunk(
-        std::move(test_island_data), size, size, size, VoxelChunk::Format::Raw,
+    auto rock_data = generate_procedural_rock(size, size, size, 1500);
+    auto proc_svo =
+        convert_raw_to_svo(std::move(rock_data), size, size, size, 4);
+    VoxelChunkPtr rock = chunk_manager.add_chunk(
+        std::move(proc_svo), size, size, size, VoxelChunk::Format::SVO,
         VoxelChunk::AttributeSet::Color);
-    auto model1 = build_model(context, test_island);
-    glm::mat3x4 transform1 = {1.0F, 0.0F,   0.0F, -4.0F, 0.0F, 1.0F,
-                              0.0F, -4.0F, 0.0F, 0.0F,   1.0F, -4.0F};
+    auto model1 = build_model(context, rock);
 
     
-    auto object1 = build_object(context, model1, transform1);
-    auto scene = build_scene(context, {object1});
+    int numobject = 30;
+    auto objects = std::vector<std::shared_ptr<GraphicsObject>>{};
+    for (uint16_t i = 0; i < numobject; i++) {
+        //give each model a random position and rotation
+        float x = (rand() % 100);
+        float y = (rand() % 100);
+        float z = (rand() % 100);
+        float radius = 50;
+        float r = radius * sqrt((rand() % 1000) / 1000.0F);
+        float theta = ((rand() % 1000) / 1000.0F) * 2 * 3.14159265358979323846;
+        glm::mat3x4 translation = {0.0F, 0.0F, 0.0F, r * cos(theta), 
+                                   0.0F, 0.0F, 0.0F, 0, 
+                                   0.0F, 0.0F, 0.0F, r * sin(theta)};
+
+        glm::mat3x3 rotationx = {1.0F,        0.0F,         0.0F,
+                                 0.0F, cos(x * 10), -sin(x * 10),
+                                 0.0F, sin(x * 10),  cos(x * 10)};
+
+        glm::mat3x3 rotationy = {cos(y * 10), 0.0F, sin(y * 10),
+                                 0.0F,        1.0F,        0.0F,
+                                -sin(y * 10), 0.0F, cos(y * 10)};
+
+        glm::mat3x3 rotationz = {cos(z * 10), -sin(z * 10), 0.0F,
+                                 sin(z * 10),  cos(z * 10), 0.0F,
+                                 0.0F,         0.0F,        1.0F};
+        float scaleFactor = 1;
+        glm::mat3x3 scale = {scaleFactor, 0.0F, 0.0F,
+                             0.0F, scaleFactor, 0.0F,
+                             0.0F, 0.0F, scaleFactor};
+        glm::mat3x3 transform = scale * rotationx * rotationy * rotationz;
+        glm::mat3x4 castTransform = glm::mat3x4(transform);
+        castTransform = castTransform + translation;
+        auto object1 = build_object(context, model1, castTransform);
+        objects.push_back(object1);
+    }
+
+    // auto object1 = build_object(context, model1, transform1);
+    
+    
+    auto scene = build_scene(context, {objects});   
 
 
 
