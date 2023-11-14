@@ -199,12 +199,16 @@ std::vector<std::byte> raw_voxelize_obj(std::string_view filepath, float voxel_s
                 } else {
                     const tinyobj::material_t &mat = materials[face_mat_id];
                     const std::string &diffuse_texname = mat.diffuse_texname;
-                    int channels;
-                    texture_pixels = stbi_load(
-                        (directory + diffuse_texname).c_str(), &texture_width,
-                        &texture_height, &channels, STBI_rgb_alpha);
-                    loaded_textures[face_mat_id] = {
-                        texture_pixels, texture_width, texture_height};
+		    if (diffuse_texname.empty()) {
+			has_materials = false;
+		    } else {
+			int channels;
+			texture_pixels = stbi_load(
+						   (directory + diffuse_texname).c_str(), &texture_width,
+						   &texture_height, &channels, STBI_rgb_alpha);
+			loaded_textures[face_mat_id] = {
+			    texture_pixels, texture_width, texture_height};
+		    }
                 }
             }
 
@@ -252,9 +256,9 @@ std::vector<std::byte> raw_voxelize_obj(std::string_view filepath, float voxel_s
                                      glm::vec3(tri_voxel_x, tri_voxel_y,
                                                tri_voxel_z),
                                      glm::vec3(voxel_size))) {
-                            std::byte r = static_cast<std::byte>(128),
-                                      g = static_cast<std::byte>(128),
-                                      b = static_cast<std::byte>(128);
+                            std::byte r = static_cast<std::byte>(255),
+                                      g = static_cast<std::byte>(255),
+                                      b = static_cast<std::byte>(255);
                             if (has_materials) {
                                 glm::vec3 plane_point = glm::vec3(
                                     tri_voxel_x, tri_voxel_y, tri_voxel_z);
