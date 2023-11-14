@@ -21,7 +21,8 @@ const std::map<std::pair<VoxelChunk::Format, VoxelChunk::AttributeSet>,
     FORMAT_TO_SBT_OFFSET = {
         {{VoxelChunk::Format::Raw, VoxelChunk::AttributeSet::Color}, 1},
         {{VoxelChunk::Format::SVO, VoxelChunk::AttributeSet::Color}, 2},
-};
+        {{VoxelChunk::Format::Raw, VoxelChunk::AttributeSet::Emissive}, 3}
+    };
 const uint64_t MAX_NUM_CHUNKS_LOADED_PER_FRAME = 32;
 
 class GraphicsContext {
@@ -218,12 +219,14 @@ GraphicsContext::GraphicsContext(std::shared_ptr<Window> window) {
     auto raw_color_rint = std::make_shared<Shader>(device_, "Raw_Color_rint");
     auto svo_color_rchit = std::make_shared<Shader>(device_, "SVO_Color_rchit");
     auto svo_color_rint = std::make_shared<Shader>(device_, "SVO_Color_rint");
+    auto emissive_rchit = std::make_shared<Shader>(device_, "Emissive_rchit");
     std::vector<std::vector<std::shared_ptr<Shader>>> shader_groups = {
         {rgen},
         {rmiss},
         {unloaded_rchit, unloaded_rint},
         {raw_color_rchit, raw_color_rint},
         {svo_color_rchit, svo_color_rint},
+        {emissive_rchit, raw_color_rint},
     };
     std::vector<VkDescriptorSetLayout> layouts = {
         swapchain_->get_image_descriptor(0)->get_layout(),

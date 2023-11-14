@@ -32,6 +32,7 @@ struct RayPayload {
     vec3 bitangent;
     uint voxel_face;
     bool hit;
+    bool emissive;
 };
 
 // Set 0 is swapped out per swapchain image.

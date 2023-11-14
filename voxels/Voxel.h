@@ -33,6 +33,7 @@ class VoxelChunk {
     enum class AttributeSet {
         Color,
         ColorNormal,
+        Emissive,
     };
 
     VoxelChunk(std::vector<std::byte> &&data, uint32_t width, uint32_t height,
@@ -123,4 +124,5 @@ const static std::unordered_map<VoxelChunk::Format, std::string_view> format_nam
 const static std::unordered_map<VoxelChunk::AttributeSet, std::string_view> attribute_set_names {
     {VoxelChunk::AttributeSet::Color, "Color"},
     {VoxelChunk::AttributeSet::ColorNormal, "ColorNormal"},
+    {VoxelChunk::AttributeSet::Emissive, "Emissive"}
 };

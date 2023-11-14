@@ -24,4 +24,5 @@ void main() {
     payload.bitangent = gl_ObjectToWorldEXT * vec4(voxel_bitangents[gl_HitKindEXT], 0.0);
     payload.color = imageLoad(volumes[volume_id], volume_load_pos);
     payload.voxel_face = gl_HitKindEXT;
+    payload.emissive = false;
 }

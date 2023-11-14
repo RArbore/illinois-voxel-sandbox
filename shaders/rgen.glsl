@@ -45,6 +45,10 @@ void main() {
     for (bounce = 0; bounce < MAX_BOUNCES; bounce++) {
         traceRayEXT(tlas, gl_RayFlagsOpaqueEXT, 0xFF, 0, 0, 0, ray_origin, 0.001f, ray_direction, 10000.0f, 0);
 
+        if (payload.hit && payload.emissive) {
+            L += weight * payload.color.xyz; // if we hit a direct light
+        }
+
         // If we've hit something, we send another ray in a random direction.
         // Otherwise assume we hit the sky.
         // Note that this is **only** doing indirect lighting.
