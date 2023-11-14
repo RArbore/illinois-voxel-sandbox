@@ -56,6 +56,8 @@ class GraphicsContext {
     std::shared_ptr<GPUImage> blue_noise_ = nullptr;
 
     std::shared_ptr<GPUImage> image_history_ = nullptr;
+    std::shared_ptr<GPUImage> g_normals_ = nullptr;
+    std::shared_ptr<GPUImage> g_positions_ = nullptr;
 
     std::shared_ptr<DescriptorSet> wide_descriptor_ = nullptr;
 
@@ -178,7 +180,7 @@ GraphicsContext::GraphicsContext(std::shared_ptr<Window> window) {
 
     image_history_ = std::make_shared<GPUImage>(
         gpu_allocator_, swapchain_->get_extent(), swapchain_->get_format(), 0,
-        VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT,
+        VK_IMAGE_USAGE_STORAGE_BIT,
         VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
         VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT, 1, 1);
 
@@ -246,13 +248,13 @@ GraphicsContext::GraphicsContext(std::shared_ptr<Window> window) {
         DescriptorSetBuilder tonemap_builder(descriptor_allocator_);
         tonemap_builder.bind_image(0,
                                    {.sampler = VK_NULL_HANDLE,
-                                    .imageView = image_history_->get_view(),
+                                    .imageView = image_views[image_index],
                                     .imageLayout = VK_IMAGE_LAYOUT_GENERAL},
                                    VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,
                                    VK_SHADER_STAGE_COMPUTE_BIT);
         tonemap_builder.bind_image(1,
                                    {.sampler = VK_NULL_HANDLE,
-                                    .imageView = image_views[image_index],
+                                    .imageView = image_history_->get_view(),
                                     .imageLayout = VK_IMAGE_LAYOUT_GENERAL},
                                    VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,
                                    VK_SHADER_STAGE_COMPUTE_BIT);

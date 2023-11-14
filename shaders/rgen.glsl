@@ -77,11 +77,13 @@ void main() {
 
     vec4 final_radiance = vec4(L, 1.0f);
 
-    if (camera.frames_since_update == 0) {
-        imageStore(image_history, ivec2(gl_LaunchIDEXT), final_radiance);
-    } else {
-        vec4 history = imageLoad(image_history, ivec2(gl_LaunchIDEXT));
-        vec4 final_color = mix(history, final_radiance, 1.0f / (camera.frames_since_update + 1));
-        imageStore(image_history, ivec2(gl_LaunchIDEXT), final_color);
-    }
+    imageStore(image_history, ivec2(gl_LaunchIDEXT), final_radiance);
+
+    // if (camera.frames_since_update == 0) {
+    //     imageStore(image_history, ivec2(gl_LaunchIDEXT), final_radiance);
+    // } else {
+    //     vec4 history = imageLoad(image_history, ivec2(gl_LaunchIDEXT));
+    //     vec4 final_color = mix(history, final_radiance, 1.0f / (camera.frames_since_update + 1));
+    //     imageStore(image_history, ivec2(gl_LaunchIDEXT), final_color);
+    // }
 }
