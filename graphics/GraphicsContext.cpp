@@ -201,13 +201,13 @@ GraphicsContext::GraphicsContext(std::shared_ptr<Window> window) {
                              VK_SHADER_STAGE_RAYGEN_BIT_KHR);
     wide_builder.bind_image(2,
                             {.sampler = VK_NULL_HANDLE,
-                             .imageView = image_history_->get_view(),
+                             .imageView = blue_noise_->get_view(),
                              .imageLayout = VK_IMAGE_LAYOUT_GENERAL},
                             VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,
                             VK_SHADER_STAGE_RAYGEN_BIT_KHR);
     wide_builder.bind_image(3,
                             {.sampler = VK_NULL_HANDLE,
-                             .imageView = blue_noise_->get_view(),
+                             .imageView = image_history_->get_view(),
                              .imageLayout = VK_IMAGE_LAYOUT_GENERAL},
                             VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,
                             VK_SHADER_STAGE_RAYGEN_BIT_KHR);

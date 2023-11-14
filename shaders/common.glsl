@@ -71,8 +71,9 @@ layout(set = 2, binding = 1) uniform camera_ {
 	Camera camera;
 };
 
-layout(set = 2, binding = 2, rgba8) uniform image2D image_history;
+layout(set = 2, binding = 2, rgba8) uniform image2D blue_noise;
 
-layout(set = 2, binding = 3, rgba8) uniform image2D blue_noise;
+layout(set = 2, binding = 3, rgba8) uniform image2D image_history;
+
 
 const float FAR_AWAY = 1000.0;
