@@ -39,6 +39,10 @@ void main() {
     ivec2 blue_noise_coords = ivec2((gl_LaunchIDEXT.xy + ivec2(hash(t), hash(3 * t))) % blue_noise_size);
     vec4 random = imageLoad(blue_noise, blue_noise_coords);
 
+    // Todo: is there a better way to clear these in a raytracing pipeline...?
+    imageStore(image_normals, ivec2(gl_LaunchIDEXT), vec4(0.0f));
+    imageStore(image_positions, ivec2(gl_LaunchIDEXT), vec4(0.0f));
+
     vec3 L = vec3(0.0f);
     vec3 weight = vec3(1.0f);
     int bounce = 0;
@@ -53,10 +57,12 @@ void main() {
         // Otherwise assume we hit the sky.
         // Note that this is **only** doing indirect lighting.
         if (payload.hit) {
-            // Choose a new direction and evaluate the BRDF/PDF
-            // blue_noise_uv = ((ivec2(hash(4 * t + bounce), hash(2 * t + 3 * bounce))) % blue_noise_size) / vec2(blue_noise_size);
-            // random = texture(blue_noise, blue_noise_uv);
+            if (bounce == 0) {
+                imageStore(image_normals, ivec2(gl_LaunchIDEXT), vec4(payload.world_normal, 1.0f));
+                imageStore(image_positions, ivec2(gl_LaunchIDEXT), vec4(payload.world_position, 1.0f));
+            }
 
+            // Choose a new direction and evaluate the BRDF/PDF
             vec3 new_local_direction = cosine_sample_hemisphere(slice_2_from_4(random, bounce));
             float pdf = dot(vec3(0.0f, 1.0f, 0.0f), new_local_direction) * INV_PI; // cosine-weighted sampling
             if (pdf < 0.001) {

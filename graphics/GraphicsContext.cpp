@@ -56,8 +56,8 @@ class GraphicsContext {
     std::shared_ptr<GPUImage> blue_noise_ = nullptr;
 
     std::shared_ptr<GPUImage> image_history_ = nullptr;
-    std::shared_ptr<GPUImage> g_normals_ = nullptr;
-    std::shared_ptr<GPUImage> g_positions_ = nullptr;
+    std::shared_ptr<GPUImage> image_normals_ = nullptr;
+    std::shared_ptr<GPUImage> image_positions_ = nullptr;
 
     std::shared_ptr<DescriptorSet> wide_descriptor_ = nullptr;
 
@@ -184,6 +184,16 @@ GraphicsContext::GraphicsContext(std::shared_ptr<Window> window) {
         VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
         VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT, 1, 1);
 
+    image_normals_ = std::make_shared<GPUImage>(
+        gpu_allocator_, swapchain_->get_extent(), swapchain_->get_format(), 0,
+        VK_IMAGE_USAGE_STORAGE_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+        VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT, 1, 1);
+
+    image_positions_ = std::make_shared<GPUImage>(
+        gpu_allocator_, swapchain_->get_extent(), swapchain_->get_format(), 0,
+        VK_IMAGE_USAGE_STORAGE_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+        VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT, 1, 1);
+
     blue_noise_ = load_image(gpu_allocator_, ring_buffer_, "LDR_RGBA_0.png");
 
     DescriptorSetBuilder wide_builder(descriptor_allocator_);
@@ -208,6 +218,18 @@ GraphicsContext::GraphicsContext(std::shared_ptr<Window> window) {
     wide_builder.bind_image(3,
                             {.sampler = VK_NULL_HANDLE,
                              .imageView = image_history_->get_view(),
+                             .imageLayout = VK_IMAGE_LAYOUT_GENERAL},
+                            VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,
+                            VK_SHADER_STAGE_RAYGEN_BIT_KHR);
+    wide_builder.bind_image(4,
+                            {.sampler = VK_NULL_HANDLE,
+                             .imageView = image_normals_->get_view(),
+                             .imageLayout = VK_IMAGE_LAYOUT_GENERAL},
+                            VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,
+                            VK_SHADER_STAGE_RAYGEN_BIT_KHR);
+    wide_builder.bind_image(5,
+                            {.sampler = VK_NULL_HANDLE,
+                             .imageView = image_positions_->get_view(),
                              .imageLayout = VK_IMAGE_LAYOUT_GENERAL},
                             VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,
                             VK_SHADER_STAGE_RAYGEN_BIT_KHR);
@@ -255,6 +277,18 @@ GraphicsContext::GraphicsContext(std::shared_ptr<Window> window) {
         tonemap_builder.bind_image(1,
                                    {.sampler = VK_NULL_HANDLE,
                                     .imageView = image_history_->get_view(),
+                                    .imageLayout = VK_IMAGE_LAYOUT_GENERAL},
+                                   VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,
+                                   VK_SHADER_STAGE_COMPUTE_BIT);
+        tonemap_builder.bind_image(2,
+                                   {.sampler = VK_NULL_HANDLE,
+                                    .imageView = image_normals_->get_view(),
+                                    .imageLayout = VK_IMAGE_LAYOUT_GENERAL},
+                                   VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,
+                                   VK_SHADER_STAGE_COMPUTE_BIT);
+        tonemap_builder.bind_image(3,
+                                   {.sampler = VK_NULL_HANDLE,
+                                    .imageView = image_positions_->get_view(),
                                     .imageLayout = VK_IMAGE_LAYOUT_GENERAL},
                                    VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,
                                    VK_SHADER_STAGE_COMPUTE_BIT);
@@ -321,10 +355,23 @@ double render_frame(std::shared_ptr<GraphicsContext> context,
     const uint32_t swapchain_image_index =
         context->swapchain_->acquire_next_image(context->acquire_semaphore_);
 
-    Barrier prologue_barrier(
+    // Todo: is there a better way to transition these images?
+    Barrier prologue_barrier0(
         context->device_, VK_PIPELINE_STAGE_2_NONE, VK_ACCESS_2_NONE,
         VK_PIPELINE_STAGE_2_RAY_TRACING_SHADER_BIT_KHR,
         VK_ACCESS_2_SHADER_WRITE_BIT, context->image_history_->get_image(),
+        VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_GENERAL);
+
+    Barrier prologue_barrier1(
+        context->device_, VK_PIPELINE_STAGE_2_NONE, VK_ACCESS_2_NONE,
+        VK_PIPELINE_STAGE_2_RAY_TRACING_SHADER_BIT_KHR,
+        VK_ACCESS_2_SHADER_WRITE_BIT, context->image_normals_->get_image(),
+        VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_GENERAL);
+
+    Barrier prologue_barrier2(
+        context->device_, VK_PIPELINE_STAGE_2_NONE, VK_ACCESS_2_NONE,
+        VK_PIPELINE_STAGE_2_RAY_TRACING_SHADER_BIT_KHR,
+        VK_ACCESS_2_SHADER_WRITE_BIT, context->image_positions_->get_image(),
         VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_GENERAL);
 
     Barrier tonemap_barrier(
@@ -352,7 +399,9 @@ double render_frame(std::shared_ptr<GraphicsContext> context,
         VkExtent2D extent = context->swapchain_->get_extent();
 
         // Render to the off-screen buffer
-        prologue_barrier.record(command_buffer);
+        prologue_barrier0.record(command_buffer);
+        prologue_barrier1.record(command_buffer);
+        prologue_barrier2.record(command_buffer);
         context->ray_trace_pipeline_->record(
             command_buffer,
             {context->swapchain_->get_image_descriptor(
