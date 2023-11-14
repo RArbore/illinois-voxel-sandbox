@@ -13,7 +13,7 @@ void main()
     // Just a clamp for the time being, 
     // but can be used for denoising + tonemapping in the future.
     ivec2 pixel = ivec2(gl_GlobalInvocationID.xy);
-    vec4 pixel_color = imageLoad(image_normals, pixel);
+    vec4 pixel_color = imageLoad(noisy_image, pixel);
     pixel_color = clamp(pixel_color, 0.0, 1.0);
     imageStore(output_image, pixel, pixel_color);
 }
