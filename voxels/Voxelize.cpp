@@ -105,7 +105,6 @@ std::vector<std::byte> raw_voxelize_obj(std::string_view filepath, float voxel_s
     tinyobj::ObjReader reader;
     
     ASSERT(reader.ParseFromFile(inputfile, reader_config), reader.Error());
-    ASSERT(reader.Warning().empty(), reader.Warning());
     
     auto &attrib = reader.GetAttrib();
     auto &shapes = reader.GetShapes();
