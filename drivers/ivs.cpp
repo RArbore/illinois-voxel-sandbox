@@ -81,7 +81,6 @@ int main(int argc, char *argv[]) {
 
 
 
-    double elapsed = 0.0;
     while (!window->should_close()) {
         window->poll_events();
         auto camera_info = camera->get_uniform_buffer();
@@ -89,11 +88,5 @@ int main(int argc, char *argv[]) {
                                  camera->get_front(), camera_info);
         camera->handle_keys(dt);
         camera->mark_rendered();
-
-        elapsed += dt / 1000.0;
-        if (elapsed >= 1.0) {
-            chunk_manager.debug_print();
-            elapsed = 0.0;
-        }
     }
 }
