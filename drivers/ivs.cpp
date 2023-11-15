@@ -34,10 +34,10 @@ int main(int argc, char *argv[]) {
     VoxelChunkPtr rock = chunk_manager.add_chunk(
         std::move(proc_svo), size, size, size, VoxelChunk::Format::SVO,
         VoxelChunk::AttributeSet::Color);
-    auto model1 = build_model(context, rock);
+    auto rock_model = build_model(context, rock);
 
     
-    int numobject = 30;
+    int numobject = 20;
     auto objects = std::vector<std::shared_ptr<GraphicsObject>>{};
     for (uint16_t i = 0; i < numobject; i++) {
         //give each model a random position and rotation
@@ -69,17 +69,28 @@ int main(int argc, char *argv[]) {
         glm::mat3x3 transform = scale * rotationx * rotationy * rotationz;
         glm::mat3x4 castTransform = glm::mat3x4(transform);
         castTransform = castTransform + translation;
-        auto object1 = build_object(context, model1, castTransform);
+        auto object1 = build_object(context, rock_model, castTransform);
         objects.push_back(object1);
     }
-
-    // auto object1 = build_object(context, model1, transform1);
     
-    
-    auto scene = build_scene(context, {objects});   
+      
 
+    int island_size = 128;
+    auto island_data = generate_island_chunk(island_size, 50, 100);
+    auto proc_island_svo =
+        convert_raw_to_svo(std::move(island_data), island_size, island_size, island_size, 4);
+    VoxelChunkPtr island = chunk_manager.add_chunk(
+        std::move(proc_island_svo), island_size, island_size, island_size, VoxelChunk::Format::SVO,
+        VoxelChunk::AttributeSet::Color);
+    auto island_model = build_model(context, island);
+    glm::mat3x4 transform1 = { 1.0F, 0.0F, 0.0F, 0.0F, 
+                                0.0F, 1.0F, 0.0F, 0.0F, 
+                                0.0F, 0.0F, 1.0F, 0.0F};
+    auto island_object = build_object(context, island_model, transform1);
 
+    objects.push_back(island_object);
 
+    auto scene = build_scene(context, {objects}); 
 
     double elapsed = 0.0;
     while (!window->should_close()) {

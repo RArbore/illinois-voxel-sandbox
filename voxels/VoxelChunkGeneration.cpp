@@ -24,9 +24,11 @@ BabyChunk::BabyChunk(uint32_t width, uint32_t height, uint32_t depth) {
                                         static_cast<std::byte>(0));
 }
 
-std::byte BabyChunk::get_voxel(uint32_t x, uint32_t y, uint32_t z) const {
+bool BabyChunk::get_voxel(uint32_t x, uint32_t y, uint32_t z) const {
     size_t voxel_idx = x + y * this->width + z * this->width * this->height;
-    return this->data.at(voxel_idx * 4);
+    // std::vector<std::byte> out = {this->data.at(voxel_idx * 4), this->data.at(voxel_idx * 4 + 1),
+    //         this->data.at(voxel_idx * 4 + 2), this->data.at(voxel_idx * 4 + 3)};
+    return this->data.at(voxel_idx * 4 + 3) != static_cast<std::byte>(0);
 }
 
 std::vector<std::byte> BabyChunk::get_data() {
@@ -202,6 +204,7 @@ std::vector<std::byte>
 generate_island_chunk(uint32_t density, uint32_t radius, uint32_t depth) {
     // generate a conical shaped island
     FastNoiseLite noise;
+    double vertical_offset = 10;
     noise.SetNoiseType(FastNoiseLite::NoiseType_OpenSimplex2);
     noise.SetSeed(456);
     BabyChunk chunk(density, density, density);
@@ -215,6 +218,10 @@ generate_island_chunk(uint32_t density, uint32_t radius, uint32_t depth) {
                                     - 2 * radius * radius * static_cast<double>(y) / depth 
                                     + radius * radius;
                 double field = constraint - xz;
+                if (y < vertical_offset) {
+                    
+                    field -= (vertical_offset - y) * 500;
+                }
                 // double field = 0;
                 float noisescales[] = {1, 2, 4, 8, 16};
                 float amplitudes[] = {1000, 500, 250, 125, 62.5};
@@ -223,8 +230,13 @@ generate_island_chunk(uint32_t density, uint32_t radius, uint32_t depth) {
                                    static_cast<float>(z) * noisescales[i]) * amplitudes[i];
                 }
 
-                if (0 < field ) {
+                if (field > 0) {
+                    
                     chunk.write_voxel(x, y, z, 100, 100, 100, 255);
+                    if (!chunk.get_voxel(x, y-1, z)) {
+                        chunk.write_voxel(x, y, z, 100, 200, 100, 255);
+                    }
+                    
                 }
                 if(x == 0 && y == 0) {
                     chunk.write_voxel(x, y, z, 0, 0, 255, 255);

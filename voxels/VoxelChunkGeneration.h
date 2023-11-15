@@ -32,7 +32,7 @@ class BabyChunk {
         uint32_t get_depth() const;
         void write_voxel(uint32_t x, uint32_t y, uint32_t z, uint32_t r,
                          uint32_t g, uint32_t b, uint32_t a);
-        std::byte get_voxel(uint32_t x, uint32_t y, uint32_t z) const;
+        bool get_voxel(uint32_t x, uint32_t y, uint32_t z) const;
     private:
         uint32_t width;
         uint32_t height;
