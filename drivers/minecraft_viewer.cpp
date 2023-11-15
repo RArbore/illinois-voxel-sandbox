@@ -11,7 +11,7 @@ int main(int argc, char *argv[]) {
 
     const std::string modelsDirectory = MODELS_DIRECTORY;
     const std::string filePath = modelsDirectory + "/r.1.0.mca";
-    AnvilLoader loader(filePath, context, chunk_manager);
+    AnvilLoader loader(filePath, context, chunk_manager, "");
     auto test_scene = loader.build_scene();
 
     glm::vec3 camera_pos = glm::vec3(512.0f, 0.0f, 48.0f);
