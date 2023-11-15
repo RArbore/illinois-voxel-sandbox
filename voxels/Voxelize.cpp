@@ -257,8 +257,9 @@ std::vector<std::byte> raw_voxelize_obj(std::string_view filepath, float voxel_s
                                                tri_voxel_z),
                                      glm::vec3(voxel_size))) {
                             std::byte r = static_cast<std::byte>(255),
-                                      g = static_cast<std::byte>(255),
-                                      b = static_cast<std::byte>(255);
+				g = static_cast<std::byte>(255),
+				b = static_cast<std::byte>(255),
+				a = static_cast<std::byte>(255);
                             if (has_materials) {
                                 glm::vec3 plane_point = glm::vec3(
                                     tri_voxel_x, tri_voxel_y, tri_voxel_z);
@@ -298,9 +299,13 @@ std::vector<std::byte> raw_voxelize_obj(std::string_view filepath, float voxel_s
                                         texture_pixels[linear_coord * 4 + 1]);
                                     b = static_cast<std::byte>(
                                         texture_pixels[linear_coord * 4 + 2]);
-                                    data.at(voxel_idx * 4 + 3) =
-                                        static_cast<std::byte>(255);
-                                }
+                                    a = static_cast<std::byte>(255);
+                                } else {
+                                    r = static_cast<std::byte>(0);
+                                    g = static_cast<std::byte>(0);
+                                    b = static_cast<std::byte>(0);
+                                    a = static_cast<std::byte>(0);
+				}
                             }
 
                             size_t voxel_idx =
@@ -309,8 +314,7 @@ std::vector<std::byte> raw_voxelize_obj(std::string_view filepath, float voxel_s
                             data.at(voxel_idx * 4) = r;
                             data.at(voxel_idx * 4 + 1) = g;
                             data.at(voxel_idx * 4 + 2) = b;
-                            data.at(voxel_idx * 4 + 3) =
-                                static_cast<std::byte>(255);
+                            data.at(voxel_idx * 4 + 3) = a;
                         }
                     }
                 }

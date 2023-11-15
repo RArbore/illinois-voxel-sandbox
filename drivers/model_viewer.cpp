@@ -13,9 +13,9 @@ int main(int argc, char *argv[]) {
     ChunkManager chunk_manager;
     std::ifstream stream(model_path,
 			 std::ios::in | std::ios::binary);
-    const auto size = std::filesystem::file_size(model_path);
-    std::vector<std::byte> svdag = std::vector<std::byte>(size);
-    stream.read(reinterpret_cast<char*>(svdag.data()), size);
+    const auto file_size = std::filesystem::file_size(model_path);
+    std::vector<std::byte> svdag = std::vector<std::byte>(file_size);
+    stream.read(reinterpret_cast<char*>(svdag.data()), file_size);
     std::cout << "SVDAG Size: " << svdag.size() << "\n";
 
     uint32_t *svdag_ptr = reinterpret_cast<uint32_t *>(svdag.data());
@@ -27,8 +27,10 @@ int main(int argc, char *argv[]) {
     auto window = create_window();
     auto context = create_graphics_context(window);
     auto model = build_model(context, chunk);
-    glm::mat3x4 transform = {1.0F, 0.0F, 0.0F, 0.0F, 0.0F, 1.0F,
-			     0.0F, 0.0F, 0.0F, 0.0F, 1.0F, 0.0F};
+    const uint32_t min_dim = chunk_width < chunk_height ? chunk_width < chunk_depth ? chunk_width : chunk_depth : chunk_height < chunk_depth ? chunk_height : chunk_depth;
+    const float size = 100.0 / static_cast<float>(min_dim);
+    glm::mat3x4 transform = {size, 0.0F, 0.0F, 0.0F, 0.0F, size,
+			     0.0F, 0.0F, 0.0F, 0.0F, size, 0.0F};
     std::vector<std::shared_ptr<GraphicsObject>> objects;
     auto object = build_object(context, model, transform);
     objects.emplace_back(std::move(object));
@@ -42,7 +44,7 @@ int main(int argc, char *argv[]) {
         auto camera_info = camera->get_uniform_buffer();
         double dt = render_frame(context, scene, camera->get_position(),
                                  camera->get_front(), camera_info);
-        camera->handle_keys(dt);
         camera->mark_rendered();
+        camera->handle_keys(dt);
     }
 }

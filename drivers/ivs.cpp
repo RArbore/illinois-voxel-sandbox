@@ -33,8 +33,8 @@ int main(int argc, char *argv[]) {
         auto camera_info = camera->get_uniform_buffer();
         double dt = render_frame(context, scene, camera->get_position(),
                                  camera->get_front(), camera_info);
-        camera->handle_keys(dt);
         camera->mark_rendered();
+        camera->handle_keys(dt);
 
 	elapsed += dt / 1000.0;
 	if (elapsed >= 1.0) {
