@@ -8,23 +8,21 @@
 
 layout(location = 0) rayPayloadInEXT RayPayload payload;
 
-hitAttributeEXT uint leaf_id;
-hitAttributeEXT uint voxel_normal_id;
-
 void main() {
-    uint svo_id = gl_InstanceCustomIndexEXT;
-    SVOLeaf_Color color = svo_leaf_color_buffers[svo_id].nodes[leaf_id];
+    uint volume_id = gl_InstanceCustomIndexEXT;
+
+    vec3 world_ray_pos = gl_WorldRayOriginEXT + gl_WorldRayDirectionEXT * gl_HitTEXT;
+    vec3 world_obj_pos = gl_ObjectToWorldEXT * vec4(0.0, 0.0, 0.0, 1.0);
+
+    vec3 voxel_sample_pos = gl_WorldToObjectEXT * vec4(world_ray_pos, 1.0);
+    ivec3 volume_load_pos = ivec3(voxel_sample_pos - 0.5 * voxel_normals[gl_HitKindEXT]);
+
     payload.hit = true;
-    payload.world_position = gl_WorldRayOriginEXT + gl_WorldRayDirectionEXT * gl_HitTEXT;
+    payload.world_position = world_ray_pos;
     payload.world_normal = gl_ObjectToWorldEXT * vec4(voxel_normals[gl_HitKindEXT], 0.0);
     payload.tangent = gl_ObjectToWorldEXT * vec4(voxel_tangents[gl_HitKindEXT], 0.0);
     payload.bitangent = gl_ObjectToWorldEXT * vec4(voxel_bitangents[gl_HitKindEXT], 0.0);
-    payload.color = vec4(
-	       float(int(color.red_)) / 255.0,
-	       float(int(color.green_)) / 255.0,
-	       float(int(color.blue_)) / 255.0,
-	       float(int(color.alpha_)) / 255.0
-	       );
+    payload.color = imageLoad(volumes[volume_id], volume_load_pos);
     payload.voxel_face = gl_HitKindEXT;
-    payload.emissive = false;
+    payload.emissive = true;
 }

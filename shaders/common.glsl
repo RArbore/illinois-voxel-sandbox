@@ -32,6 +32,7 @@ struct RayPayload {
     vec3 bitangent;
     uint voxel_face;
     bool hit;
+    bool emissive;
 };
 
 // Set 0 is swapped out per swapchain image.
@@ -70,8 +71,11 @@ layout(set = 2, binding = 1) uniform camera_ {
 	Camera camera;
 };
 
-layout(set = 2, binding = 2, rgba8) uniform image2D image_history;
+layout(set = 2, binding = 2, rgba8) uniform image2D blue_noise;
 
-layout(set = 2, binding = 3, rgba8) uniform image2D blue_noise;
+layout(set = 2, binding = 3, rgba8) uniform image2D image_history;
+layout(set = 2, binding = 4, rgba8) uniform image2D image_normals;
+layout(set = 2, binding = 5, rgba8) uniform image2D image_positions;
+
 
 const float FAR_AWAY = 1000.0;

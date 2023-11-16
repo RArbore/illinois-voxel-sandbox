@@ -21,7 +21,8 @@ const std::map<std::pair<VoxelChunk::Format, VoxelChunk::AttributeSet>,
     FORMAT_TO_SBT_OFFSET = {
         {{VoxelChunk::Format::Raw, VoxelChunk::AttributeSet::Color}, 1},
         {{VoxelChunk::Format::SVO, VoxelChunk::AttributeSet::Color}, 2},
-};
+        {{VoxelChunk::Format::Raw, VoxelChunk::AttributeSet::Emissive}, 3}
+    };
 const uint64_t MAX_NUM_CHUNKS_LOADED_PER_FRAME = 32;
 
 class GraphicsContext {
@@ -55,6 +56,8 @@ class GraphicsContext {
     std::shared_ptr<GPUImage> blue_noise_ = nullptr;
 
     std::shared_ptr<GPUImage> image_history_ = nullptr;
+    std::shared_ptr<GPUImage> image_normals_ = nullptr;
+    std::shared_ptr<GPUImage> image_positions_ = nullptr;
 
     std::shared_ptr<DescriptorSet> wide_descriptor_ = nullptr;
 
@@ -177,8 +180,18 @@ GraphicsContext::GraphicsContext(std::shared_ptr<Window> window) {
 
     image_history_ = std::make_shared<GPUImage>(
         gpu_allocator_, swapchain_->get_extent(), swapchain_->get_format(), 0,
-        VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT,
+        VK_IMAGE_USAGE_STORAGE_BIT,
         VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+        VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT, 1, 1);
+
+    image_normals_ = std::make_shared<GPUImage>(
+        gpu_allocator_, swapchain_->get_extent(), swapchain_->get_format(), 0,
+        VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+        VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT, 1, 1);
+
+    image_positions_ = std::make_shared<GPUImage>(
+        gpu_allocator_, swapchain_->get_extent(), swapchain_->get_format(), 0,
+        VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
         VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT, 1, 1);
 
     blue_noise_ = load_image(gpu_allocator_, ring_buffer_, "LDR_RGBA_0.png");
@@ -198,13 +211,25 @@ GraphicsContext::GraphicsContext(std::shared_ptr<Window> window) {
                              VK_SHADER_STAGE_RAYGEN_BIT_KHR);
     wide_builder.bind_image(2,
                             {.sampler = VK_NULL_HANDLE,
-                             .imageView = image_history_->get_view(),
+                             .imageView = blue_noise_->get_view(),
                              .imageLayout = VK_IMAGE_LAYOUT_GENERAL},
                             VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,
                             VK_SHADER_STAGE_RAYGEN_BIT_KHR);
     wide_builder.bind_image(3,
                             {.sampler = VK_NULL_HANDLE,
-                             .imageView = blue_noise_->get_view(),
+                             .imageView = image_history_->get_view(),
+                             .imageLayout = VK_IMAGE_LAYOUT_GENERAL},
+                            VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,
+                            VK_SHADER_STAGE_RAYGEN_BIT_KHR);
+    wide_builder.bind_image(4,
+                            {.sampler = VK_NULL_HANDLE,
+                             .imageView = image_normals_->get_view(),
+                             .imageLayout = VK_IMAGE_LAYOUT_GENERAL},
+                            VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,
+                            VK_SHADER_STAGE_RAYGEN_BIT_KHR);
+    wide_builder.bind_image(5,
+                            {.sampler = VK_NULL_HANDLE,
+                             .imageView = image_positions_->get_view(),
                              .imageLayout = VK_IMAGE_LAYOUT_GENERAL},
                             VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,
                             VK_SHADER_STAGE_RAYGEN_BIT_KHR);
@@ -218,12 +243,14 @@ GraphicsContext::GraphicsContext(std::shared_ptr<Window> window) {
     auto raw_color_rint = std::make_shared<Shader>(device_, "Raw_Color_rint");
     auto svo_color_rchit = std::make_shared<Shader>(device_, "SVO_Color_rchit");
     auto svo_color_rint = std::make_shared<Shader>(device_, "SVO_Color_rint");
+    auto emissive_rchit = std::make_shared<Shader>(device_, "Emissive_rchit");
     std::vector<std::vector<std::shared_ptr<Shader>>> shader_groups = {
         {rgen},
         {rmiss},
         {unloaded_rchit, unloaded_rint},
         {raw_color_rchit, raw_color_rint},
         {svo_color_rchit, svo_color_rint},
+        {emissive_rchit, raw_color_rint},
     };
     std::vector<VkDescriptorSetLayout> layouts = {
         swapchain_->get_image_descriptor(0)->get_layout(),
@@ -243,13 +270,25 @@ GraphicsContext::GraphicsContext(std::shared_ptr<Window> window) {
         DescriptorSetBuilder tonemap_builder(descriptor_allocator_);
         tonemap_builder.bind_image(0,
                                    {.sampler = VK_NULL_HANDLE,
-                                    .imageView = image_history_->get_view(),
+                                    .imageView = image_views[image_index],
                                     .imageLayout = VK_IMAGE_LAYOUT_GENERAL},
                                    VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,
                                    VK_SHADER_STAGE_COMPUTE_BIT);
         tonemap_builder.bind_image(1,
                                    {.sampler = VK_NULL_HANDLE,
-                                    .imageView = image_views[image_index],
+                                    .imageView = image_history_->get_view(),
+                                    .imageLayout = VK_IMAGE_LAYOUT_GENERAL},
+                                   VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,
+                                   VK_SHADER_STAGE_COMPUTE_BIT);
+        tonemap_builder.bind_image(2,
+                                   {.sampler = VK_NULL_HANDLE,
+                                    .imageView = image_normals_->get_view(),
+                                    .imageLayout = VK_IMAGE_LAYOUT_GENERAL},
+                                   VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,
+                                   VK_SHADER_STAGE_COMPUTE_BIT);
+        tonemap_builder.bind_image(3,
+                                   {.sampler = VK_NULL_HANDLE,
+                                    .imageView = image_positions_->get_view(),
                                     .imageLayout = VK_IMAGE_LAYOUT_GENERAL},
                                    VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,
                                    VK_SHADER_STAGE_COMPUTE_BIT);
@@ -316,10 +355,23 @@ double render_frame(std::shared_ptr<GraphicsContext> context,
     const uint32_t swapchain_image_index =
         context->swapchain_->acquire_next_image(context->acquire_semaphore_);
 
-    Barrier prologue_barrier(
+    // Todo: is there a better way to transition these images?
+    Barrier prologue_barrier0(
         context->device_, VK_PIPELINE_STAGE_2_NONE, VK_ACCESS_2_NONE,
         VK_PIPELINE_STAGE_2_RAY_TRACING_SHADER_BIT_KHR,
         VK_ACCESS_2_SHADER_WRITE_BIT, context->image_history_->get_image(),
+        VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_GENERAL);
+
+    Barrier prologue_barrier1(
+        context->device_, VK_PIPELINE_STAGE_2_NONE, VK_ACCESS_2_NONE,
+        VK_PIPELINE_STAGE_2_RAY_TRACING_SHADER_BIT_KHR,
+        VK_ACCESS_2_SHADER_WRITE_BIT, context->image_normals_->get_image(),
+        VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_GENERAL);
+
+    Barrier prologue_barrier2(
+        context->device_, VK_PIPELINE_STAGE_2_NONE, VK_ACCESS_2_NONE,
+        VK_PIPELINE_STAGE_2_RAY_TRACING_SHADER_BIT_KHR,
+        VK_ACCESS_2_SHADER_WRITE_BIT, context->image_positions_->get_image(),
         VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_GENERAL);
 
     Barrier tonemap_barrier(
@@ -346,8 +398,27 @@ double render_frame(std::shared_ptr<GraphicsContext> context,
                                                     command_buffer) {
         VkExtent2D extent = context->swapchain_->get_extent();
 
+        // Make sure to clear data from previous frame.
+        VkClearColorValue clear_color = {0.0f, 0.0f, 0.0f, 0.0f};
+        VkImageSubresourceRange range = {
+            .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+            .baseMipLevel = 0,
+            .levelCount = 1,
+            .baseArrayLayer = 0,
+            .layerCount = 1,
+        };
+
+        vkCmdClearColorImage(command_buffer,
+                             context->image_normals_->get_image(),
+                             VK_IMAGE_LAYOUT_GENERAL, &clear_color, 1, &range);
+        vkCmdClearColorImage(command_buffer,
+                             context->image_positions_->get_image(),
+                             VK_IMAGE_LAYOUT_GENERAL, &clear_color, 1, &range);
+
         // Render to the off-screen buffer
-        prologue_barrier.record(command_buffer);
+        prologue_barrier0.record(command_buffer);
+        prologue_barrier1.record(command_buffer);
+        prologue_barrier2.record(command_buffer);
         context->ray_trace_pipeline_->record(
             command_buffer,
             {context->swapchain_->get_image_descriptor(
