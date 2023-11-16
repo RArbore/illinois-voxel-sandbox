@@ -39,10 +39,6 @@ void main() {
     ivec2 blue_noise_coords = ivec2((gl_LaunchIDEXT.xy + ivec2(hash(t), hash(3 * t))) % blue_noise_size);
     vec4 random = imageLoad(blue_noise, blue_noise_coords);
 
-    // Todo: is there a better way to clear these in a raytracing pipeline...?
-    imageStore(image_normals, ivec2(gl_LaunchIDEXT), vec4(0.0f));
-    imageStore(image_positions, ivec2(gl_LaunchIDEXT), vec4(0.0f));
-
     vec3 L = vec3(0.0f);
     vec3 weight = vec3(1.0f);
     int bounce = 0;

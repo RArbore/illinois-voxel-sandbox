@@ -186,12 +186,12 @@ GraphicsContext::GraphicsContext(std::shared_ptr<Window> window) {
 
     image_normals_ = std::make_shared<GPUImage>(
         gpu_allocator_, swapchain_->get_extent(), swapchain_->get_format(), 0,
-        VK_IMAGE_USAGE_STORAGE_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+        VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
         VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT, 1, 1);
 
     image_positions_ = std::make_shared<GPUImage>(
         gpu_allocator_, swapchain_->get_extent(), swapchain_->get_format(), 0,
-        VK_IMAGE_USAGE_STORAGE_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+        VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
         VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT, 1, 1);
 
     blue_noise_ = load_image(gpu_allocator_, ring_buffer_, "LDR_RGBA_0.png");
@@ -397,6 +397,23 @@ double render_frame(std::shared_ptr<GraphicsContext> context,
     context->render_command_buffer_->record([&](VkCommandBuffer
                                                     command_buffer) {
         VkExtent2D extent = context->swapchain_->get_extent();
+
+        // Make sure to clear data from previous frame.
+        VkClearColorValue clear_color = {0.0f, 0.0f, 0.0f, 0.0f};
+        VkImageSubresourceRange range = {
+            .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+            .baseMipLevel = 0,
+            .levelCount = 1,
+            .baseArrayLayer = 0,
+            .layerCount = 1,
+        };
+
+        vkCmdClearColorImage(command_buffer,
+                             context->image_normals_->get_image(),
+                             VK_IMAGE_LAYOUT_GENERAL, &clear_color, 1, &range);
+        vkCmdClearColorImage(command_buffer,
+                             context->image_positions_->get_image(),
+                             VK_IMAGE_LAYOUT_GENERAL, &clear_color, 1, &range);
 
         // Render to the off-screen buffer
         prologue_barrier0.record(command_buffer);
