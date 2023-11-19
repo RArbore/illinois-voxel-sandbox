@@ -5,33 +5,6 @@
 
 #include "common.glsl"
 
-struct aabb_intersect_result {
-    float front_t;
-    float back_t;
-    uint k;
-};
-
-aabb_intersect_result hit_aabb(const vec3 minimum, const vec3 maximum, const vec3 origin, const vec3 direction) {
-    aabb_intersect_result r;
-    vec3 invDir = 1.0 / direction;
-    vec3 tbot = invDir * (minimum - origin);
-    vec3 ttop = invDir * (maximum - origin);
-    vec3 tmin = min(ttop, tbot);
-    vec3 tmax = max(ttop, tbot);
-    float t0 = max(tmin.x, max(tmin.y, tmin.z));
-    float t1 = min(tmax.x, min(tmax.y, tmax.z));
-    r.front_t = t1 > max(t0, 0.0) ? t0 : -FAR_AWAY;
-    r.back_t = t1 > max(t0, 0.0) ? t1 : -FAR_AWAY;
-    if (t0 == tmin.x) {
-	r.k = tbot.x > ttop.x ? 1 : 0;
-    } else if (t0 == tmin.y) {
-	r.k = tbot.y > ttop.y ? 3 : 2;
-    } else if (t0 == tmin.z) {
-	r.k = tbot.z > ttop.z ? 5 : 4;
-    }
-    return r;
-}
-
 void main() {
     uint volume_id = gl_InstanceCustomIndexEXT;
 
@@ -53,7 +26,7 @@ void main() {
 	while (steps < max_steps && all(greaterThanEqual(obj_ray_voxel, ivec3(0))) && all(lessThan(obj_ray_voxel, volume_size))) {
 	    float palette = imageLoad(volumes[volume_id], obj_ray_voxel).a;
 	    
-	    if (palette > 0.0) {
+	    if (palette != 0.0) {
 		aabb_intersect_result r = hit_aabb(obj_ray_voxel, obj_ray_voxel + 1, obj_ray_pos, obj_ray_dir);
 		float intersect_time = length(gl_ObjectToWorldEXT * vec4(obj_ray_pos + obj_ray_dir * r.front_t, 1.0) - gl_ObjectToWorldEXT * vec4(obj_ray_pos, 1.0));
 		reportIntersectionEXT(intersect_time, r.k);

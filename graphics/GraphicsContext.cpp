@@ -21,9 +21,11 @@ const std::map<std::pair<VoxelChunk::Format, VoxelChunk::AttributeSet>,
     FORMAT_TO_SBT_OFFSET = {
         {{VoxelChunk::Format::Raw, VoxelChunk::AttributeSet::Color}, 1},
         {{VoxelChunk::Format::SVO, VoxelChunk::AttributeSet::Color}, 2},
-        {{VoxelChunk::Format::Raw, VoxelChunk::AttributeSet::Emissive}, 3}
-    };
-const uint64_t MAX_NUM_CHUNKS_LOADED_PER_FRAME = 32;
+        {{VoxelChunk::Format::SVDAG, VoxelChunk::AttributeSet::Color}, 3},
+        {{VoxelChunk::Format::Raw, VoxelChunk::AttributeSet::Emissive}, 4},
+};
+
+const uint32_t MAX_NUM_CHUNKS_LOADED_PER_FRAME = 32;
 
 class GraphicsContext {
   public:
@@ -113,12 +115,14 @@ class GraphicsScene {
     GraphicsScene(std::shared_ptr<GraphicsContext> context,
                   std::shared_ptr<TLAS> tlas,
                   std::vector<std::shared_ptr<GraphicsObject>> objects,
-                  std::shared_ptr<DescriptorSet> scene_descriptor)
-        : tlas_(tlas), objects_(objects), scene_descriptor_(scene_descriptor) {}
+                  std::shared_ptr<DescriptorSet> scene_descriptor,
+		  std::shared_ptr<GPUBuffer> chunk_dimensions)
+        : tlas_(tlas), objects_(objects), scene_descriptor_(scene_descriptor), chunk_dimensions_(chunk_dimensions) {}
 
     std::shared_ptr<TLAS> tlas_;
     std::vector<std::shared_ptr<GraphicsObject>> objects_;
     std::shared_ptr<DescriptorSet> scene_descriptor_ = nullptr;
+    std::shared_ptr<GPUBuffer> chunk_dimensions_ = nullptr;
 
     std::vector<std::shared_ptr<GraphicsModel>> assemble_models_in_order() {
         std::unordered_map<std::shared_ptr<GraphicsModel>, size_t>
@@ -146,7 +150,7 @@ GraphicsContext::GraphicsContext(std::shared_ptr<Window> window) {
     swapchain_ =
         std::make_shared<Swapchain>(device_, window, descriptor_allocator_);
     ring_buffer_ =
-        std::make_shared<RingBuffer>(gpu_allocator_, command_pool_, 1 << 24);
+        std::make_shared<RingBuffer>(gpu_allocator_, command_pool_, 1 << 27);
 
     DescriptorSetBuilder scene_builder(descriptor_allocator_);
     scene_builder.bind_acceleration_structure(0, {},
@@ -157,7 +161,10 @@ GraphicsContext::GraphicsContext(std::shared_ptr<Window> window) {
     scene_builder.bind_buffers(2, {}, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
                                VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR |
                                    VK_SHADER_STAGE_INTERSECTION_BIT_KHR);
-
+    scene_builder.bind_buffer(3, {}, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
+			      VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR |
+			      VK_SHADER_STAGE_INTERSECTION_BIT_KHR);
+    
     chunk_request_buffer_ = std::make_shared<GPUBuffer>(
         gpu_allocator_, MAX_NUM_CHUNKS_LOADED_PER_FRAME * sizeof(uint64_t),
         sizeof(uint64_t), VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
@@ -166,7 +173,7 @@ GraphicsContext::GraphicsContext(std::shared_ptr<Window> window) {
         VMA_ALLOCATION_CREATE_HOST_ACCESS_RANDOM_BIT);
     chunk_request_span_ = chunk_request_buffer_->cpu_map();
     uint64_t *crb = reinterpret_cast<uint64_t *>(chunk_request_span_.data());
-    for (uint32_t i = 0; i < MAX_NUM_CHUNKS_LOADED_PER_FRAME; ++i) {
+    for (uint32_t i = 0; i < MAX_MODELS; ++i) {
         crb[i] = 0x00000000FFFFFFFF;
     }
 
@@ -243,6 +250,8 @@ GraphicsContext::GraphicsContext(std::shared_ptr<Window> window) {
     auto raw_color_rint = std::make_shared<Shader>(device_, "Raw_Color_rint");
     auto svo_color_rchit = std::make_shared<Shader>(device_, "SVO_Color_rchit");
     auto svo_color_rint = std::make_shared<Shader>(device_, "SVO_Color_rint");
+    auto svdag_color_rchit = std::make_shared<Shader>(device_, "SVDAG_Color_rchit");
+    auto svdag_color_rint = std::make_shared<Shader>(device_, "SVDAG_Color_rint");
     auto emissive_rchit = std::make_shared<Shader>(device_, "Emissive_rchit");
     std::vector<std::vector<std::shared_ptr<Shader>>> shader_groups = {
         {rgen},
@@ -250,6 +259,7 @@ GraphicsContext::GraphicsContext(std::shared_ptr<Window> window) {
         {unloaded_rchit, unloaded_rint},
         {raw_color_rchit, raw_color_rint},
         {svo_color_rchit, svo_color_rint},
+        {svdag_color_rchit, svdag_color_rint},
         {emissive_rchit, raw_color_rint},
     };
     std::vector<VkDescriptorSetLayout> layouts = {
@@ -531,8 +541,23 @@ build_scene(std::shared_ptr<GraphicsContext> context,
         scene_models.at(idx) = std::move(model);
     }
 
+    std::shared_ptr<GPUBuffer> chunk_dimensions = std::make_shared<GPUBuffer>(
+									      context->gpu_allocator_, MAX_MODELS * sizeof(uint32_t) * 3,
+									      sizeof(uint64_t), VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
+									      VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
+									      VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+									      VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT);
+    auto chunk_dimensions_span = chunk_dimensions->cpu_map();
+    uint32_t *chunk_dimensions_ptr = reinterpret_cast<uint32_t *>(chunk_dimensions_span.data());
+    for (uint32_t i = 0; i < scene_models.size(); ++i) {
+	chunk_dimensions_ptr[i * 3] = scene_models[i]->chunk_->get_width();
+	chunk_dimensions_ptr[i * 3 + 1] = scene_models[i]->chunk_->get_height();
+	chunk_dimensions_ptr[i * 3 + 2] = scene_models[i]->chunk_->get_depth();
+    }
+    chunk_dimensions->cpu_unmap();
+    
     auto scene =
-        std::make_shared<GraphicsScene>(context, tlas, objects, nullptr);
+        std::make_shared<GraphicsScene>(context, tlas, objects, nullptr, chunk_dimensions);
     context->bind_scene_descriptors(builder, scene, std::move(scene_models));
     scene->scene_descriptor_ = builder.build();
     return scene;
@@ -667,7 +692,7 @@ void GraphicsContext::bind_scene_descriptors(
         VK_SHADER_STAGE_RAYGEN_BIT_KHR);
 
     std::vector<std::pair<VkDescriptorImageInfo, uint32_t>> raw_volume_infos;
-    std::vector<std::pair<VkDescriptorBufferInfo, uint32_t>> svo_buffer_infos;
+    std::vector<std::pair<VkDescriptorBufferInfo, uint32_t>> sparse_buffer_infos;
     for (size_t i = 0; i < models.size(); ++i) {
         const auto &model = models.at(i);
         if (model->chunk_->get_state() == VoxelChunk::State::GPU &&
@@ -679,19 +704,28 @@ void GraphicsContext::bind_scene_descriptors(
             raw_volume_info.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
             raw_volume_infos.emplace_back(raw_volume_info, i);
         } else if (model->chunk_->get_state() == VoxelChunk::State::GPU &&
-                   model->chunk_->get_format() == VoxelChunk::Format::SVO) {
+                   (model->chunk_->get_format() == VoxelChunk::Format::SVO ||
+		    model->chunk_->get_format() == VoxelChunk::Format::SVDAG)) {
             auto buffer = model->chunk_->get_gpu_buffer();
-            VkDescriptorBufferInfo svo_buffer_info{};
-            svo_buffer_info.buffer = buffer->get_buffer();
-            svo_buffer_info.offset = 0;
-            svo_buffer_info.range = buffer->get_size();
-            svo_buffer_infos.emplace_back(svo_buffer_info, i);
+            VkDescriptorBufferInfo sparse_buffer_info{};
+            sparse_buffer_info.buffer = buffer->get_buffer();
+            sparse_buffer_info.offset = 0;
+            sparse_buffer_info.range = buffer->get_size();
+            sparse_buffer_infos.emplace_back(sparse_buffer_info, i);
         }
     }
     builder.bind_images(1, raw_volume_infos, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,
                         VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR |
                             VK_SHADER_STAGE_INTERSECTION_BIT_KHR);
-    builder.bind_buffers(2, svo_buffer_infos, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
+    builder.bind_buffers(2, sparse_buffer_infos, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
                          VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR |
                              VK_SHADER_STAGE_INTERSECTION_BIT_KHR);
+
+    VkDescriptorBufferInfo chunk_dimensions_info{};
+    chunk_dimensions_info.buffer = scene->chunk_dimensions_->get_buffer();
+    chunk_dimensions_info.offset = 0;
+    chunk_dimensions_info.range = scene->chunk_dimensions_->get_size();
+    builder.bind_buffer(3, chunk_dimensions_info, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
+			VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR |
+			VK_SHADER_STAGE_INTERSECTION_BIT_KHR);
 }

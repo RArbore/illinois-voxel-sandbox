@@ -85,7 +85,8 @@ void main() {
     //     imageStore(image_history, ivec2(gl_LaunchIDEXT), final_radiance);
     // } else {
     //     vec4 history = imageLoad(image_history, ivec2(gl_LaunchIDEXT));
-    //     vec4 final_color = mix(history, final_radiance, 1.0f / (camera.frames_since_update + 1));
+	//     float proportion = max(1.0f / (camera.frames_since_update + 1), 0.1);
+    //     vec4 final_color = mix(history, final_radiance, proportion);
     //     imageStore(image_history, ivec2(gl_LaunchIDEXT), final_color);
     // }
 }

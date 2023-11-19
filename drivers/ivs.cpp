@@ -7,9 +7,9 @@
 int main(int argc, char *argv[]) {
     auto test_proc_data1 = generate_basic_procedural_chunk(128, 128, 128);
     std::cout << "Raw size: " << test_proc_data1.size() << " bytes.\n";
-    /*auto test_svo_data1 =
-        convert_raw_to_svo(std::move(test_proc_data1), 128, 128, 128, 4);
-	std::cout << "SVO size: " << test_svo_data1.size() << " bytes.\n";*/
+    auto test_svdag_data1 =
+        convert_raw_to_svdag(std::move(test_proc_data1), 128, 128, 128, 4);
+    std::cout << "SVDAG size: " << test_svdag_data1.size() << " bytes.\n";
 
     ChunkManager chunk_manager;
     auto window = create_window();
@@ -18,7 +18,7 @@ int main(int argc, char *argv[]) {
     auto camera = create_camera(window, camera_pos, 0.0f, 0.0f, 0.1f, 0.25f);
 
     VoxelChunkPtr test_proc1 = chunk_manager.add_chunk(
-        std::move(test_proc_data1), 128, 128, 128, VoxelChunk::Format::Raw,
+        std::move(test_svdag_data1), 128, 128, 128, VoxelChunk::Format::SVDAG,
         VoxelChunk::AttributeSet::Color);
 
     auto model1 = build_model(context, test_proc1);
@@ -43,8 +43,8 @@ int main(int argc, char *argv[]) {
         auto camera_info = camera->get_uniform_buffer();
         double dt = render_frame(context, scene, camera->get_position(),
                                  camera->get_front(), camera_info);
-        camera->handle_keys(dt);
         camera->mark_rendered();
+        camera->handle_keys(dt);
 
 	elapsed += dt / 1000.0;
 	if (elapsed >= 1.0) {

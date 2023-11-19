@@ -9,6 +9,8 @@ set(GLSL_SHADER_FILES
   Raw_Color_rint.glsl
   SVO_Color_rchit.glsl
   SVO_Color_rint.glsl
+  SVDAG_Color_rchit.glsl
+  SVDAG_Color_rint.glsl
   Unloaded_rchit.glsl
   Unloaded_rint.glsl
   tonemap_comp.glsl
@@ -18,7 +20,7 @@ set(GLSL_SHADER_FILES
 foreach(FILE ${GLSL_SHADER_FILES})
   get_filename_component(FILE_WE ${FILE} NAME_WE)
   add_custom_command(TARGET shaders
-    COMMAND glslc --target-spv=spv1.5 --target-env=vulkan1.3 -o ${CMAKE_BINARY_DIR}/${FILE_WE}.spv ${FILE}
+    COMMAND glslc --target-spv=spv1.5 --target-env=vulkan1.3 -O -g -o ${CMAKE_BINARY_DIR}/${FILE_WE}.spv ${FILE}
     MAIN_DEPENDENCY ${FILE}
     COMMENT "GLSL ${FILE}"
     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}

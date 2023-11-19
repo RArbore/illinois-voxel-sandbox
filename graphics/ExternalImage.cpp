@@ -1,6 +1,5 @@
 #include "ExternalImage.h"
 
-#define STB_IMAGE_IMPLEMENTATION
 #include <external/stb_image.h>
 
 std::shared_ptr<GPUImage> load_image(std::shared_ptr<GPUAllocator> allocator,
