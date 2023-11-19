@@ -14,6 +14,7 @@ class Swapchain {
               std::shared_ptr<DescriptorAllocator> allocator);
     ~Swapchain();
 
+    const std::vector<VkImageView>& get_image_views() const;
     VkImage get_image(uint32_t image_index);
     VkExtent2D get_extent();
     VkFormat get_format();
