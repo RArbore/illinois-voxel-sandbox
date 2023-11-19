@@ -25,7 +25,17 @@ int main(int argc, char *argv[]) {
     glm::mat3x4 transform1 = {1.0F, 0.0F,   0.0F, -64.0F, 0.0F, 1.0F,
                               0.0F, -64.0F, 0.0F, 0.0F,   1.0F, -64.0F};
     auto object1 = build_object(context, model1, transform1);
-    auto scene = build_scene(context, {object1});
+
+    auto emissive_block = generate_basic_filled_chunk(8, 8, 8);
+    VoxelChunkPtr test_light = chunk_manager.add_chunk(
+        std::move(emissive_block), 8, 8, 8, VoxelChunk::Format::Raw,
+        VoxelChunk::AttributeSet::Emissive);
+    auto light = build_model(context, test_light);
+    glm::mat3x4 transform2 = {2.0F, 0.0F,   0.0F, 0.0F, 0.0F, 2.0F,
+                              0.0F, 0.0F, 0.0F, 0.0F,   2.0F, 0.0F};
+    auto object2 = build_object(context, light, transform2);
+
+    auto scene = build_scene(context, {object1, object2});
 
     double elapsed = 0.0;
     while (!window->should_close()) {

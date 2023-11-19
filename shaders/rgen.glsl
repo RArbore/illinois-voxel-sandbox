@@ -45,6 +45,10 @@ void main() {
     for (bounce = 0; bounce < MAX_BOUNCES; bounce++) {
         traceRayEXT(tlas, gl_RayFlagsOpaqueEXT, 0xFF, 0, 0, 0, ray_origin, 0.001f, ray_direction, 10000.0f, 0);
 
+        if (payload.hit && payload.emissive) {
+            L += weight * payload.color.xyz; // if we hit a direct light
+        }
+
         // If we've hit something, we send another ray in a random direction.
         // Otherwise assume we hit the sky.
         // Note that this is **only** doing indirect lighting.
@@ -54,7 +58,7 @@ void main() {
                 imageStore(image_positions, ivec2(gl_LaunchIDEXT), vec4(payload.world_position, 1.0f));
             }
 
-             // Choose a new direction and evaluate the BRDF/PDF
+            // Choose a new direction and evaluate the BRDF/PDF
             vec3 new_local_direction = cosine_sample_hemisphere(slice_2_from_4(random, bounce));
             float pdf = dot(vec3(0.0f, 1.0f, 0.0f), new_local_direction) * INV_PI; // cosine-weighted sampling
             if (pdf < 0.001) {
@@ -81,7 +85,7 @@ void main() {
     //     imageStore(image_history, ivec2(gl_LaunchIDEXT), final_radiance);
     // } else {
     //     vec4 history = imageLoad(image_history, ivec2(gl_LaunchIDEXT));
-	// float proportion = max(1.0f / (camera.frames_since_update + 1), 0.1);
+	//     float proportion = max(1.0f / (camera.frames_since_update + 1), 0.1);
     //     vec4 final_color = mix(history, final_radiance, proportion);
     //     imageStore(image_history, ivec2(gl_LaunchIDEXT), final_color);
     // }

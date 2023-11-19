@@ -19,10 +19,10 @@ void main() {
 
     payload.hit = true;
     payload.world_position = world_ray_pos;
-    payload.world_normal = normalize(gl_ObjectToWorldEXT * vec4(voxel_normals[gl_HitKindEXT], 0.0));
-    payload.tangent = normalize(gl_ObjectToWorldEXT * vec4(voxel_tangents[gl_HitKindEXT], 0.0));
-    payload.bitangent = normalize(gl_ObjectToWorldEXT * vec4(voxel_bitangents[gl_HitKindEXT], 0.0));
+    payload.world_normal = gl_ObjectToWorldEXT * vec4(voxel_normals[gl_HitKindEXT], 0.0);
+    payload.tangent = gl_ObjectToWorldEXT * vec4(voxel_tangents[gl_HitKindEXT], 0.0);
+    payload.bitangent = gl_ObjectToWorldEXT * vec4(voxel_bitangents[gl_HitKindEXT], 0.0);
     payload.color = imageLoad(volumes[volume_id], volume_load_pos);
     payload.voxel_face = gl_HitKindEXT;
-    payload.emissive = false;
+    payload.emissive = true;
 }

@@ -26,4 +26,5 @@ void main() {
 	       float(int(color.alpha_)) / 255.0
 	       );
     payload.voxel_face = gl_HitKindEXT;
+    payload.emissive = false;
 }
