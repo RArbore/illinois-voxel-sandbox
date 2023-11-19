@@ -140,19 +140,25 @@ std::vector<std::byte> raw_voxelize_obj(std::string_view filepath, float voxel_s
                                     static_cast<size_t>(chunk_height) *
                                     static_cast<size_t>(chunk_depth) * 4,
                                 static_cast<std::byte>(0));
+
     for (const auto &shape : shapes) {
         std::cout << shape.mesh.indices.size() / 3 << " triangles\n";
         uint32_t num_printed = 0;
         for (int64_t i = 0; i < shape.mesh.indices.size(); i += 3) {
-            auto index_a = shape.mesh.indices[i].vertex_index;
-            auto index_b = shape.mesh.indices[i + 1].vertex_index;
-            auto index_c = shape.mesh.indices[i + 2].vertex_index;
+            const auto &vert_a = shape.mesh.indices[i];
+            const auto &vert_b = shape.mesh.indices[i + 1];
+            const auto &vert_c = shape.mesh.indices[i + 2];
 
-            bool has_materials = attrib.texcoords.size() > 0;
+            auto index_a = vert_a.vertex_index;
+            auto index_b = vert_b.vertex_index;
+            auto index_c = vert_c.vertex_index;
 
-            auto tex_index_a = shape.mesh.indices[i].texcoord_index;
-            auto tex_index_b = shape.mesh.indices[i + 1].texcoord_index;
-            auto tex_index_c = shape.mesh.indices[i + 2].texcoord_index;
+            auto tex_index_a = vert_a.texcoord_index;
+            auto tex_index_b = vert_b.texcoord_index;
+            auto tex_index_c = vert_c.texcoord_index;
+
+            bool has_materials =
+                (tex_index_a >= 0 && tex_index_b >= 0 && tex_index_c >= 0);
 
             const Triangle tri(
                 glm::vec3(attrib.vertices.at(3 * index_a),
@@ -260,14 +266,15 @@ std::vector<std::byte> raw_voxelize_obj(std::string_view filepath, float voxel_s
 				g = static_cast<std::byte>(255),
 				b = static_cast<std::byte>(255),
 				a = static_cast<std::byte>(255);
+                            glm::vec3 plane_point = glm::vec3(
+                                tri_voxel_x, tri_voxel_y, tri_voxel_z);
+                            plane_point -=
+                                unit_plane *
+                                (glm::dot(unit_plane, plane_point - tri.a));
+                            glm::vec3 barycentric_coords =
+                                inverse_tri_matrix * plane_point;
+
                             if (has_materials) {
-                                glm::vec3 plane_point = glm::vec3(
-                                    tri_voxel_x, tri_voxel_y, tri_voxel_z);
-                                plane_point -=
-                                    unit_plane *
-                                    (glm::dot(unit_plane, plane_point - tri.a));
-                                glm::vec3 barycentric_coords =
-                                    inverse_tri_matrix * plane_point;
                                 glm::vec2 uv = tri.t_a * barycentric_coords.x +
                                                tri.t_b * barycentric_coords.y +
                                                tri.t_c * barycentric_coords.z;
@@ -305,7 +312,7 @@ std::vector<std::byte> raw_voxelize_obj(std::string_view filepath, float voxel_s
                                     g = static_cast<std::byte>(0);
                                     b = static_cast<std::byte>(0);
                                     a = static_cast<std::byte>(0);
-				}
+				                }
                             }
 
                             size_t voxel_idx =
