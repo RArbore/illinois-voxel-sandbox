@@ -49,10 +49,12 @@ void main() {
         // Otherwise assume we hit the sky.
         // Note that this is **only** doing indirect lighting.
         if (payload.hit) {
-            // Choose a new direction and evaluate the BRDF/PDF
-            // blue_noise_uv = ((ivec2(hash(4 * t + bounce), hash(2 * t + 3 * bounce))) % blue_noise_size) / vec2(blue_noise_size);
-            // random = texture(blue_noise, blue_noise_uv);
+            if (bounce == 0) {
+                imageStore(image_normals, ivec2(gl_LaunchIDEXT), vec4(payload.world_normal, 1.0f));
+                imageStore(image_positions, ivec2(gl_LaunchIDEXT), vec4(payload.world_position, 1.0f));
+            }
 
+             // Choose a new direction and evaluate the BRDF/PDF
             vec3 new_local_direction = cosine_sample_hemisphere(slice_2_from_4(random, bounce));
             float pdf = dot(vec3(0.0f, 1.0f, 0.0f), new_local_direction) * INV_PI; // cosine-weighted sampling
             if (pdf < 0.001) {
@@ -73,12 +75,14 @@ void main() {
 
     vec4 final_radiance = vec4(L, 1.0f);
 
-    if (camera.frames_since_update == 0) {
-        imageStore(image_history, ivec2(gl_LaunchIDEXT), final_radiance);
-    } else {
-        vec4 history = imageLoad(image_history, ivec2(gl_LaunchIDEXT));
-	float proportion = max(1.0f / (camera.frames_since_update + 1), 0.1);
-        vec4 final_color = mix(history, final_radiance, proportion);
-        imageStore(image_history, ivec2(gl_LaunchIDEXT), final_color);
-    }
+    imageStore(image_history, ivec2(gl_LaunchIDEXT), final_radiance);
+
+    // if (camera.frames_since_update == 0) {
+    //     imageStore(image_history, ivec2(gl_LaunchIDEXT), final_radiance);
+    // } else {
+    //     vec4 history = imageLoad(image_history, ivec2(gl_LaunchIDEXT));
+	// float proportion = max(1.0f / (camera.frames_since_update + 1), 0.1);
+    //     vec4 final_color = mix(history, final_radiance, proportion);
+    //     imageStore(image_history, ivec2(gl_LaunchIDEXT), final_color);
+    // }
 }
