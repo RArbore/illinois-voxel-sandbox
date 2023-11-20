@@ -408,7 +408,11 @@ double render_frame(std::shared_ptr<GraphicsContext> context,
                                                     command_buffer) {
         VkExtent2D extent = context->swapchain_->get_extent();
 
-        // Make sure to clear data from previous frame.
+        // Make sure to prepare the images and clear the previous frame.
+        prologue_barrier0.record(command_buffer);
+        prologue_barrier1.record(command_buffer);
+        prologue_barrier2.record(command_buffer);
+
         VkClearColorValue clear_color = {0.0f, 0.0f, 0.0f, 0.0f};
         VkImageSubresourceRange range = {
             .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
@@ -426,9 +430,6 @@ double render_frame(std::shared_ptr<GraphicsContext> context,
                              VK_IMAGE_LAYOUT_GENERAL, &clear_color, 1, &range);
 
         // Render to the off-screen buffer
-        prologue_barrier0.record(command_buffer);
-        prologue_barrier1.record(command_buffer);
-        prologue_barrier2.record(command_buffer);
         context->ray_trace_pipeline_->record(
             command_buffer,
             {context->swapchain_->get_image_descriptor(
