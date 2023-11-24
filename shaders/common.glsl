@@ -102,7 +102,7 @@ layout(set = 1, binding = 4) buffer direct_lights_ {
     // Each voxel uses 6 values
     // 3 for the bottom left corner, 3 for the dimensions
     // todo: can we use a struct for this?
-    float voxels[]; 
+    float emissive_voxels[]; 
 };
 
 // Set 2 is not swapped out - it is for GraphicsContext-wide data.
