@@ -63,7 +63,7 @@ void main() {
             if (num_emissive_voxels > 0) {
                 vec4 random_light = imageLoad(blue_noise, blue_noise_coords + ivec2(bounce * slice_2_from_4(random, bounce + 3)));
                 uint32_t light_index = uint32_t(num_emissive_voxels * random_light.x); // pick a light
-                uint8_t light_face = uint8_t(3 * random_light.y); // pick one of 3 faces to sample
+                uint8_t light_face = uint8_t(3 * random_light.y); // pick one of 3 faces to sample (todo: is 6 necessary?)
 
                 vec3 light_corner = vec3(emissive_voxels[6 * light_index + 0], 
                                          emissive_voxels[6 * light_index + 1], 
@@ -103,7 +103,7 @@ void main() {
                     float power_weight = light_weight / (light_weight + bsdf_weight); 
 
                     // 1 / pi is the BSDF
-                    L += power_weight * payload.color.xyz * INV_PI / light_pdf;
+                    L += weight * power_weight * payload.color.xyz * INV_PI / light_pdf;
                 }
             }
 
