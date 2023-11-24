@@ -577,9 +577,12 @@ build_scene(std::shared_ptr<GraphicsContext> context,
             VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
         VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT);
     auto emissive_voxels_span = emissive_voxels->cpu_map();
-    uint32_t *emissive_voxels_ptr =
+    uint32_t *num_emissive_voxels_ptr =
         reinterpret_cast<uint32_t *>(emissive_voxels_span.data());
-    emissive_voxels_ptr[0] = num_emissive_chunks;
+    num_emissive_voxels_ptr[0] = num_emissive_chunks;
+
+    float *emissive_voxels_ptr =
+        reinterpret_cast<float *>(num_emissive_voxels_ptr + 1); 
     uint32_t emissive_index = 0;
     for (auto& object : objects) {
         if (object->model_->chunk_->get_attribute_set() ==
