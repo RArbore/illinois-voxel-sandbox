@@ -103,7 +103,7 @@ void main() {
                     float power_weight = light_weight / (light_weight + bsdf_weight); 
 
                     // 1 / pi is the BSDF
-                    L += weight * power_weight * payload.color.xyz * INV_PI / light_pdf;
+                    L += weight * power_weight * payload.color.xyz * INV_PI * abs(dot(light_direction, isect.world_normal)) / light_pdf;
                 }
             }
 
