@@ -587,17 +587,17 @@ build_scene(std::shared_ptr<GraphicsContext> context,
     for (auto& object : objects) {
         if (object->model_->chunk_->get_attribute_set() ==
             VoxelChunk::AttributeSet::Emissive) {
-            emissive_voxels_ptr[6 * emissive_index + 1 + 0] =
-                object->transform_[3][0];
-            emissive_voxels_ptr[6 * emissive_index + 1 + 1] =
-                object->transform_[3][1];
-            emissive_voxels_ptr[6 * emissive_index + 1 + 2] =
-                object->transform_[3][2];
-            emissive_voxels_ptr[6 * emissive_index + 1 + 3] =
+            emissive_voxels_ptr[6 * emissive_index + 0] =
+                object->transform_[0][3];
+            emissive_voxels_ptr[6 * emissive_index + 1] =
+                object->transform_[1][3];
+            emissive_voxels_ptr[6 * emissive_index + 2] =
+                object->transform_[2][3];
+            emissive_voxels_ptr[6 * emissive_index + 3] =
                 object->model_->chunk_->get_width();
-            emissive_voxels_ptr[6 * emissive_index + 1 + 4] =
+            emissive_voxels_ptr[6 * emissive_index + 4] =
                 object->model_->chunk_->get_height();
-            emissive_voxels_ptr[6 * emissive_index + 1 + 5] =
+            emissive_voxels_ptr[6 * emissive_index + 5] =
                 object->model_->chunk_->get_depth();
             emissive_index++;
         }
