@@ -48,16 +48,16 @@ void main() {
         // If we've hit something, we send another ray in a random direction.
         // Otherwise assume we hit the sky. Todo: toggle the sky as an infinite light
         if (payload.hit) {
-            if (bounce == 0) {
-                imageStore(image_normals, ivec2(gl_LaunchIDEXT), vec4(payload.world_normal, 1.0f));
-                imageStore(image_positions, ivec2(gl_LaunchIDEXT), vec4(payload.world_position, 1.0f));
+            RayPayload isect = payload;
 
-                if (payload.emissive) {
-                    L += weight * payload.color.xyz;
+            if (bounce == 0) {
+                imageStore(image_normals, ivec2(gl_LaunchIDEXT), vec4(isect.world_normal, 1.0f));
+                imageStore(image_positions, ivec2(gl_LaunchIDEXT), vec4(isect.world_position, 1.0f));
+
+                if (isect.emissive) {
+                    L += weight * isect.color.xyz;
                 }
             }
-
-            RayPayload isect = payload;
 
             // Choose a random light to sample to 
             if (num_emissive_voxels > 0) {
