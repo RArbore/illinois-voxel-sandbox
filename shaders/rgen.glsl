@@ -95,8 +95,8 @@ void main() {
 
                 // If light is hit; todo: voxel id might be useful here
                 if (payload.hit && payload.emissive) {
-                    // 1 / pi is the BSDF
-                    L += weight * payload.color.xyz * INV_PI * abs(dot(light_direction, isect.world_normal)) / light_pdf;
+                    vec3 bsdf = isect.color.xyz * INV_PI;
+                    L += weight * payload.color.xyz * bsdf * abs(dot(light_direction, isect.world_normal)) / light_pdf;
                 }
             }
 
