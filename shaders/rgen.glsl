@@ -95,15 +95,8 @@ void main() {
 
                 // If light is hit; todo: voxel id might be useful here
                 if (payload.hit && payload.emissive) {
-                    // Power heuristic - the bsdf pdf is just cosine weighted
-                    float bsdf_pdf = dot(isect.world_normal, light_direction) * INV_PI;
-
-                    float light_weight = sqrt(light_pdf);
-                    float bsdf_weight = sqrt(bsdf_pdf);
-                    float power_weight = light_weight / (light_weight + bsdf_weight); 
-
                     // 1 / pi is the BSDF
-                    L += weight * power_weight * payload.color.xyz * INV_PI * abs(dot(light_direction, isect.world_normal)) / light_pdf;
+                    L += weight * payload.color.xyz * INV_PI * abs(dot(light_direction, isect.world_normal)) / light_pdf;
                 }
             }
 
