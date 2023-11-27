@@ -87,9 +87,10 @@ class GraphicsContext {
     void check_chunk_request_buffer(
         std::vector<std::shared_ptr<Semaphore>> &render_wait_semaphores);
 
-    void tick_download_models(
-	std::vector<std::shared_ptr<Semaphore>> &render_wait_semaphores);
-
+    void tick_download_models(std::vector<std::shared_ptr<Semaphore>> &render_wait_semaphores,
+			      std::shared_ptr<GraphicsScene> scene,
+			      std::span<std::byte> push_constants_span);
+    
     void bind_scene_descriptors(
         DescriptorSetBuilder &builder, std::shared_ptr<GraphicsScene> scene,
         std::vector<std::shared_ptr<GraphicsModel>> &&models);
@@ -399,7 +400,7 @@ double render_frame(std::shared_ptr<GraphicsContext> context,
 
     if (!changed_scenes) {
         context->check_chunk_request_buffer(render_wait_semaphores);
-	context->tick_download_models(render_wait_semaphores);
+	context->tick_download_models(render_wait_semaphores, scene, push_constants_span);
         if (context->frame_index_ % 512 == 0) {
             context->ring_buffer_->reap_in_flight_copies();
         }
@@ -655,20 +656,32 @@ void GraphicsContext::check_chunk_request_buffer(
     }
 }
 
-void GraphicsContext::tick_download_models(std::vector<std::shared_ptr<Semaphore>> &render_wait_semaphores) {
+void GraphicsContext::tick_download_models(std::vector<std::shared_ptr<Semaphore>> &render_wait_semaphores,
+					   std::shared_ptr<GraphicsScene> scene,
+					   std::span<std::byte> push_constants_span) {
+    std::vector<std::shared_ptr<GraphicsModel>> scene_models =
+	current_scene_->assemble_models_in_order();
+    std::erase_if(downloading_models_, 
+		  [&](uint64_t model_idx) { return !scene_models.at(model_idx)->chunk_->downloading(); });
+
     if (frame_index_ % 128 == 0) {
+	download_fence_->reset();
 	memset(chunk_download_span_.data(), 0, chunk_download_span_.size());
 
 	download_command_buffer_->record([&](VkCommandBuffer command_buffer) {
-
+	    VkExtent2D extent = swapchain_->get_extent();
+	    download_ray_trace_pipeline_->record(
+						 command_buffer,
+						 {swapchain_->get_image_descriptor(0), // this is redundant for the time being
+						  scene->scene_descriptor_, wide_descriptor_},
+						 push_constants_span, extent.width, extent.height, 1);
 	});
 
 	device_->submit_command(download_command_buffer_, {}, {}, download_fence_);
-    } else if (download_fence_->has_finished()) {
-	download_fence_->reset();
+
+	download_fence_->wait();
 	uint32_t *cdb = reinterpret_cast<uint32_t *>(chunk_download_span_.data());
-	std::vector<std::shared_ptr<GraphicsModel>> scene_models =
-	    current_scene_->assemble_models_in_order();
+	std::unordered_map<uint64_t, uint32_t> new_sbt_offsets;
 	for (uint64_t model_idx = 0; model_idx < scene_models.size(); ++model_idx) {
 	    auto &model = scene_models.at(model_idx);
 	    if (!uploading_models_.contains(model_idx) &&
@@ -676,19 +689,9 @@ void GraphicsContext::tick_download_models(std::vector<std::shared_ptr<Semaphore
 		cdb[model_idx] < 4 &&
 		model->chunk_->get_state() == VoxelChunk::State::GPU) {
 		downloading_models_.insert(model_idx);
-	    }
-	}
-	
-	std::unordered_map<uint64_t, uint32_t> new_sbt_offsets;
-	for (auto model_idx : downloading_models_) {
-	    auto &model = scene_models.at(model_idx);
-	    model->chunk_->tick_disk_download(device_, ring_buffer_);
-	    if (!model->chunk_->downloading()) {
+		model->chunk_->tick_disk_download(device_, ring_buffer_);
 		new_sbt_offsets.emplace(model_idx, 0);
 	    }
-	}
-	for (auto [model_idx, _] : new_sbt_offsets) {
-	    downloading_models_.erase(model_idx);
 	}
 	
 	if (!new_sbt_offsets.empty()) {

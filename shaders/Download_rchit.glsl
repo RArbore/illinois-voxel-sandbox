@@ -11,4 +11,5 @@ void main() {
     uint chunk_id = gl_InstanceCustomIndexEXT;
     hit.hit = false;
     hit.color = vec4(0.0, 0.0, 0.0, 1.0);
+    atomicAdd(chunk_download_buffer[chunk_id], 1);
 }
