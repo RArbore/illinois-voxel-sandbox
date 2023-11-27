@@ -38,6 +38,7 @@ class GraphicsContext {
     std::shared_ptr<Swapchain> swapchain_ = nullptr;
     std::shared_ptr<CommandPool> command_pool_ = nullptr;
     std::shared_ptr<RayTracePipeline> ray_trace_pipeline_ = nullptr;
+    std::shared_ptr<RayTracePipeline> download_ray_trace_pipeline_ = nullptr;
     std::shared_ptr<DescriptorAllocator> descriptor_allocator_ = nullptr;
     std::shared_ptr<RingBuffer> ring_buffer_ = nullptr;
 
@@ -54,6 +55,9 @@ class GraphicsContext {
 
     std::shared_ptr<GPUBuffer> chunk_request_buffer_ = nullptr;
     std::span<std::byte> chunk_request_span_;
+
+    std::shared_ptr<GPUBuffer> chunk_download_buffer_ = nullptr;
+    std::span<std::byte> chunk_download_span_;
 
     std::shared_ptr<GPUImage> blue_noise_ = nullptr;
 
@@ -173,8 +177,20 @@ GraphicsContext::GraphicsContext(std::shared_ptr<Window> window) {
         VMA_ALLOCATION_CREATE_HOST_ACCESS_RANDOM_BIT);
     chunk_request_span_ = chunk_request_buffer_->cpu_map();
     uint64_t *crb = reinterpret_cast<uint64_t *>(chunk_request_span_.data());
-    for (uint32_t i = 0; i < MAX_MODELS; ++i) {
+    for (uint32_t i = 0; i < MAX_NUM_CHUNKS_LOADED_PER_FRAME; ++i) {
         crb[i] = 0x00000000FFFFFFFF;
+    }
+
+    chunk_download_buffer_ = std::make_shared<GPUBuffer>(
+        gpu_allocator_, MAX_NUM_CHUNKS_LOADED_PER_FRAME * sizeof(uint32_t),
+        sizeof(uint32_t), VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
+        VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
+            VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+        VMA_ALLOCATION_CREATE_HOST_ACCESS_RANDOM_BIT);
+    chunk_download_span_ = chunk_download_buffer_->cpu_map();
+    uint32_t *cdb = reinterpret_cast<uint32_t *>(chunk_download_span_.data());
+    for (uint32_t i = 0; i < MAX_MODELS; ++i) {
+        cdb[i] = 0;
     }
 
     camera_buffer_ = std::make_shared<GPUBuffer>(
@@ -211,30 +227,36 @@ GraphicsContext::GraphicsContext(std::shared_ptr<Window> window) {
                              VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
                              VK_SHADER_STAGE_INTERSECTION_BIT_KHR);
     wide_builder.bind_buffer(1,
+                             {.buffer = chunk_download_buffer_->get_buffer(),
+                              .offset = 0,
+                              .range = chunk_download_buffer_->get_size()},
+                             VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
+                             VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR);
+    wide_builder.bind_buffer(2,
                              {.buffer = camera_buffer_->get_buffer(),
                               .offset = 0,
                               .range = camera_buffer_->get_size()},
                              VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
                              VK_SHADER_STAGE_RAYGEN_BIT_KHR);
-    wide_builder.bind_image(2,
+    wide_builder.bind_image(3,
                             {.sampler = VK_NULL_HANDLE,
                              .imageView = blue_noise_->get_view(),
                              .imageLayout = VK_IMAGE_LAYOUT_GENERAL},
                             VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,
                             VK_SHADER_STAGE_RAYGEN_BIT_KHR);
-    wide_builder.bind_image(3,
+    wide_builder.bind_image(4,
                             {.sampler = VK_NULL_HANDLE,
                              .imageView = image_history_->get_view(),
                              .imageLayout = VK_IMAGE_LAYOUT_GENERAL},
                             VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,
                             VK_SHADER_STAGE_RAYGEN_BIT_KHR);
-    wide_builder.bind_image(4,
+    wide_builder.bind_image(5,
                             {.sampler = VK_NULL_HANDLE,
                              .imageView = image_normals_->get_view(),
                              .imageLayout = VK_IMAGE_LAYOUT_GENERAL},
                             VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,
                             VK_SHADER_STAGE_RAYGEN_BIT_KHR);
-    wide_builder.bind_image(5,
+    wide_builder.bind_image(6,
                             {.sampler = VK_NULL_HANDLE,
                              .imageView = image_positions_->get_view(),
                              .imageLayout = VK_IMAGE_LAYOUT_GENERAL},
@@ -253,6 +275,7 @@ GraphicsContext::GraphicsContext(std::shared_ptr<Window> window) {
     auto svdag_color_rchit = std::make_shared<Shader>(device_, "SVDAG_Color_rchit");
     auto svdag_color_rint = std::make_shared<Shader>(device_, "SVDAG_Color_rint");
     auto emissive_rchit = std::make_shared<Shader>(device_, "Emissive_rchit");
+    auto download_rchit = std::make_shared<Shader>(device_, "Download_rchit");
     std::vector<std::vector<std::shared_ptr<Shader>>> shader_groups = {
         {rgen},
         {rmiss},
@@ -262,6 +285,15 @@ GraphicsContext::GraphicsContext(std::shared_ptr<Window> window) {
         {svdag_color_rchit, svdag_color_rint},
         {emissive_rchit, raw_color_rint},
     };
+    std::vector<std::vector<std::shared_ptr<Shader>>> download_shader_groups = {
+        {rgen},
+        {rmiss},
+        {unloaded_rchit, unloaded_rint},
+        {download_rchit, raw_color_rint},
+        {download_rchit, svo_color_rint},
+        {download_rchit, svdag_color_rint},
+        {download_rchit, raw_color_rint},
+    };
     std::vector<VkDescriptorSetLayout> layouts = {
         swapchain_->get_image_descriptor(0)->get_layout(),
         scene_builder.get_layout()->get_layout(),
@@ -269,6 +301,8 @@ GraphicsContext::GraphicsContext(std::shared_ptr<Window> window) {
 
     ray_trace_pipeline_ = std::make_shared<RayTracePipeline>(
         gpu_allocator_, shader_groups, layouts);
+    download_ray_trace_pipeline_ = std::make_shared<RayTracePipeline>(
+        gpu_allocator_, download_shader_groups, layouts);
     frame_fence_ = std::make_shared<Fence>(device_);
     acquire_semaphore_ = std::make_shared<Semaphore>(device_);
     render_semaphore_ = std::make_shared<Semaphore>(device_);
@@ -397,7 +431,7 @@ double render_frame(std::shared_ptr<GraphicsContext> context,
         context->swapchain_->get_image(swapchain_image_index),
         VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
 
-    std::vector<std::byte> push_constants(128);
+    std::vector<std::byte> push_constants(128, std::byte{0});
     memcpy(push_constants.data(), &context->elapsed_ms_, sizeof(double));
     std::span<std::byte> push_constants_span(push_constants.data(),
                                              push_constants.size());
