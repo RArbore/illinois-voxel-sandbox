@@ -46,9 +46,11 @@ class GraphicsContext {
     std::vector<std::shared_ptr<DescriptorSet>> tonemap_descriptors_; // Needed per swapchain image?
 
     std::shared_ptr<Fence> frame_fence_ = nullptr;
+    std::shared_ptr<Fence> download_fence_ = nullptr;
     std::shared_ptr<Semaphore> acquire_semaphore_ = nullptr;
     std::shared_ptr<Semaphore> render_semaphore_ = nullptr;
     std::shared_ptr<Command> render_command_buffer_ = nullptr;
+    std::shared_ptr<Command> download_command_buffer_ = nullptr;
 
     std::shared_ptr<GPUBuffer> camera_buffer_ = nullptr;
     std::span<std::byte> camera_span_;
@@ -85,9 +87,8 @@ class GraphicsContext {
     void check_chunk_request_buffer(
         std::vector<std::shared_ptr<Semaphore>> &render_wait_semaphores);
 
-    void download_offscreen_models(
-        glm::vec3 camera_position, glm::vec3 camera_front,
-        std::vector<std::shared_ptr<Semaphore>> &render_wait_semaphores);
+    void tick_download_models(
+	std::vector<std::shared_ptr<Semaphore>> &render_wait_semaphores);
 
     void bind_scene_descriptors(
         DescriptorSetBuilder &builder, std::shared_ptr<GraphicsScene> scene,
@@ -304,9 +305,11 @@ GraphicsContext::GraphicsContext(std::shared_ptr<Window> window) {
     download_ray_trace_pipeline_ = std::make_shared<RayTracePipeline>(
         gpu_allocator_, download_shader_groups, layouts);
     frame_fence_ = std::make_shared<Fence>(device_);
+    download_fence_ = std::make_shared<Fence>(device_);
     acquire_semaphore_ = std::make_shared<Semaphore>(device_);
     render_semaphore_ = std::make_shared<Semaphore>(device_);
     render_command_buffer_ = std::make_shared<Command>(command_pool_);
+    download_command_buffer_ = std::make_shared<Command>(command_pool_);
 
     auto tonemap_comp = std::make_shared<Shader>(device_, "tonemap_comp");
     const auto &image_views = swapchain_->get_image_views();
@@ -349,6 +352,7 @@ GraphicsContext::GraphicsContext(std::shared_ptr<Window> window) {
 GraphicsContext::~GraphicsContext() {
     vkDeviceWaitIdle(device_->get_device());
     chunk_request_buffer_->cpu_unmap();
+    chunk_download_buffer_->cpu_unmap();
     camera_buffer_->cpu_unmap();
 }
 
@@ -384,14 +388,25 @@ double render_frame(std::shared_ptr<GraphicsContext> context,
         context->current_scene_ = scene;
     }
 
+    uint32_t download_bit = 1;
+    std::vector<std::byte> push_constants(128, std::byte{0});
+    memcpy(push_constants.data(), &context->elapsed_ms_, sizeof(double));
+    memcpy(push_constants.data() + sizeof(double), &download_bit, sizeof(uint32_t));
+    std::span<std::byte> push_constants_span(push_constants.data(),
+                                             push_constants.size());
+
+    memcpy(context->camera_span_.data(), &camera_info, sizeof(CameraUB));
+
     if (!changed_scenes) {
         context->check_chunk_request_buffer(render_wait_semaphores);
+	context->tick_download_models(render_wait_semaphores);
         if (context->frame_index_ % 512 == 0) {
-            context->download_offscreen_models(camera_position, camera_front,
-                                               render_wait_semaphores);
             context->ring_buffer_->reap_in_flight_copies();
         }
     }
+
+    download_bit = 0;
+    memcpy(push_constants.data() + sizeof(double), &download_bit, sizeof(uint32_t));
 
     // To-do: histories should be recreated if the swapchain was recreated.
     // Alternatively, we can size the history to the max size somehow
@@ -430,13 +445,6 @@ double render_frame(std::shared_ptr<GraphicsContext> context,
         VK_ACCESS_2_MEMORY_READ_BIT,
         context->swapchain_->get_image(swapchain_image_index),
         VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
-
-    std::vector<std::byte> push_constants(128, std::byte{0});
-    memcpy(push_constants.data(), &context->elapsed_ms_, sizeof(double));
-    std::span<std::byte> push_constants_span(push_constants.data(),
-                                             push_constants.size());
-
-    memcpy(context->camera_span_.data(), &camera_info, sizeof(CameraUB));
 
     context->render_command_buffer_->record([&](VkCommandBuffer
                                                     command_buffer) {
@@ -647,71 +655,51 @@ void GraphicsContext::check_chunk_request_buffer(
     }
 }
 
-void GraphicsContext::download_offscreen_models(
-    glm::vec3 camera_position, glm::vec3 camera_front,
-    std::vector<std::shared_ptr<Semaphore>> &render_wait_semaphores) {
-    auto onscreen = [&](std::shared_ptr<GraphicsObject> object) -> bool {
-        for (uint32_t i = 0; i < 8; ++i) {
-            auto point_object = glm::vec4(
-                static_cast<float>(object->model_->chunk_->get_width()) *
-                    static_cast<float>(i & 1),
-                static_cast<float>(object->model_->chunk_->get_height()) *
-                    static_cast<float>((i >> 1) & 1),
-                static_cast<float>(object->model_->chunk_->get_depth()) *
-                    static_cast<float>((i >> 2) & 1),
-                1.0);
-            auto point_world =
-                glm::transpose(object->transform_) * point_object;
-            if (glm::dot(
-                    glm::vec3(point_world.x, point_world.y, point_world.z) -
-                        camera_position,
-                    camera_front) > 0.0) {
-                return true;
-            }
-        }
-        return false;
-    };
-    std::unordered_set<std::shared_ptr<GraphicsModel>> onscreen_models;
-    for (const auto &object : current_scene_->objects_) {
-        if (onscreen(object)) {
-            onscreen_models.insert(object->model_);
-        }
-    }
+void GraphicsContext::tick_download_models(std::vector<std::shared_ptr<Semaphore>> &render_wait_semaphores) {
+    if (frame_index_ % 128 == 0) {
+	memset(chunk_download_span_.data(), 0, chunk_download_span_.size());
 
-    std::vector<std::shared_ptr<GraphicsModel>> scene_models =
-        current_scene_->assemble_models_in_order();
-    for (uint64_t model_idx = 0; model_idx < scene_models.size(); ++model_idx) {
-        auto &model = scene_models.at(model_idx);
-        if (!uploading_models_.contains(model_idx) &&
-            !downloading_models_.contains(model_idx) &&
-            !onscreen_models.contains(model) &&
-            model->chunk_->get_state() == VoxelChunk::State::GPU) {
-            downloading_models_.insert(model_idx);
-        }
-    }
+	download_command_buffer_->record([&](VkCommandBuffer command_buffer) {
 
-    std::unordered_map<uint64_t, uint32_t> new_sbt_offsets;
-    for (auto model_idx : downloading_models_) {
-        auto &model = scene_models.at(model_idx);
-	model->chunk_->tick_disk_download(device_, ring_buffer_);
-        if (!model->chunk_->downloading()) {
-            new_sbt_offsets.emplace(model_idx, 0);
-        }
-    }
-    for (auto [model_idx, _] : new_sbt_offsets) {
-        downloading_models_.erase(model_idx);
-    }
+	});
 
-    if (!new_sbt_offsets.empty()) {
-        current_scene_->tlas_->update_model_sbt_offsets(
-            std::move(new_sbt_offsets));
-        render_wait_semaphores.emplace_back(
-            current_scene_->tlas_->get_timeline());
-
-        DescriptorSetBuilder builder(descriptor_allocator_);
-        bind_scene_descriptors(builder, current_scene_,
-                               std::move(scene_models));
-        builder.update(current_scene_->scene_descriptor_);
+	device_->submit_command(download_command_buffer_, {}, {}, download_fence_);
+    } else if (download_fence_->has_finished()) {
+	download_fence_->reset();
+	uint32_t *cdb = reinterpret_cast<uint32_t *>(chunk_download_span_.data());
+	std::vector<std::shared_ptr<GraphicsModel>> scene_models =
+	    current_scene_->assemble_models_in_order();
+	for (uint64_t model_idx = 0; model_idx < scene_models.size(); ++model_idx) {
+	    auto &model = scene_models.at(model_idx);
+	    if (!uploading_models_.contains(model_idx) &&
+		!downloading_models_.contains(model_idx) &&
+		cdb[model_idx] < 4 &&
+		model->chunk_->get_state() == VoxelChunk::State::GPU) {
+		downloading_models_.insert(model_idx);
+	    }
+	}
+	
+	std::unordered_map<uint64_t, uint32_t> new_sbt_offsets;
+	for (auto model_idx : downloading_models_) {
+	    auto &model = scene_models.at(model_idx);
+	    model->chunk_->tick_disk_download(device_, ring_buffer_);
+	    if (!model->chunk_->downloading()) {
+		new_sbt_offsets.emplace(model_idx, 0);
+	    }
+	}
+	for (auto [model_idx, _] : new_sbt_offsets) {
+	    downloading_models_.erase(model_idx);
+	}
+	
+	if (!new_sbt_offsets.empty()) {
+	    current_scene_->tlas_->update_model_sbt_offsets(std::move(new_sbt_offsets));
+	    render_wait_semaphores.emplace_back(current_scene_->tlas_->get_timeline());
+	    
+	    DescriptorSetBuilder builder(descriptor_allocator_);
+	    bind_scene_descriptors(builder, current_scene_,
+				   std::move(scene_models));
+	    builder.update(current_scene_->scene_descriptor_);
+	}
     }
 }
 
