@@ -58,9 +58,11 @@ void VoxelChunk::tick_gpu_upload(std::shared_ptr<Device> device,
             const auto size = std::filesystem::file_size(disk_path_);
 	    cpu_data_ = std::vector<std::byte>(size);
 	    stream.read(reinterpret_cast<char*>(cpu_data_.data()), size);
-	    std::filesystem::remove(disk_path_);
 
-	    state_ = State::CPU;
+        state_ = State::CPU;
+
+        // todo: this may fail on Windows and may need to be deleted manually
+        std::filesystem::remove(disk_path_); 
 	});
     } else if (state_ == State::CPU) {
 	uploading_ = true;
