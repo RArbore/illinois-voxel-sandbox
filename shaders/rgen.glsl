@@ -9,7 +9,7 @@
 
 layout(location = 0) rayPayloadEXT RayPayload payload;
 
-const int MAX_BOUNCES = 3;
+const int MAX_BOUNCES = 2;
 
 uint hash(uint x) {
     x += (x << 10u);
@@ -50,7 +50,7 @@ void main() {
         if (payload.hit) {
             RayPayload isect = payload;
 
-            if (bounce == 0) {
+            if (bounce == 0 && !bool(download_bit)) {
                 imageStore(image_normals, ivec2(gl_LaunchIDEXT), vec4(isect.world_normal, 1.0f));
                 imageStore(image_positions, ivec2(gl_LaunchIDEXT), vec4(isect.world_position, 1.0f));
 
@@ -100,7 +100,7 @@ void main() {
 
                 if (payload.hit && length(payload.world_position - light_point) < 0.001) {
                     vec3 bsdf = isect.color.xyz * INV_PI;
-                    L += weight * payload.color.xyz * bsdf * abs(dot(light_direction, isect.world_normal)) / light_pdf;
+                    L += weight * payload.color.xyz * bsdf * payload.color.w / light_pdf;
                 }
             }
 
@@ -125,13 +125,14 @@ void main() {
 
     vec4 final_radiance = vec4(L, 1.0f);
 
-    // imageStore(image_history, ivec2(gl_LaunchIDEXT), final_radiance);
-
-    if (camera.frames_since_update == 0) {
-        imageStore(image_history, ivec2(gl_LaunchIDEXT), final_radiance);
-    } else {
-        vec4 history = imageLoad(image_history, ivec2(gl_LaunchIDEXT));
-        vec4 final_color = mix(history, final_radiance, 1.0f / (camera.frames_since_update + 1));
-        imageStore(image_history, ivec2(gl_LaunchIDEXT), final_color);
+    if (!bool(download_bit)) {
+        if (camera.frames_since_update == 0) {
+            imageStore(image_history, ivec2(gl_LaunchIDEXT), final_radiance);
+        } else {
+            vec4 history = imageLoad(image_history, ivec2(gl_LaunchIDEXT));
+            float proportion = max(1.0f / (camera.frames_since_update + 1), 0.1);
+            vec4 final_color = mix(history, final_radiance, proportion);
+            imageStore(image_history, ivec2(gl_LaunchIDEXT), final_color);
+        }
     }
 }

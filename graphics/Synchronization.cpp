@@ -15,7 +15,7 @@ Fence::Fence(std::shared_ptr<Device> device, bool create_signaled) {
 }
 
 void Fence::wait() {
-    vkWaitForFences(device_->get_device(), 1, &fence_, VK_TRUE, UINT64_MAX);
+    ASSERT(vkWaitForFences(device_->get_device(), 1, &fence_, VK_TRUE, 100000000), "Fence was waited on for more than one second.");
 }
 
 void Fence::reset() { vkResetFences(device_->get_device(), 1, &fence_); }

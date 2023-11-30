@@ -38,6 +38,7 @@ class GraphicsContext {
     std::shared_ptr<Swapchain> swapchain_ = nullptr;
     std::shared_ptr<CommandPool> command_pool_ = nullptr;
     std::shared_ptr<RayTracePipeline> ray_trace_pipeline_ = nullptr;
+    std::shared_ptr<RayTracePipeline> download_ray_trace_pipeline_ = nullptr;
     std::shared_ptr<DescriptorAllocator> descriptor_allocator_ = nullptr;
     std::shared_ptr<RingBuffer> ring_buffer_ = nullptr;
 
@@ -45,15 +46,20 @@ class GraphicsContext {
     std::vector<std::shared_ptr<DescriptorSet>> tonemap_descriptors_; // Needed per swapchain image?
 
     std::shared_ptr<Fence> frame_fence_ = nullptr;
+    std::shared_ptr<Fence> download_fence_ = nullptr;
     std::shared_ptr<Semaphore> acquire_semaphore_ = nullptr;
     std::shared_ptr<Semaphore> render_semaphore_ = nullptr;
     std::shared_ptr<Command> render_command_buffer_ = nullptr;
+    std::shared_ptr<Command> download_command_buffer_ = nullptr;
 
     std::shared_ptr<GPUBuffer> camera_buffer_ = nullptr;
     std::span<std::byte> camera_span_;
 
     std::shared_ptr<GPUBuffer> chunk_request_buffer_ = nullptr;
     std::span<std::byte> chunk_request_span_;
+
+    std::shared_ptr<GPUBuffer> chunk_download_buffer_ = nullptr;
+    std::span<std::byte> chunk_download_span_;
 
     std::shared_ptr<GPUImage> blue_noise_ = nullptr;
 
@@ -81,10 +87,10 @@ class GraphicsContext {
     void check_chunk_request_buffer(
         std::vector<std::shared_ptr<Semaphore>> &render_wait_semaphores);
 
-    void download_offscreen_models(
-        glm::vec3 camera_position, glm::vec3 camera_front,
-        std::vector<std::shared_ptr<Semaphore>> &render_wait_semaphores);
-
+    void tick_download_models(std::vector<std::shared_ptr<Semaphore>> &render_wait_semaphores,
+			      std::shared_ptr<GraphicsScene> scene,
+			      std::span<std::byte> push_constants_span);
+    
     void bind_scene_descriptors(
         DescriptorSetBuilder &builder, std::shared_ptr<GraphicsScene> scene,
         std::vector<std::shared_ptr<GraphicsModel>> &&models);
@@ -178,8 +184,20 @@ GraphicsContext::GraphicsContext(std::shared_ptr<Window> window) {
         VMA_ALLOCATION_CREATE_HOST_ACCESS_RANDOM_BIT);
     chunk_request_span_ = chunk_request_buffer_->cpu_map();
     uint64_t *crb = reinterpret_cast<uint64_t *>(chunk_request_span_.data());
-    for (uint32_t i = 0; i < MAX_MODELS; ++i) {
+    for (uint32_t i = 0; i < MAX_NUM_CHUNKS_LOADED_PER_FRAME; ++i) {
         crb[i] = 0x00000000FFFFFFFF;
+    }
+
+    chunk_download_buffer_ = std::make_shared<GPUBuffer>(
+        gpu_allocator_, MAX_NUM_CHUNKS_LOADED_PER_FRAME * sizeof(uint32_t),
+        sizeof(uint32_t), VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
+        VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
+            VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+        VMA_ALLOCATION_CREATE_HOST_ACCESS_RANDOM_BIT);
+    chunk_download_span_ = chunk_download_buffer_->cpu_map();
+    uint32_t *cdb = reinterpret_cast<uint32_t *>(chunk_download_span_.data());
+    for (uint32_t i = 0; i < MAX_MODELS; ++i) {
+        cdb[i] = 0;
     }
 
     camera_buffer_ = std::make_shared<GPUBuffer>(
@@ -190,8 +208,9 @@ GraphicsContext::GraphicsContext(std::shared_ptr<Window> window) {
         VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT);
     camera_span_ = camera_buffer_->cpu_map();
 
+    VkFormat luminance_format = VK_FORMAT_R16G16B16A16_SFLOAT;
     image_history_ = std::make_shared<GPUImage>(
-        gpu_allocator_, swapchain_->get_extent(), swapchain_->get_format(), 0,
+        gpu_allocator_, swapchain_->get_extent(), luminance_format, 0,
         VK_IMAGE_USAGE_STORAGE_BIT,
         VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
         VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT, 1, 1);
@@ -216,30 +235,36 @@ GraphicsContext::GraphicsContext(std::shared_ptr<Window> window) {
                              VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
                              VK_SHADER_STAGE_INTERSECTION_BIT_KHR);
     wide_builder.bind_buffer(1,
+                             {.buffer = chunk_download_buffer_->get_buffer(),
+                              .offset = 0,
+                              .range = chunk_download_buffer_->get_size()},
+                             VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
+                             VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR);
+    wide_builder.bind_buffer(2,
                              {.buffer = camera_buffer_->get_buffer(),
                               .offset = 0,
                               .range = camera_buffer_->get_size()},
                              VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
                              VK_SHADER_STAGE_RAYGEN_BIT_KHR);
-    wide_builder.bind_image(2,
+    wide_builder.bind_image(3,
                             {.sampler = VK_NULL_HANDLE,
                              .imageView = blue_noise_->get_view(),
                              .imageLayout = VK_IMAGE_LAYOUT_GENERAL},
                             VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,
                             VK_SHADER_STAGE_RAYGEN_BIT_KHR);
-    wide_builder.bind_image(3,
+    wide_builder.bind_image(4,
                             {.sampler = VK_NULL_HANDLE,
                              .imageView = image_history_->get_view(),
                              .imageLayout = VK_IMAGE_LAYOUT_GENERAL},
                             VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,
                             VK_SHADER_STAGE_RAYGEN_BIT_KHR);
-    wide_builder.bind_image(4,
+    wide_builder.bind_image(5,
                             {.sampler = VK_NULL_HANDLE,
                              .imageView = image_normals_->get_view(),
                              .imageLayout = VK_IMAGE_LAYOUT_GENERAL},
                             VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,
                             VK_SHADER_STAGE_RAYGEN_BIT_KHR);
-    wide_builder.bind_image(5,
+    wide_builder.bind_image(6,
                             {.sampler = VK_NULL_HANDLE,
                              .imageView = image_positions_->get_view(),
                              .imageLayout = VK_IMAGE_LAYOUT_GENERAL},
@@ -258,6 +283,7 @@ GraphicsContext::GraphicsContext(std::shared_ptr<Window> window) {
     auto svdag_color_rchit = std::make_shared<Shader>(device_, "SVDAG_Color_rchit");
     auto svdag_color_rint = std::make_shared<Shader>(device_, "SVDAG_Color_rint");
     auto emissive_rchit = std::make_shared<Shader>(device_, "Emissive_rchit");
+    auto download_rchit = std::make_shared<Shader>(device_, "Download_rchit");
     std::vector<std::vector<std::shared_ptr<Shader>>> shader_groups = {
         {rgen},
         {rmiss},
@@ -267,6 +293,15 @@ GraphicsContext::GraphicsContext(std::shared_ptr<Window> window) {
         {svdag_color_rchit, svdag_color_rint},
         {emissive_rchit, raw_color_rint},
     };
+    std::vector<std::vector<std::shared_ptr<Shader>>> download_shader_groups = {
+        {rgen},
+        {rmiss},
+        {unloaded_rchit, unloaded_rint},
+        {download_rchit, raw_color_rint},
+        {download_rchit, svo_color_rint},
+        {download_rchit, svdag_color_rint},
+        {download_rchit, raw_color_rint},
+    };
     std::vector<VkDescriptorSetLayout> layouts = {
         swapchain_->get_image_descriptor(0)->get_layout(),
         scene_builder.get_layout()->get_layout(),
@@ -274,10 +309,14 @@ GraphicsContext::GraphicsContext(std::shared_ptr<Window> window) {
 
     ray_trace_pipeline_ = std::make_shared<RayTracePipeline>(
         gpu_allocator_, shader_groups, layouts);
+    download_ray_trace_pipeline_ = std::make_shared<RayTracePipeline>(
+        gpu_allocator_, download_shader_groups, layouts);
     frame_fence_ = std::make_shared<Fence>(device_);
+    download_fence_ = std::make_shared<Fence>(device_);
     acquire_semaphore_ = std::make_shared<Semaphore>(device_);
     render_semaphore_ = std::make_shared<Semaphore>(device_);
     render_command_buffer_ = std::make_shared<Command>(command_pool_);
+    download_command_buffer_ = std::make_shared<Command>(command_pool_);
 
     auto tonemap_comp = std::make_shared<Shader>(device_, "tonemap_comp");
     const auto &image_views = swapchain_->get_image_views();
@@ -320,6 +359,7 @@ GraphicsContext::GraphicsContext(std::shared_ptr<Window> window) {
 GraphicsContext::~GraphicsContext() {
     vkDeviceWaitIdle(device_->get_device());
     chunk_request_buffer_->cpu_unmap();
+    chunk_download_buffer_->cpu_unmap();
     camera_buffer_->cpu_unmap();
 }
 
@@ -355,14 +395,25 @@ double render_frame(std::shared_ptr<GraphicsContext> context,
         context->current_scene_ = scene;
     }
 
+    uint32_t download_bit = 1;
+    std::vector<std::byte> push_constants(128, std::byte{0});
+    memcpy(push_constants.data(), &context->elapsed_ms_, sizeof(double));
+    memcpy(push_constants.data() + sizeof(double), &download_bit, sizeof(uint32_t));
+    std::span<std::byte> push_constants_span(push_constants.data(),
+                                             push_constants.size());
+
+    memcpy(context->camera_span_.data(), &camera_info, sizeof(CameraUB));
+
     if (!changed_scenes) {
         context->check_chunk_request_buffer(render_wait_semaphores);
+	context->tick_download_models(render_wait_semaphores, scene, push_constants_span);
         if (context->frame_index_ % 512 == 0) {
-            context->download_offscreen_models(camera_position, camera_front,
-                                               render_wait_semaphores);
             context->ring_buffer_->reap_in_flight_copies();
         }
     }
+
+    download_bit = 0;
+    memcpy(push_constants.data() + sizeof(double), &download_bit, sizeof(uint32_t));
 
     // To-do: histories should be recreated if the swapchain was recreated.
     // Alternatively, we can size the history to the max size somehow
@@ -401,13 +452,6 @@ double render_frame(std::shared_ptr<GraphicsContext> context,
         VK_ACCESS_2_MEMORY_READ_BIT,
         context->swapchain_->get_image(swapchain_image_index),
         VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
-
-    std::vector<std::byte> push_constants(128);
-    memcpy(push_constants.data(), &context->elapsed_ms_, sizeof(double));
-    std::span<std::byte> push_constants_span(push_constants.data(),
-                                             push_constants.size());
-
-    memcpy(context->camera_span_.data(), &camera_info, sizeof(CameraUB));
 
     context->render_command_buffer_->record([&](VkCommandBuffer
                                                     command_buffer) {
@@ -660,71 +704,53 @@ void GraphicsContext::check_chunk_request_buffer(
     }
 }
 
-void GraphicsContext::download_offscreen_models(
-    glm::vec3 camera_position, glm::vec3 camera_front,
-    std::vector<std::shared_ptr<Semaphore>> &render_wait_semaphores) {
-    auto onscreen = [&](std::shared_ptr<GraphicsObject> object) -> bool {
-        for (uint32_t i = 0; i < 8; ++i) {
-            auto point_object = glm::vec4(
-                static_cast<float>(object->model_->chunk_->get_width()) *
-                    static_cast<float>(i & 1),
-                static_cast<float>(object->model_->chunk_->get_height()) *
-                    static_cast<float>((i >> 1) & 1),
-                static_cast<float>(object->model_->chunk_->get_depth()) *
-                    static_cast<float>((i >> 2) & 1),
-                1.0);
-            auto point_world =
-                glm::transpose(object->transform_) * point_object;
-            if (glm::dot(
-                    glm::vec3(point_world.x, point_world.y, point_world.z) -
-                        camera_position,
-                    camera_front) > 0.0) {
-                return true;
-            }
-        }
-        return false;
-    };
-    std::unordered_set<std::shared_ptr<GraphicsModel>> onscreen_models;
-    for (const auto &object : current_scene_->objects_) {
-        if (onscreen(object)) {
-            onscreen_models.insert(object->model_);
-        }
-    }
-
+void GraphicsContext::tick_download_models(std::vector<std::shared_ptr<Semaphore>> &render_wait_semaphores,
+					   std::shared_ptr<GraphicsScene> scene,
+					   std::span<std::byte> push_constants_span) {
     std::vector<std::shared_ptr<GraphicsModel>> scene_models =
-        current_scene_->assemble_models_in_order();
-    for (uint64_t model_idx = 0; model_idx < scene_models.size(); ++model_idx) {
-        auto &model = scene_models.at(model_idx);
-        if (!uploading_models_.contains(model_idx) &&
-            !downloading_models_.contains(model_idx) &&
-            !onscreen_models.contains(model) &&
-            model->chunk_->get_state() == VoxelChunk::State::GPU) {
-            downloading_models_.insert(model_idx);
-        }
-    }
+	current_scene_->assemble_models_in_order();
+    std::erase_if(downloading_models_, 
+		  [&](uint64_t model_idx) { return !scene_models.at(model_idx)->chunk_->downloading(); });
 
-    std::unordered_map<uint64_t, uint32_t> new_sbt_offsets;
-    for (auto model_idx : downloading_models_) {
-        auto &model = scene_models.at(model_idx);
-	model->chunk_->tick_disk_download(device_, ring_buffer_);
-        if (!model->chunk_->downloading()) {
-            new_sbt_offsets.emplace(model_idx, 0);
-        }
-    }
-    for (auto [model_idx, _] : new_sbt_offsets) {
-        downloading_models_.erase(model_idx);
-    }
+    if (frame_index_ % 128 == 0) {
+	download_fence_->reset();
+	memset(chunk_download_span_.data(), 0, chunk_download_span_.size());
 
-    if (!new_sbt_offsets.empty()) {
-        current_scene_->tlas_->update_model_sbt_offsets(
-            std::move(new_sbt_offsets));
-        render_wait_semaphores.emplace_back(
-            current_scene_->tlas_->get_timeline());
+	download_command_buffer_->record([&](VkCommandBuffer command_buffer) {
+	    VkExtent2D extent = swapchain_->get_extent();
+	    download_ray_trace_pipeline_->record(
+						 command_buffer,
+						 {swapchain_->get_image_descriptor(0), // this is redundant for the time being
+						  scene->scene_descriptor_, wide_descriptor_},
+						 push_constants_span, extent.width, extent.height, 1);
+	});
 
-        DescriptorSetBuilder builder(descriptor_allocator_);
-        bind_scene_descriptors(builder, current_scene_,
-                               std::move(scene_models));
-        builder.update(current_scene_->scene_descriptor_);
+	device_->submit_command(download_command_buffer_, {}, {}, download_fence_);
+
+	download_fence_->wait();
+	uint32_t *cdb = reinterpret_cast<uint32_t *>(chunk_download_span_.data());
+	std::unordered_map<uint64_t, uint32_t> new_sbt_offsets;
+	for (uint64_t model_idx = 0; model_idx < scene_models.size(); ++model_idx) {
+	    auto &model = scene_models.at(model_idx);
+	    if (!uploading_models_.contains(model_idx) &&
+		!downloading_models_.contains(model_idx) &&
+		cdb[model_idx] < 4 &&
+		model->chunk_->get_state() == VoxelChunk::State::GPU) {
+		downloading_models_.insert(model_idx);
+		model->chunk_->tick_disk_download(device_, ring_buffer_);
+		new_sbt_offsets.emplace(model_idx, 0);
+	    }
+	}
+	
+	if (!new_sbt_offsets.empty()) {
+	    current_scene_->tlas_->update_model_sbt_offsets(std::move(new_sbt_offsets));
+	    render_wait_semaphores.emplace_back(current_scene_->tlas_->get_timeline());
+	    
+	    DescriptorSetBuilder builder(descriptor_allocator_);
+	    bind_scene_descriptors(builder, current_scene_,
+				   std::move(scene_models));
+	    builder.update(current_scene_->scene_descriptor_);
+	}
     }
 }
 
