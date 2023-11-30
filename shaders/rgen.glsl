@@ -100,7 +100,7 @@ void main() {
 
                 if (payload.hit && length(payload.world_position - light_point) < 0.001) {
                     vec3 bsdf = isect.color.xyz * INV_PI;
-                    L += weight * payload.color.xyz * bsdf * payload.color.w / light_pdf;
+                    L += weight * payload.color.xyz * bsdf * payload.color.w * abs(dot(light_direction, isect.world_normal)) / light_pdf;
                 }
             }
 
@@ -118,7 +118,7 @@ void main() {
             ray_direction = new_direction;
             weight *= bsdf * abs(dot(new_direction, isect.world_normal)) / pdf;
         } else {
-            L += weight * payload.color.xyz; // add the sky color if the first ray is a miss
+            L += weight * payload.color.xyz * payload.color.w; // add the sky color if the first ray is a miss
             break;
         }
     }

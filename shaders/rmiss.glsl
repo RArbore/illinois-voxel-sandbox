@@ -9,6 +9,6 @@ layout(location = 0) rayPayloadInEXT RayPayload payload;
 
 void main() {
     payload.hit = false;
-    payload.color = 0.25 * vec4(0.95, 1.0, 1.0, 1.0);
+    payload.color = vec4(0.95, 1.0, 1.0, 0.25);
     payload.emissive = true;
 }
