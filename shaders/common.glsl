@@ -39,6 +39,7 @@ const uint SVDAG_INVALID_OFFSET = 0xFFFFFFFF;
 
 layout (push_constant) uniform PushConstants {
     uint64_t elapsed_ms;
+    uint download_bit;
 };
 
 struct RayPayload {
@@ -101,20 +102,24 @@ layout(set = 2, binding = 0) buffer chunk_request_buffer_ {
     uint32_t chunk_request_buffer[MAX_NUM_CHUNKS_LOADED_PER_FRAME];
 };
 
+layout(set = 2, binding = 1) buffer chunk_download_buffer_ {
+    uint32_t chunk_download_buffer[MAX_MODELS];
+};
+
 struct Camera {
     mat4 view_inv; // view space to world space
     highp int frames_since_update; // accumulated frames since the camera hasn't moved
 };
 
-layout(set = 2, binding = 1) uniform camera_ {
+layout(set = 2, binding = 2) uniform camera_ {
 	Camera camera;
 };
 
-layout(set = 2, binding = 2, rgba8) uniform image2D blue_noise;
+layout(set = 2, binding = 3, rgba8) uniform image2D blue_noise;
 
-layout(set = 2, binding = 3, rgba16f) uniform image2D image_history;
-layout(set = 2, binding = 4, rgba8) uniform image2D image_normals;
-layout(set = 2, binding = 5, rgba8) uniform image2D image_positions;
+layout(set = 2, binding = 4, rgba16f) uniform image2D image_history;
+layout(set = 2, binding = 5, rgba8) uniform image2D image_normals;
+layout(set = 2, binding = 6, rgba8) uniform image2D image_positions;
 
 
 const float FAR_AWAY = 1000.0;
