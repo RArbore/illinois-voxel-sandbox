@@ -212,6 +212,13 @@ std::vector<std::byte> raw_voxelize_obj(std::string_view filepath, float voxel_s
 			texture_pixels = stbi_load(
 						   (directory + diffuse_texname).c_str(), &texture_width,
 						   &texture_height, &channels, STBI_rgb_alpha);
+			if (!texture_pixels) {
+			    std::stringstream ss;
+			    ss << "Couldn't load texture from the following path: ";
+			    ss << (directory + diffuse_texname);
+			    ss << "\n";
+			    ASSERT(false, ss.str());
+			}
 			loaded_textures[face_mat_id] = {
 			    texture_pixels, texture_width, texture_height};
 		    }

@@ -45,6 +45,10 @@ void main() {
     for (bounce = 0; bounce < MAX_BOUNCES; bounce++) {
         traceRayEXT(tlas, gl_RayFlagsOpaqueEXT, 0xFF, 0, 0, 0, ray_origin, 0.001f, ray_direction, 10000.0f, 0);
 
+        if (payload.hit && payload.emissive) {
+            L += weight * payload.color.xyz * payload.color.w * 255.0; // if we hit a direct light
+        }
+
         // If we've hit something, we send another ray in a random direction.
         // Otherwise assume we hit the sky. Todo: toggle the sky as an infinite light
         if (payload.hit) {
@@ -121,14 +125,14 @@ void main() {
 
     vec4 final_radiance = vec4(L, 1.0f);
 
-    imageStore(image_history, ivec2(gl_LaunchIDEXT), final_radiance);
+    // imageStore(image_history, ivec2(gl_LaunchIDEXT), final_radiance);
 
-    // if (camera.frames_since_update == 0) {
-    //     imageStore(image_history, ivec2(gl_LaunchIDEXT), final_radiance);
-    // } else {
-    //     vec4 history = imageLoad(image_history, ivec2(gl_LaunchIDEXT));
-	//     float proportion = max(1.0f / (camera.frames_since_update + 1), 0.1);
-    //     vec4 final_color = mix(history, final_radiance, proportion);
-    //     imageStore(image_history, ivec2(gl_LaunchIDEXT), final_color);
-    // }
+    if (camera.frames_since_update == 0) {
+        imageStore(image_history, ivec2(gl_LaunchIDEXT), final_radiance);
+    } else {
+        vec4 history = imageLoad(image_history, ivec2(gl_LaunchIDEXT));
+	    float proportion = max(1.0f / (camera.frames_since_update + 1), 0.1);
+        vec4 final_color = mix(history, final_radiance, proportion);
+        imageStore(image_history, ivec2(gl_LaunchIDEXT), final_color);
+    }
 }
