@@ -79,12 +79,14 @@ void main() {
 
     vec4 final_radiance = vec4(L, 1.0f);
 
-    if (camera.frames_since_update == 0 && !bool(download_bit)) {
-        imageStore(image_history, ivec2(gl_LaunchIDEXT), final_radiance);
-    } else {
-        vec4 history = imageLoad(image_history, ivec2(gl_LaunchIDEXT));
-	    float proportion = max(1.0f / (camera.frames_since_update + 1), 0.1);
-        vec4 final_color = mix(history, final_radiance, proportion);
-        imageStore(image_history, ivec2(gl_LaunchIDEXT), final_color);
+    if (!bool(download_bit)) {
+        if (camera.frames_since_update == 0) {
+            imageStore(image_history, ivec2(gl_LaunchIDEXT), final_radiance);
+        } else {
+            vec4 history = imageLoad(image_history, ivec2(gl_LaunchIDEXT));
+            float proportion = max(1.0f / (camera.frames_since_update + 1), 0.1);
+            vec4 final_color = mix(history, final_radiance, proportion);
+            imageStore(image_history, ivec2(gl_LaunchIDEXT), final_color);
+        }
     }
 }

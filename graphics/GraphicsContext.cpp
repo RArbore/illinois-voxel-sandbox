@@ -156,7 +156,7 @@ GraphicsContext::GraphicsContext(std::shared_ptr<Window> window) {
     swapchain_ =
         std::make_shared<Swapchain>(device_, window, descriptor_allocator_);
     ring_buffer_ =
-        std::make_shared<RingBuffer>(gpu_allocator_, command_pool_, 1 << 27);
+        std::make_shared<RingBuffer>(gpu_allocator_, command_pool_, 1 << 30);
 
     DescriptorSetBuilder scene_builder(descriptor_allocator_);
     scene_builder.bind_acceleration_structure(0, {},
@@ -203,8 +203,9 @@ GraphicsContext::GraphicsContext(std::shared_ptr<Window> window) {
         VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT);
     camera_span_ = camera_buffer_->cpu_map();
 
+    VkFormat luminance_format = VK_FORMAT_R16G16B16A16_SFLOAT;
     image_history_ = std::make_shared<GPUImage>(
-        gpu_allocator_, swapchain_->get_extent(), swapchain_->get_format(), 0,
+        gpu_allocator_, swapchain_->get_extent(), luminance_format, 0,
         VK_IMAGE_USAGE_STORAGE_BIT,
         VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
         VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT, 1, 1);

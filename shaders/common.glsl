@@ -117,7 +117,7 @@ layout(set = 2, binding = 2) uniform camera_ {
 
 layout(set = 2, binding = 3, rgba8) uniform image2D blue_noise;
 
-layout(set = 2, binding = 4, rgba8) uniform image2D image_history;
+layout(set = 2, binding = 4, rgba16f) uniform image2D image_history;
 layout(set = 2, binding = 5, rgba8) uniform image2D image_normals;
 layout(set = 2, binding = 6, rgba8) uniform image2D image_positions;
 
