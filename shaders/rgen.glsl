@@ -44,11 +44,7 @@ void main() {
     int bounce = 0;
     for (bounce = 0; bounce < MAX_BOUNCES; bounce++) {
         traceRayEXT(tlas, gl_RayFlagsOpaqueEXT, 0xFF, 0, 0, 0, ray_origin, 0.001f, ray_direction, 10000.0f, 0);
-
-        if (payload.hit && payload.emissive) {
-            L += weight * payload.color.xyz * payload.color.w * 255.0; // if we hit a direct light
-        }
-
+        
         // If we've hit something, we send another ray in a random direction.
         // Otherwise assume we hit the sky. Todo: toggle the sky as an infinite light
         if (payload.hit) {
@@ -67,29 +63,34 @@ void main() {
             if (num_emissive_voxels > 0) {
                 vec4 random_light = imageLoad(blue_noise, blue_noise_coords + ivec2(bounce * slice_2_from_4(random, bounce + 3)));
                 uint32_t light_index = uint32_t(num_emissive_voxels * random_light.x); // pick a light
-                uint8_t light_face = uint8_t(3 * random_light.y); // pick one of 3 faces to sample (todo: is 6 necessary?)
+                uint8_t light_face = uint8_t(6 * random_light.y);
 
                 vec3 light_corner = vec3(emissive_voxels[6 * light_index + 0], 
                                          emissive_voxels[6 * light_index + 1], 
                                          emissive_voxels[6 * light_index + 2]);
                 
-                // 0 is xy, 1 is yz, 2 is xz
                 vec3 light_point = light_corner;
-                float light_pdf = 1.0f / (3 * num_emissive_voxels);
+                float light_pdf = 1.0f / (6 * num_emissive_voxels);
+                float width = emissive_voxels[6 * light_index + 3];
+                float height = emissive_voxels[6 * light_index + 4];
+                float depth = emissive_voxels[6 * light_index + 5];
                 if (light_face == 0) {
-                    float width = emissive_voxels[6 * light_index + 3];
-                    float height = emissive_voxels[6 * light_index + 4];
                     light_point += vec3(width * random_light.z, height * random_light.w, 0);
                     light_pdf /= (width * height);
                 } else if (light_face == 1) {
-                    float height = emissive_voxels[6 * light_index + 4];
-                    float depth = emissive_voxels[6 * light_index + 5];
                     light_point += vec3(0, height * random_light.z, depth * random_light.w);
                     light_pdf /= (height * depth);
                 } else if (light_face == 2) {
-                    float width = emissive_voxels[6 * light_index + 3];
-                    float depth = emissive_voxels[6 * light_index + 5];
                     light_point += vec3(width * random_light.z, 0, depth * random_light.w);
+                    light_pdf /= (width * depth);
+                } else if (light_face == 3) {
+                    light_point += vec3(width * random_light.z, height * random_light.w, depth);
+                    light_pdf /= (width * height);
+                } else if (light_face == 4) {
+                    light_point += vec3(width, height * random_light.z, depth * random_light.w);
+                    light_pdf /= (height * depth);
+                } else if (light_face == 5) {
+                    light_point += vec3(width * random_light.z, height, depth * random_light.w);
                     light_pdf /= (width * depth);
                 }
 
@@ -97,8 +98,7 @@ void main() {
                 vec3 light_ray_origin = isect.world_position + 0.01 * isect.world_normal;
                 traceRayEXT(tlas, gl_RayFlagsOpaqueEXT, 0xFF, 0, 0, 0, light_ray_origin, 0.001f, light_direction, 10000.0f, 0);
 
-                // If light is hit; todo: voxel id might be useful here
-                if (payload.hit && payload.emissive) {
+                if (payload.hit && length(payload.world_position - light_point) < 0.001) {
                     vec3 bsdf = isect.color.xyz * INV_PI;
                     L += weight * payload.color.xyz * bsdf * abs(dot(light_direction, isect.world_normal)) / light_pdf;
                 }
@@ -131,8 +131,7 @@ void main() {
         imageStore(image_history, ivec2(gl_LaunchIDEXT), final_radiance);
     } else {
         vec4 history = imageLoad(image_history, ivec2(gl_LaunchIDEXT));
-	    float proportion = max(1.0f / (camera.frames_since_update + 1), 0.1);
-        vec4 final_color = mix(history, final_radiance, proportion);
+        vec4 final_color = mix(history, final_radiance, 1.0f / (camera.frames_since_update + 1));
         imageStore(image_history, ivec2(gl_LaunchIDEXT), final_color);
     }
 }
