@@ -94,8 +94,8 @@ void main() {
                     light_pdf /= (width * depth);
                 }
 
-                vec3 light_direction = normalize(light_point - isect.world_position);
                 vec3 light_ray_origin = isect.world_position + 0.01 * isect.world_normal;
+                vec3 light_direction = normalize(light_point - light_ray_origin);
                 traceRayEXT(tlas, gl_RayFlagsOpaqueEXT, 0xFF, 0, 0, 0, light_ray_origin, 0.001f, light_direction, 10000.0f, 0);
 
                 if (payload.hit && length(payload.world_position - light_point) < 0.001) {
