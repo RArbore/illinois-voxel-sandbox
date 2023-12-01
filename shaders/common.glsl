@@ -97,6 +97,15 @@ layout(set = 1, binding = 3) buffer chunk_dimensions_ {
     uint32_t chunk_dimensions[MAX_MODELS * 3];
 };
 
+layout(set = 1, binding = 4) buffer direct_lights_ {
+    uint32_t num_emissive_voxels;
+
+    // Each voxel uses 6 values
+    // 3 for the bottom left corner, 3 for the dimensions
+    // todo: can we use a struct for this?
+    float emissive_voxels[]; 
+};
+
 // Set 2 is not swapped out - it is for GraphicsContext-wide data.
 layout(set = 2, binding = 0) buffer chunk_request_buffer_ {
     uint32_t chunk_request_buffer[MAX_NUM_CHUNKS_LOADED_PER_FRAME];

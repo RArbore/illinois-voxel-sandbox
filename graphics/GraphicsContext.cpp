@@ -122,13 +122,16 @@ class GraphicsScene {
                   std::shared_ptr<TLAS> tlas,
                   std::vector<std::shared_ptr<GraphicsObject>> objects,
                   std::shared_ptr<DescriptorSet> scene_descriptor,
-		  std::shared_ptr<GPUBuffer> chunk_dimensions)
-        : tlas_(tlas), objects_(objects), scene_descriptor_(scene_descriptor), chunk_dimensions_(chunk_dimensions) {}
+                  std::shared_ptr<GPUBuffer> chunk_dimensions,
+                  std::shared_ptr<GPUBuffer> emissive_voxels)
+        : tlas_(tlas), objects_(objects), scene_descriptor_(scene_descriptor),
+          chunk_dimensions_(chunk_dimensions), emissive_voxels_{emissive_voxels} {}
 
     std::shared_ptr<TLAS> tlas_;
     std::vector<std::shared_ptr<GraphicsObject>> objects_;
     std::shared_ptr<DescriptorSet> scene_descriptor_ = nullptr;
     std::shared_ptr<GPUBuffer> chunk_dimensions_ = nullptr;
+    std::shared_ptr<GPUBuffer> emissive_voxels_ = nullptr;
 
     std::vector<std::shared_ptr<GraphicsModel>> assemble_models_in_order() {
         std::unordered_map<std::shared_ptr<GraphicsModel>, size_t>
@@ -170,6 +173,8 @@ GraphicsContext::GraphicsContext(std::shared_ptr<Window> window) {
     scene_builder.bind_buffer(3, {}, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
 			      VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR |
 			      VK_SHADER_STAGE_INTERSECTION_BIT_KHR);
+    scene_builder.bind_buffer(4, {}, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
+                              VK_SHADER_STAGE_RAYGEN_BIT_KHR);
     
     chunk_request_buffer_ = std::make_shared<GPUBuffer>(
         gpu_allocator_, MAX_NUM_CHUNKS_LOADED_PER_FRAME * sizeof(uint64_t),
@@ -565,6 +570,8 @@ build_scene(std::shared_ptr<GraphicsContext> context,
             referenced_models.emplace(object->model_, referenced_models.size());
         }
     }
+
+    uint32_t num_emissive_chunks = 0;
     std::vector<VkAccelerationStructureInstanceKHR> instances;
     for (const auto &object : objects) {
         VkTransformMatrixKHR transform{};
@@ -574,6 +581,11 @@ build_scene(std::shared_ptr<GraphicsContext> context,
         instances.emplace_back(transform, model_idx,
                                0xFF, model_on_gpu ? object->model_->sbt_offset_ : UNLOADED_SBT_OFFSET, 0,
                                object->model_->blas_->get_device_address());
+
+        if (object->model_->chunk_->get_attribute_set() ==
+            VoxelChunk::AttributeSet::Emissive) {
+            num_emissive_chunks++;
+        }
     }
     std::shared_ptr<TLAS> tlas = std::make_shared<TLAS>(
         context->gpu_allocator_, context->command_pool_, context->ring_buffer_,
@@ -595,14 +607,50 @@ build_scene(std::shared_ptr<GraphicsContext> context,
     auto chunk_dimensions_span = chunk_dimensions->cpu_map();
     uint32_t *chunk_dimensions_ptr = reinterpret_cast<uint32_t *>(chunk_dimensions_span.data());
     for (uint32_t i = 0; i < scene_models.size(); ++i) {
-	chunk_dimensions_ptr[i * 3] = scene_models[i]->chunk_->get_width();
-	chunk_dimensions_ptr[i * 3 + 1] = scene_models[i]->chunk_->get_height();
-	chunk_dimensions_ptr[i * 3 + 2] = scene_models[i]->chunk_->get_depth();
+	    chunk_dimensions_ptr[i * 3] = scene_models[i]->chunk_->get_width();
+	    chunk_dimensions_ptr[i * 3 + 1] = scene_models[i]->chunk_->get_height();
+	    chunk_dimensions_ptr[i * 3 + 2] = scene_models[i]->chunk_->get_depth();
     }
     chunk_dimensions->cpu_unmap();
+
+    std::shared_ptr<GPUBuffer> emissive_voxels = std::make_shared<GPUBuffer>(
+        context->gpu_allocator_,
+        sizeof(float) * (6 * num_emissive_chunks) + sizeof(uint32_t), sizeof(uint64_t),
+        VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
+        VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
+            VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+        VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT);
+    auto emissive_voxels_span = emissive_voxels->cpu_map();
+    uint32_t *num_emissive_voxels_ptr =
+        reinterpret_cast<uint32_t *>(emissive_voxels_span.data());
+    num_emissive_voxels_ptr[0] = num_emissive_chunks;
+
+    float *emissive_voxels_ptr =
+        reinterpret_cast<float *>(num_emissive_voxels_ptr + 1); 
+    uint32_t emissive_index = 0;
+    for (auto& object : objects) {
+        // Note that emissive voxels MUST be axis-aligned at the moment.
+        if (object->model_->chunk_->get_attribute_set() ==
+            VoxelChunk::AttributeSet::Emissive) {
+            emissive_voxels_ptr[6 * emissive_index + 0] =
+                object->transform_[0][3];
+            emissive_voxels_ptr[6 * emissive_index + 1] =
+                object->transform_[1][3];
+            emissive_voxels_ptr[6 * emissive_index + 2] =
+                object->transform_[2][3];
+            emissive_voxels_ptr[6 * emissive_index + 3] =
+                object->model_->chunk_->get_width() * object->transform_[0][0];
+            emissive_voxels_ptr[6 * emissive_index + 4] =
+                object->model_->chunk_->get_height() * object->transform_[1][1];
+            emissive_voxels_ptr[6 * emissive_index + 5] =
+                object->model_->chunk_->get_depth() * object->transform_[2][2];
+            emissive_index++;
+        }
+    }
+    emissive_voxels->cpu_unmap();
     
     auto scene =
-        std::make_shared<GraphicsScene>(context, tlas, objects, nullptr, chunk_dimensions);
+        std::make_shared<GraphicsScene>(context, tlas, objects, nullptr, chunk_dimensions, emissive_voxels);
     context->bind_scene_descriptors(builder, scene, std::move(scene_models));
     scene->scene_descriptor_ = builder.build();
     return scene;
@@ -755,4 +803,12 @@ void GraphicsContext::bind_scene_descriptors(
     builder.bind_buffer(3, chunk_dimensions_info, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
 			VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR |
 			VK_SHADER_STAGE_INTERSECTION_BIT_KHR);
+
+    VkDescriptorBufferInfo emissive_voxels_info{};
+    emissive_voxels_info.buffer = scene->emissive_voxels_->get_buffer();
+    emissive_voxels_info.offset = 0;
+    emissive_voxels_info.range = scene->emissive_voxels_->get_size();
+    builder.bind_buffer(4, emissive_voxels_info,
+                        VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
+                        VK_SHADER_STAGE_RAYGEN_BIT_KHR);
 }
