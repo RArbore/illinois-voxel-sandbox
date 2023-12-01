@@ -28,10 +28,21 @@ vec3 reinhard(vec3 color) {
     return change_luminance(color, final_luminance);
 }
 
+vec3 aces_approx(vec3 color)
+{
+    color *= 0.6f;
+    const float a = 2.51f;
+    const float b = 0.03f;
+    const float c = 2.43f;
+    const float d = 0.59f;
+    const float e = 0.14f;
+    return (color * (a * color + b)) / (color *(c * color + d) + e);
+}
+
 void main()
 {
     ivec2 pixel = ivec2(gl_GlobalInvocationID.xy);
     vec3 pixel_color = imageLoad(noisy_image, pixel).xyz;
-    pixel_color = clamp(reinhard(pixel_color), 0.0, 1.0);
+    pixel_color = clamp(aces_approx(pixel_color), 0.0f, 1.0f);
     imageStore(output_image, pixel, vec4(pixel_color, 1.0f));
 }
