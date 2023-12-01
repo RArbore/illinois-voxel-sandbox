@@ -629,6 +629,7 @@ build_scene(std::shared_ptr<GraphicsContext> context,
         reinterpret_cast<float *>(num_emissive_voxels_ptr + 1); 
     uint32_t emissive_index = 0;
     for (auto& object : objects) {
+        // Note that emissive voxels MUST be axis-aligned at the moment.
         if (object->model_->chunk_->get_attribute_set() ==
             VoxelChunk::AttributeSet::Emissive) {
             emissive_voxels_ptr[6 * emissive_index + 0] =
@@ -638,11 +639,11 @@ build_scene(std::shared_ptr<GraphicsContext> context,
             emissive_voxels_ptr[6 * emissive_index + 2] =
                 object->transform_[2][3];
             emissive_voxels_ptr[6 * emissive_index + 3] =
-                object->model_->chunk_->get_width();
+                object->model_->chunk_->get_width() * object->transform_[0][0];
             emissive_voxels_ptr[6 * emissive_index + 4] =
-                object->model_->chunk_->get_height();
+                object->model_->chunk_->get_height() * object->transform_[1][1];
             emissive_voxels_ptr[6 * emissive_index + 5] =
-                object->model_->chunk_->get_depth();
+                object->model_->chunk_->get_depth() * object->transform_[2][2];
             emissive_index++;
         }
     }

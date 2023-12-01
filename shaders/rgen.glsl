@@ -61,7 +61,7 @@ void main() {
 
             // Choose a random light to sample to 
             if (num_emissive_voxels > 0) {
-                vec4 random_light = imageLoad(blue_noise, blue_noise_coords + ivec2(bounce * slice_2_from_4(random, bounce + 3)));
+                vec4 random_light = imageLoad(blue_noise, blue_noise_coords + ivec2(vec2(3, 3) * slice_2_from_4(random, bounce + 3)));
                 uint32_t light_index = uint32_t(num_emissive_voxels * random_light.x); // pick a light
                 uint8_t light_face = uint8_t(6 * random_light.y);
 
@@ -98,7 +98,7 @@ void main() {
                 vec3 light_direction = normalize(light_point - light_ray_origin);
                 traceRayEXT(tlas, gl_RayFlagsOpaqueEXT, 0xFF, 0, 0, 0, light_ray_origin, 0.001f, light_direction, 10000.0f, 0);
 
-                if (payload.hit && length(payload.world_position - light_point) < 0.001) {
+                if (payload.hit && length(payload.world_position - light_point) < 0.01) {
                     vec3 bsdf = isect.color.xyz * INV_PI;
                     L += weight * payload.color.xyz * bsdf * payload.color.w * abs(dot(light_direction, isect.world_normal)) / light_pdf;
                 }
@@ -130,7 +130,7 @@ void main() {
             imageStore(image_history, ivec2(gl_LaunchIDEXT), final_radiance);
         } else {
             vec4 history = imageLoad(image_history, ivec2(gl_LaunchIDEXT));
-            float proportion = max(1.0f / (camera.frames_since_update + 1), 0.1);
+            float proportion = 1.0f / (camera.frames_since_update + 1);
             vec4 final_color = mix(history, final_radiance, proportion);
             imageStore(image_history, ivec2(gl_LaunchIDEXT), final_color);
         }
