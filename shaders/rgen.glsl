@@ -100,7 +100,10 @@ void main() {
 
                 if (payload.hit && length(payload.world_position - light_point) < 0.01) {
                     vec3 bsdf = isect.color.xyz * INV_PI;
-                    L += weight * payload.color.xyz * bsdf * payload.color.w * abs(dot(light_direction, isect.world_normal)) / light_pdf;
+                    // Transform from surface area sampling to solid angle sampling
+                    vec3 light_hit = payload.world_position - isect.world_position;
+                    light_pdf *= dot(light_hit, light_hit) / abs(dot(payload.world_normal, -light_direction));
+                    L += weight * payload.color.xyz * bsdf * payload.color.w * 255.0 * abs(dot(light_direction, isect.world_normal)) / light_pdf;
                 }
             }
 
