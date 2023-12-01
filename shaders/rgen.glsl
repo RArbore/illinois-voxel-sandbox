@@ -103,7 +103,9 @@ void main() {
                     // Transform from surface area sampling to solid angle sampling
                     vec3 light_hit = payload.world_position - isect.world_position;
                     light_pdf *= dot(light_hit, light_hit) / abs(dot(payload.world_normal, -light_direction));
-                    L += weight * payload.color.xyz * bsdf * payload.color.w * 255.0 * abs(dot(light_direction, isect.world_normal)) / light_pdf;
+                    if (light_pdf > 0.01) {
+                        L += weight * payload.color.xyz * bsdf * payload.color.w * 255.0 * abs(dot(light_direction, isect.world_normal)) / light_pdf;
+                    }
                 }
             }
 
