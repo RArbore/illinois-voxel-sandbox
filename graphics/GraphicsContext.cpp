@@ -67,7 +67,8 @@ class GraphicsContext {
 
     std::shared_ptr<GPUImage> blue_noise_ = nullptr;
 
-    std::array<std::shared_ptr<GPUImage>, 2> image_histories_ = {nullptr, nullptr};
+    std::shared_ptr<GPUImage> image_history_ = nullptr;
+    std::array<std::shared_ptr<GPUImage>, 2> atrous_images_ = {nullptr, nullptr};
     std::shared_ptr<GPUImage> image_normals_ = nullptr;
     std::shared_ptr<GPUImage> image_positions_ = nullptr;
 
@@ -213,8 +214,12 @@ GraphicsContext::GraphicsContext(std::shared_ptr<Window> window) {
     camera_span_ = camera_buffer_->cpu_map();
 
     VkFormat luminance_format = VK_FORMAT_R16G16B16A16_SFLOAT;
+    image_history_ = std::make_shared<GPUImage>(
+						gpu_allocator_, swapchain_->get_extent(), luminance_format, 0,
+						VK_IMAGE_USAGE_STORAGE_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+						VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT, 1, 1);
     for (int i = 0; i < 2; i++) {
-        image_histories_[i] = std::make_shared<GPUImage>(
+        atrous_images_[i] = std::make_shared<GPUImage>(
             gpu_allocator_, swapchain_->get_extent(), luminance_format, 0,
             VK_IMAGE_USAGE_STORAGE_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
             VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT, 1, 1);
@@ -259,8 +264,7 @@ GraphicsContext::GraphicsContext(std::shared_ptr<Window> window) {
                             VK_SHADER_STAGE_RAYGEN_BIT_KHR);
     wide_builder.bind_image(4,
                             {.sampler = VK_NULL_HANDLE,
-                             // always write out to the first intermediate history image
-                             .imageView = image_histories_[0]->get_view(),
+			     .imageView = image_history_->get_view(),
                              .imageLayout = VK_IMAGE_LAYOUT_GENERAL},
                             VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,
                             VK_SHADER_STAGE_RAYGEN_BIT_KHR);
@@ -326,18 +330,20 @@ GraphicsContext::GraphicsContext(std::shared_ptr<Window> window) {
 
     num_filter_iterations_ = 4;
     auto denoise_comp = std::make_shared<Shader>(device_, "denoise_comp");
-    for (int i = 0; i < 2; i++) {
+    for (int i = 0; i < num_filter_iterations_; i++) {
+	// Create a descriptor per filter iteration. On the first iteration,
+	// read from image history. On every other iteration, alternate between
+	// the atrous images.
         DescriptorSetBuilder denoise_builder(descriptor_allocator_);
-        // The denoiser reads from one of the buffers and writes to the other.
         denoise_builder.bind_image(0,
                                    {.sampler = VK_NULL_HANDLE,
-                                    .imageView = image_histories_[i]->get_view(),
+                                    .imageView = atrous_images_[i]->get_view(),
                                     .imageLayout = VK_IMAGE_LAYOUT_GENERAL},
                                    VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,
                                    VK_SHADER_STAGE_COMPUTE_BIT);
         denoise_builder.bind_image(1,
                                    {.sampler = VK_NULL_HANDLE,
-                                    .imageView = image_histories_[(i + 1) % 2]->get_view(),
+                                    .imageView = i ? atrous_images_[(i + 1) % 2]->get_view() : image_history_->get_view(),
                                     .imageLayout = VK_IMAGE_LAYOUT_GENERAL},
                                    VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,
                                    VK_SHADER_STAGE_COMPUTE_BIT);
@@ -376,7 +382,7 @@ GraphicsContext::GraphicsContext(std::shared_ptr<Window> window) {
                                    {.sampler = VK_NULL_HANDLE,
                                     // depending on the number of iterations,
                                     // either the first or second image will contain the final result
-                                    .imageView = image_histories_[(num_filter_iterations_ % 2) == 0 ? 0 : 1]->get_view(),
+                                    .imageView = atrous_images_[(num_filter_iterations_ % 2) == 0 ? 0 : 1]->get_view(),
                                     .imageLayout = VK_IMAGE_LAYOUT_GENERAL},
                                    VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,
                                    VK_SHADER_STAGE_COMPUTE_BIT);
@@ -472,13 +478,19 @@ double render_frame(std::shared_ptr<GraphicsContext> context,
     Barrier prologue_barrier2(
         context->device_, VK_PIPELINE_STAGE_2_NONE, VK_ACCESS_2_NONE,
         VK_PIPELINE_STAGE_2_RAY_TRACING_SHADER_BIT_KHR,
-        VK_ACCESS_2_SHADER_WRITE_BIT, context->image_histories_[0]->get_image(),
+        VK_ACCESS_2_SHADER_WRITE_BIT, context->image_history_->get_image(),
         VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_GENERAL);
 
     Barrier prologue_barrier3(
         context->device_, VK_PIPELINE_STAGE_2_NONE, VK_ACCESS_2_NONE,
         VK_PIPELINE_STAGE_2_RAY_TRACING_SHADER_BIT_KHR,
-        VK_ACCESS_2_SHADER_WRITE_BIT, context->image_histories_[1]->get_image(),
+        VK_ACCESS_2_SHADER_WRITE_BIT, context->atrous_images_[0]->get_image(),
+        VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_GENERAL);
+
+    Barrier prologue_barrier4(
+        context->device_, VK_PIPELINE_STAGE_2_NONE, VK_ACCESS_2_NONE,
+        VK_PIPELINE_STAGE_2_RAY_TRACING_SHADER_BIT_KHR,
+        VK_ACCESS_2_SHADER_WRITE_BIT, context->atrous_images_[1]->get_image(),
         VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_GENERAL);
 
     Barrier denoise_barrier(
@@ -508,6 +520,7 @@ double render_frame(std::shared_ptr<GraphicsContext> context,
         prologue_barrier1.record(command_buffer);
         prologue_barrier2.record(command_buffer);
         prologue_barrier3.record(command_buffer);
+        prologue_barrier4.record(command_buffer);
 
         VkClearColorValue clear_color = {0.0f, 0.0f, 0.0f, 0.0f};
         VkImageSubresourceRange range = {
@@ -559,7 +572,7 @@ double render_frame(std::shared_ptr<GraphicsContext> context,
 
             context->denoise_pipeline_->record(
                 command_buffer,
-                {context->denoise_descriptors_[(filter_level % 2) == 0 ? 0 : 1]},
+                {context->denoise_descriptors_[filter_level]},
                 denoise_push_constants_span, compute_width, compute_height, 1);
             
             denoise_barrier.record(command_buffer);

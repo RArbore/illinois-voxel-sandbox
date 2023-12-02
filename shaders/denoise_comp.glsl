@@ -62,5 +62,5 @@ void main() {
     //     }
     // }
 
-    imageStore(output_image, pixel, vec4(variance_rt, variance_norm, variance_pos, 1.0f));
+    imageStore(output_image, pixel, color);
 }
