@@ -537,23 +537,23 @@ double render_frame(std::shared_ptr<GraphicsContext> context,
         int compute_height = (extent.height + 16 - 1) / 16;
         
         // Denoising pass
-        for (uint16_t filter_level = 0; filter_level < context->num_filter_iterations_; filter_level++) {
+        for (uint32_t filter_level = 0; filter_level < context->num_filter_iterations_; filter_level++) {
             // to-do: can these all be pre-computed?
-            float variance_rt = 255;
-            float variance_normal = 0.01;
-            float variance_position = 0.01;
+            double variance_rt = 0.01;
+            double variance_normal = 0.01;
+            double variance_position = 0.01;
 
             std::vector<std::byte> denoise_push_constants(128, std::byte{0});
-            memcpy(denoise_push_constants.data(), &filter_level, sizeof(uint16_t));
-            memcpy(denoise_push_constants.data() + sizeof(uint16_t) +
-                       0 * sizeof(float),
-                   &variance_rt, sizeof(float));
-            memcpy(denoise_push_constants.data() + sizeof(uint16_t) +
-                       1 * sizeof(float),
-                   &variance_normal, sizeof(float));
-            memcpy(denoise_push_constants.data() + sizeof(uint16_t) +
-                       2 * sizeof(float),
-                   &variance_position, sizeof(float));
+            memcpy(denoise_push_constants.data(), &filter_level, sizeof(uint32_t));
+            memcpy(denoise_push_constants.data() + sizeof(uint32_t) +
+                       0 * sizeof(double),
+                   &variance_rt, sizeof(double));
+            memcpy(denoise_push_constants.data() + sizeof(uint32_t) +
+                       1 * sizeof(double),
+                   &variance_normal, sizeof(double));
+            memcpy(denoise_push_constants.data() + sizeof(uint32_t) +
+                       2 * sizeof(double),
+                   &variance_position, sizeof(double));
             std::span<std::byte> denoise_push_constants_span(denoise_push_constants.data(),
                                                              denoise_push_constants.size());
 

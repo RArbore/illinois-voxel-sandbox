@@ -1,13 +1,13 @@
 #version 460
 #pragma shader_stage(compute)
 
-#extension GL_EXT_shader_explicit_arithmetic_types_int16 : require
+#extension GL_EXT_shader_explicit_arithmetic_types_int32 : require
 
 layout (push_constant) uniform params {
-    uint16_t filter_level;
-    float variance_rt;
-    float variance_norm;
-    float variance_pos;
+    uint32_t filter_level;
+    double variance_rt;
+    double variance_norm;
+    double variance_pos;
 };
 
 layout (binding = 0, rgba16f) uniform writeonly image2D output_image;
@@ -62,5 +62,5 @@ void main() {
     //     }
     // }
 
-    imageStore(output_image, pixel, color);
+    imageStore(output_image, pixel, vec4(variance_rt, variance_norm, variance_pos, 1.0f));
 }
