@@ -324,7 +324,7 @@ GraphicsContext::GraphicsContext(std::shared_ptr<Window> window) {
     render_command_buffer_ = std::make_shared<Command>(command_pool_);
     download_command_buffer_ = std::make_shared<Command>(command_pool_);
 
-    num_filter_iterations_ = 3;
+    num_filter_iterations_ = 4;
     auto denoise_comp = std::make_shared<Shader>(device_, "denoise_comp");
     for (int i = 0; i < 2; i++) {
         DescriptorSetBuilder denoise_builder(descriptor_allocator_);
@@ -460,19 +460,25 @@ double render_frame(std::shared_ptr<GraphicsContext> context,
     Barrier prologue_barrier0(
         context->device_, VK_PIPELINE_STAGE_2_NONE, VK_ACCESS_2_NONE,
         VK_PIPELINE_STAGE_2_RAY_TRACING_SHADER_BIT_KHR,
-        VK_ACCESS_2_SHADER_WRITE_BIT, context->image_histories_[0]->get_image(),
+        VK_ACCESS_2_SHADER_WRITE_BIT, context->image_normals_->get_image(),
         VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_GENERAL);
 
     Barrier prologue_barrier1(
         context->device_, VK_PIPELINE_STAGE_2_NONE, VK_ACCESS_2_NONE,
         VK_PIPELINE_STAGE_2_RAY_TRACING_SHADER_BIT_KHR,
-        VK_ACCESS_2_SHADER_WRITE_BIT, context->image_normals_->get_image(),
+        VK_ACCESS_2_SHADER_WRITE_BIT, context->image_positions_->get_image(),
         VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_GENERAL);
 
     Barrier prologue_barrier2(
         context->device_, VK_PIPELINE_STAGE_2_NONE, VK_ACCESS_2_NONE,
         VK_PIPELINE_STAGE_2_RAY_TRACING_SHADER_BIT_KHR,
-        VK_ACCESS_2_SHADER_WRITE_BIT, context->image_positions_->get_image(),
+        VK_ACCESS_2_SHADER_WRITE_BIT, context->image_histories_[0]->get_image(),
+        VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_GENERAL);
+
+    Barrier prologue_barrier3(
+        context->device_, VK_PIPELINE_STAGE_2_NONE, VK_ACCESS_2_NONE,
+        VK_PIPELINE_STAGE_2_RAY_TRACING_SHADER_BIT_KHR,
+        VK_ACCESS_2_SHADER_WRITE_BIT, context->image_histories_[1]->get_image(),
         VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_GENERAL);
 
     Barrier denoise_barrier(
@@ -501,6 +507,7 @@ double render_frame(std::shared_ptr<GraphicsContext> context,
         prologue_barrier0.record(command_buffer);
         prologue_barrier1.record(command_buffer);
         prologue_barrier2.record(command_buffer);
+        prologue_barrier3.record(command_buffer);
 
         VkClearColorValue clear_color = {0.0f, 0.0f, 0.0f, 0.0f};
         VkImageSubresourceRange range = {
@@ -528,7 +535,7 @@ double render_frame(std::shared_ptr<GraphicsContext> context,
 
         int compute_width = (extent.width + 16 - 1) / 16;
         int compute_height = (extent.height + 16 - 1) / 16;
-
+        /*
         // Denoising pass
         for (uint16_t filter_level = 0; filter_level < context->num_filter_iterations_; filter_level++) {
             // to-do: can these all be pre-computed?
@@ -556,7 +563,7 @@ double render_frame(std::shared_ptr<GraphicsContext> context,
                 denoise_push_constants_span, compute_width, compute_height, 1);
             
             denoise_barrier.record(command_buffer);
-        }
+        }*/
 
         // Copy the off-screen buffer to the swapchain
         tonemap_barrier.record(command_buffer);

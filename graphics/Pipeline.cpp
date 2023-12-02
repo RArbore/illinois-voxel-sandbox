@@ -380,6 +380,8 @@ void ComputePipeline::record(
     vkCmdBindDescriptorSets(command, VK_PIPELINE_BIND_POINT_COMPUTE, layout_, 0,
                             static_cast<uint32_t>(vk_descriptor_sets.size()),
                             vk_descriptor_sets.data(), 0, nullptr);
+    vkCmdPushConstants(command, layout_, VK_SHADER_STAGE_ALL, 0, 128,
+                       push_constants.data());
 
     vkCmdDispatch(command, width, height, depth);
 }
