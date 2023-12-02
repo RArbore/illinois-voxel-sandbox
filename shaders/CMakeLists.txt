@@ -13,6 +13,7 @@ set(GLSL_SHADER_FILES
   SVDAG_Color_rint.glsl
   Unloaded_rchit.glsl
   Unloaded_rint.glsl
+  denoise_comp.glsl
   tonemap_comp.glsl
   Emissive_rchit.glsl
   Download_rchit.glsl

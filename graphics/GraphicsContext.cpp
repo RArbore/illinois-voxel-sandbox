@@ -318,6 +318,8 @@ GraphicsContext::GraphicsContext(std::shared_ptr<Window> window) {
     render_command_buffer_ = std::make_shared<Command>(command_pool_);
     download_command_buffer_ = std::make_shared<Command>(command_pool_);
 
+    auto denoise_comp = std::make_shared<Shader>(device_, "denoise_comp");
+
     auto tonemap_comp = std::make_shared<Shader>(device_, "tonemap_comp");
     const auto &image_views = swapchain_->get_image_views();
     for (int image_index = 0; image_index < image_views.size(); image_index++) {
