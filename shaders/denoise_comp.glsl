@@ -1,15 +1,17 @@
 #version 460
 #pragma shader_stage(compute)
 
+#extension GL_EXT_shader_explicit_arithmetic_types_int16 : require
+
 layout (push_constant) uniform params {
-    int filter_level;
+    uint16_t filter_level;
     float variance_rt;
     float variance_norm;
     float variance_pos;
 };
 
-layout (binding = 0, rgba8) uniform writeonly image2D output_image;
-layout (binding = 1, rgba8) uniform readonly image2D noisy_image;
+layout (binding = 0, rgba16f) uniform writeonly image2D output_image;
+layout (binding = 1, rgba16f) uniform readonly image2D noisy_image;
 layout (binding = 2, rgba8) uniform readonly image2D image_normals;
 layout (binding = 3, rgba8) uniform readonly image2D image_positions;
 
@@ -41,7 +43,7 @@ void main() {
     vec4 sum = vec4(0.0f);
     float k = 1.0f;
     for (int i = 0; i < 25; i++) {
-        vec2 offset_pixel = pixel + ivec2(offsets[i] * step_size);
+        ivec2 offset_pixel = pixel + ivec2(offsets[i] * step_size);
         vec4 offset_color = imageLoad(noisy_image, offset_pixel);
         vec4 offset_normal = imageLoad(image_normals, offset_pixel);
         vec4 offset_position = imageLoad(image_positions, offset_pixel);

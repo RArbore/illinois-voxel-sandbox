@@ -1,10 +1,15 @@
 #version 460
 #pragma shader_stage(compute)
 
+#extension GL_EXT_shader_explicit_arithmetic_types_int16 : require
+
+layout (push_constant) uniform params {
+    // 0 is Reinhard, 1 is ACES
+    uint16_t tonemap_option;
+};
+
 layout (binding = 0, rgba8) uniform writeonly image2D output_image;
-layout (binding = 1, rgba8) uniform readonly image2D noisy_image;
-layout (binding = 2, rgba8) uniform readonly image2D image_normals;
-layout (binding = 3, rgba8) uniform readonly image2D image_positions;
+layout (binding = 1, rgba16f) uniform readonly image2D denoised_image;
 
 layout (local_size_x = 16, local_size_y = 16, local_size_z = 1) in;
 
@@ -42,7 +47,11 @@ vec3 aces_approx(vec3 color)
 void main()
 {
     ivec2 pixel = ivec2(gl_GlobalInvocationID.xy);
-    vec3 pixel_color = imageLoad(noisy_image, pixel).xyz;
-    pixel_color = clamp(aces_approx(pixel_color), 0.0f, 1.0f);
+    vec3 pixel_color = imageLoad(denoised_image, pixel).xyz;
+    if (tonemap_option == 0) {
+        pixel_color = clamp(reinhard(pixel_color), 0.0f, 1.0f);
+    } else if (tonemap_option == 1) {
+        pixel_color = clamp(aces_approx(pixel_color), 0.0f, 1.0f);
+    }
     imageStore(output_image, pixel, vec4(pixel_color, 1.0f));
 }

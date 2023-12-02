@@ -45,6 +45,10 @@ class GraphicsContext {
     std::shared_ptr<ComputePipeline> tonemap_pipeline_ = nullptr;
     std::vector<std::shared_ptr<DescriptorSet>> tonemap_descriptors_; // Needed per swapchain image?
 
+    std::shared_ptr<ComputePipeline> denoise_pipeline_ = nullptr;
+    std::vector<std::shared_ptr<DescriptorSet>> denoise_descriptors_;
+    uint8_t num_filter_iterations_ = 0;
+
     std::shared_ptr<Fence> frame_fence_ = nullptr;
     std::shared_ptr<Fence> download_fence_ = nullptr;
     std::shared_ptr<Semaphore> acquire_semaphore_ = nullptr;
@@ -63,7 +67,7 @@ class GraphicsContext {
 
     std::shared_ptr<GPUImage> blue_noise_ = nullptr;
 
-    std::shared_ptr<GPUImage> image_history_ = nullptr;
+    std::array<std::shared_ptr<GPUImage>, 2> image_histories_ = {nullptr, nullptr};
     std::shared_ptr<GPUImage> image_normals_ = nullptr;
     std::shared_ptr<GPUImage> image_positions_ = nullptr;
 
@@ -209,11 +213,12 @@ GraphicsContext::GraphicsContext(std::shared_ptr<Window> window) {
     camera_span_ = camera_buffer_->cpu_map();
 
     VkFormat luminance_format = VK_FORMAT_R16G16B16A16_SFLOAT;
-    image_history_ = std::make_shared<GPUImage>(
-        gpu_allocator_, swapchain_->get_extent(), luminance_format, 0,
-        VK_IMAGE_USAGE_STORAGE_BIT,
-        VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
-        VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT, 1, 1);
+    for (int i = 0; i < 2; i++) {
+        image_histories_[i] = std::make_shared<GPUImage>(
+            gpu_allocator_, swapchain_->get_extent(), luminance_format, 0,
+            VK_IMAGE_USAGE_STORAGE_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+            VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT, 1, 1);
+    }
 
     image_normals_ = std::make_shared<GPUImage>(
         gpu_allocator_, swapchain_->get_extent(), swapchain_->get_format(), 0,
@@ -254,7 +259,8 @@ GraphicsContext::GraphicsContext(std::shared_ptr<Window> window) {
                             VK_SHADER_STAGE_RAYGEN_BIT_KHR);
     wide_builder.bind_image(4,
                             {.sampler = VK_NULL_HANDLE,
-                             .imageView = image_history_->get_view(),
+                             // always write out to the first intermediate history image
+                             .imageView = image_histories_[0]->get_view(),
                              .imageLayout = VK_IMAGE_LAYOUT_GENERAL},
                             VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,
                             VK_SHADER_STAGE_RAYGEN_BIT_KHR);
@@ -318,7 +324,43 @@ GraphicsContext::GraphicsContext(std::shared_ptr<Window> window) {
     render_command_buffer_ = std::make_shared<Command>(command_pool_);
     download_command_buffer_ = std::make_shared<Command>(command_pool_);
 
+    num_filter_iterations_ = 3;
     auto denoise_comp = std::make_shared<Shader>(device_, "denoise_comp");
+    for (int i = 0; i < 2; i++) {
+        DescriptorSetBuilder denoise_builder(descriptor_allocator_);
+        // The denoiser reads from one of the bufferes and writes to the other
+        denoise_builder.bind_image(0,
+                                   {.sampler = VK_NULL_HANDLE,
+                                    .imageView = image_histories_[i]->get_view(),
+                                    .imageLayout = VK_IMAGE_LAYOUT_GENERAL},
+                                   VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,
+                                   VK_SHADER_STAGE_COMPUTE_BIT);
+        denoise_builder.bind_image(1,
+                                   {.sampler = VK_NULL_HANDLE,
+                                    .imageView = image_histories_[(i + 1) % 2]->get_view(),
+                                    .imageLayout = VK_IMAGE_LAYOUT_GENERAL},
+                                   VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,
+                                   VK_SHADER_STAGE_COMPUTE_BIT);
+        denoise_builder.bind_image(2,
+                                   {.sampler = VK_NULL_HANDLE,
+                                    .imageView = image_normals_->get_view(),
+                                    .imageLayout = VK_IMAGE_LAYOUT_GENERAL},
+                                   VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,
+                                   VK_SHADER_STAGE_COMPUTE_BIT);
+        denoise_builder.bind_image(3,
+                                   {.sampler = VK_NULL_HANDLE,
+                                    .imageView = image_positions_->get_view(),
+                                    .imageLayout = VK_IMAGE_LAYOUT_GENERAL},
+                                   VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,
+                                   VK_SHADER_STAGE_COMPUTE_BIT);
+        denoise_descriptors_.push_back(denoise_builder.build());
+    }
+
+    std::vector<VkDescriptorSetLayout> denoise_layouts = {
+        denoise_descriptors_[0]->get_layout()};
+
+    denoise_pipeline_ = std::make_shared<ComputePipeline>(
+        gpu_allocator_, denoise_comp, denoise_layouts);
 
     auto tonemap_comp = std::make_shared<Shader>(device_, "tonemap_comp");
     const auto &image_views = swapchain_->get_image_views();
@@ -332,22 +374,13 @@ GraphicsContext::GraphicsContext(std::shared_ptr<Window> window) {
                                    VK_SHADER_STAGE_COMPUTE_BIT);
         tonemap_builder.bind_image(1,
                                    {.sampler = VK_NULL_HANDLE,
-                                    .imageView = image_history_->get_view(),
+                                    // depending on the number of iterations,
+                                    // either the first or second image will contain the final result
+                                    .imageView = image_histories_[(num_filter_iterations_ % 2) == 0 ? 0 : 1]->get_view(),
                                     .imageLayout = VK_IMAGE_LAYOUT_GENERAL},
                                    VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,
                                    VK_SHADER_STAGE_COMPUTE_BIT);
-        tonemap_builder.bind_image(2,
-                                   {.sampler = VK_NULL_HANDLE,
-                                    .imageView = image_normals_->get_view(),
-                                    .imageLayout = VK_IMAGE_LAYOUT_GENERAL},
-                                   VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,
-                                   VK_SHADER_STAGE_COMPUTE_BIT);
-        tonemap_builder.bind_image(3,
-                                   {.sampler = VK_NULL_HANDLE,
-                                    .imageView = image_positions_->get_view(),
-                                    .imageLayout = VK_IMAGE_LAYOUT_GENERAL},
-                                   VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,
-                                   VK_SHADER_STAGE_COMPUTE_BIT);
+
         tonemap_descriptors_.push_back(tonemap_builder.build());
     }
 
@@ -427,7 +460,7 @@ double render_frame(std::shared_ptr<GraphicsContext> context,
     Barrier prologue_barrier0(
         context->device_, VK_PIPELINE_STAGE_2_NONE, VK_ACCESS_2_NONE,
         VK_PIPELINE_STAGE_2_RAY_TRACING_SHADER_BIT_KHR,
-        VK_ACCESS_2_SHADER_WRITE_BIT, context->image_history_->get_image(),
+        VK_ACCESS_2_SHADER_WRITE_BIT, context->image_histories_[0]->get_image(),
         VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_GENERAL);
 
     Barrier prologue_barrier1(
@@ -441,6 +474,11 @@ double render_frame(std::shared_ptr<GraphicsContext> context,
         VK_PIPELINE_STAGE_2_RAY_TRACING_SHADER_BIT_KHR,
         VK_ACCESS_2_SHADER_WRITE_BIT, context->image_positions_->get_image(),
         VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_GENERAL);
+
+    Barrier denoise_barrier(
+        context->device_, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
+        VK_ACCESS_2_MEMORY_READ_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
+        VK_ACCESS_MEMORY_WRITE_BIT);
 
     Barrier tonemap_barrier(
         context->device_, VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT, 0,
@@ -488,16 +526,51 @@ double render_frame(std::shared_ptr<GraphicsContext> context,
              scene->scene_descriptor_, context->wide_descriptor_},
             push_constants_span, extent.width, extent.height, 1);
 
+        int compute_width = (extent.width + 16 - 1) / 16;
+        int compute_height = (extent.height + 16 - 1) / 16;
+
+        // Denoising pass
+        for (uint16_t filter_level = 0; filter_level < context->num_filter_iterations_; filter_level++) {
+            // to-do: can these all be pre-computed?
+            float variance_rt = 0.01;
+            float variance_normal = 0.01;
+            float variance_position = 0.01;
+
+            std::vector<std::byte> denoise_push_constants(128, std::byte{0});
+            memcpy(denoise_push_constants.data(), &filter_level, sizeof(uint16_t));
+            memcpy(denoise_push_constants.data() + sizeof(uint16_t) +
+                       0 * sizeof(float),
+                   &variance_rt, sizeof(float));
+            memcpy(denoise_push_constants.data() + sizeof(uint16_t) +
+                       1 * sizeof(float),
+                   &variance_normal, sizeof(float));
+            memcpy(denoise_push_constants.data() + sizeof(uint16_t) +
+                       2 * sizeof(float),
+                   &variance_position, sizeof(float));
+            std::span<std::byte> denoise_push_constants_span(denoise_push_constants.data(),
+                                                             denoise_push_constants.size());
+
+            context->denoise_pipeline_->record(
+                command_buffer,
+                {context->denoise_descriptors_[(filter_level % 2) == 1 ? 0 : 1]},
+                denoise_push_constants_span, compute_width, compute_height, 1);
+            
+            denoise_barrier.record(command_buffer);
+        }
+
         // Copy the off-screen buffer to the swapchain
         tonemap_barrier.record(command_buffer);
 
-        int compute_width = (extent.width + 16 - 1) / 16;
-        int compute_height = (extent.height + 16 - 1) / 16;
+        std::vector<std::byte> tonemap_push_constants(128, std::byte{0});
+        uint16_t tonemap_option = 0;
+        memcpy(tonemap_push_constants.data(), &tonemap_option, sizeof(uint16_t));
+        std::span<std::byte> tonemap_push_constants_span(
+            tonemap_push_constants.data(), tonemap_push_constants.size());
 
         context->tonemap_pipeline_->record(
             command_buffer,
             {context->tonemap_descriptors_[swapchain_image_index]},
-            compute_width, compute_height, 1);
+            tonemap_push_constants_span, compute_width, compute_height, 1);
 
         epilogue_barrier.record(command_buffer);
     });

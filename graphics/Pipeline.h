@@ -62,6 +62,7 @@ class ComputePipeline {
     // Assuming that the compute pipeline doesn't use push constants at the moment
     void record(VkCommandBuffer command,
                 std::vector<std::shared_ptr<DescriptorSet>> descriptor_sets,
+                std::span<std::byte> push_constants,
                 uint32_t width, uint32_t height, uint32_t depth);
 
   private:

@@ -329,12 +329,19 @@ ComputePipeline::ComputePipeline(
     compute_info.module = compute_shader->get_module();
     compute_info.pName = "main";
 
+    VkPushConstantRange push_constant_range{};
+    push_constant_range.stageFlags = VK_SHADER_STAGE_ALL;
+    push_constant_range.offset = 0;
+    push_constant_range.size = 128;
+
     VkPipelineLayoutCreateInfo pipeline_layout_create_info{};
     pipeline_layout_create_info.sType =
         VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
     pipeline_layout_create_info.setLayoutCount =
         static_cast<uint32_t>(descriptor_layouts.size());
     pipeline_layout_create_info.pSetLayouts = descriptor_layouts.data();
+    pipeline_layout_create_info.pushConstantRangeCount = 1;
+    pipeline_layout_create_info.pPushConstantRanges = &push_constant_range;
     ASSERT(vkCreatePipelineLayout(device_->get_device(),
                                   &pipeline_layout_create_info, nullptr,
                                   &layout_),
@@ -358,8 +365,11 @@ ComputePipeline::~ComputePipeline() {
 
 void ComputePipeline::record(
     VkCommandBuffer command,
-    std::vector<std::shared_ptr<DescriptorSet>> descriptor_sets, uint32_t width,
+    std::vector<std::shared_ptr<DescriptorSet>> descriptor_sets,
+    std::span<std::byte> push_constants, uint32_t width,
     uint32_t height, uint32_t depth) {
+    ASSERT(push_constants.size() == 128,
+           "Push constants must take exactly 128 bytes.");
 
     std::vector<VkDescriptorSet> vk_descriptor_sets;
     for (auto set : descriptor_sets) {
