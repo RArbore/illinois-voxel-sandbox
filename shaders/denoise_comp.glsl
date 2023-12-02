@@ -40,24 +40,27 @@ void main() {
     vec4 normal = imageLoad(image_normals, pixel);
     vec4 position = imageLoad(image_positions, pixel); 
 
-    vec4 sum = vec4(0.0f);
-    float k = 1.0f;
-    for (int i = 0; i < 25; i++) {
-        ivec2 offset_pixel = pixel + ivec2(offsets[i] * step_size);
-        vec4 offset_color = imageLoad(noisy_image, offset_pixel);
-        vec4 offset_normal = imageLoad(image_normals, offset_pixel);
-        vec4 offset_position = imageLoad(image_positions, offset_pixel);
+    // vec4 sum = vec4(0.0f);
+    // float k = 1.0f;
+    // for (int i = 0; i < 25; i++) {
+    //     ivec2 offset_pixel = pixel + ivec2(offsets[i] * step_size);
+    //     if (all(greaterThanEqual(offset_pixel, ivec2(0))) && all(lessThan(offset_pixel, imageSize(noisy_image)))) {
+    //         vec4 offset_color = imageLoad(noisy_image, offset_pixel);
+    //         vec4 color_diff = color - offset_color;
+    //         vec4 normal_diff = normal - imageLoad(image_normals, offset_pixel);
+    //         vec4 position_diff = position - imageLoad(image_positions, offset_pixel);
 
-        float w_rt = exp(-length(color - offset_color) / variance_rt);
-        float w_norm = exp(-length(normal - offset_normal) / variance_norm);
-        float w_pos = exp(-length(position - offset_position) / variance_pos);
+    //         float w_rt = min(exp(-dot(color_diff, color_diff) / variance_rt), 1.0);
+    //         float w_norm = min(exp(-max(dot(normal_diff, normal_diff) / (step_size * step_size), 0.0) / variance_norm), 1.0);
+    //         float w_pos = min(exp(-dot(position_diff, position_diff) / variance_pos), 1.0);
 
-        float h = kernel[i];
-        float w = w_rt * w_norm * w_pos;
+    //         float h = kernel[i];
+    //         float w = w_rt * w_norm * w_pos;
 
-        k += h * w;
-        sum += h * w * offset_color;
-    }
+    //         k += h * w;
+    //         sum += h * w * offset_color;
+    //     }
+    // }
 
-    imageStore(output_image, pixel, sum / k);
+    imageStore(output_image, pixel, color);
 }

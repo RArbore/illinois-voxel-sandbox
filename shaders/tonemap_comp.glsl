@@ -52,6 +52,8 @@ void main()
         pixel_color = clamp(reinhard(pixel_color), 0.0f, 1.0f);
     } else if (tonemap_option == 1) {
         pixel_color = clamp(aces_approx(pixel_color), 0.0f, 1.0f);
+    } else {
+        pixel_color = vec3(1.0f);
     }
     imageStore(output_image, pixel, vec4(pixel_color, 1.0f));
 }

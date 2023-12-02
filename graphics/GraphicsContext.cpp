@@ -328,7 +328,7 @@ GraphicsContext::GraphicsContext(std::shared_ptr<Window> window) {
     auto denoise_comp = std::make_shared<Shader>(device_, "denoise_comp");
     for (int i = 0; i < 2; i++) {
         DescriptorSetBuilder denoise_builder(descriptor_allocator_);
-        // The denoiser reads from one of the bufferes and writes to the other
+        // The denoiser reads from one of the buffers and writes to the other.
         denoise_builder.bind_image(0,
                                    {.sampler = VK_NULL_HANDLE,
                                     .imageView = image_histories_[i]->get_view(),
@@ -535,11 +535,11 @@ double render_frame(std::shared_ptr<GraphicsContext> context,
 
         int compute_width = (extent.width + 16 - 1) / 16;
         int compute_height = (extent.height + 16 - 1) / 16;
-        /*
+        
         // Denoising pass
         for (uint16_t filter_level = 0; filter_level < context->num_filter_iterations_; filter_level++) {
             // to-do: can these all be pre-computed?
-            float variance_rt = 0.01;
+            float variance_rt = 255;
             float variance_normal = 0.01;
             float variance_position = 0.01;
 
@@ -559,11 +559,11 @@ double render_frame(std::shared_ptr<GraphicsContext> context,
 
             context->denoise_pipeline_->record(
                 command_buffer,
-                {context->denoise_descriptors_[(filter_level % 2) == 1 ? 0 : 1]},
+                {context->denoise_descriptors_[(filter_level % 2) == 0 ? 0 : 1]},
                 denoise_push_constants_span, compute_width, compute_height, 1);
             
             denoise_barrier.record(command_buffer);
-        }*/
+        }
 
         // Copy the off-screen buffer to the swapchain
         tonemap_barrier.record(command_buffer);
