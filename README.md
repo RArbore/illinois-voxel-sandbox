@@ -2,6 +2,8 @@
 A high performance voxel engine.
 
 # Resources
+## Drive of our models:
+https://drive.google.com/drive/folders/1yYgGjmKMd0R-FPsuIUwO7hSuZn9j0tob?usp=sharing
 ## External voxelizer:
 
 https://github.com/Eisenwave/obj2voxel#installation
