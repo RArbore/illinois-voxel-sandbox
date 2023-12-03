@@ -15,13 +15,13 @@ layout (binding = 3, rgba8) uniform readonly image2D image_positions;
 
 layout (local_size_x = 16, local_size_y = 16, local_size_z = 1) in;
 
-float blur_kernel_3x3[9] = float[9](
+const float blur_kernel_3x3[9] = {
 				    1.0 / 16.0, 1.0 / 8.0, 1.0 / 16.0,
 				    1.0 / 8.0, 1.0 / 4.0, 1.0 / 8.0,
 				    1.0 / 16.0, 1.0 / 8.0, 1.0 / 16.0
-				    );
+};
 
-const float blur_kernel_5x5[25] = float[25]{
+const float blur_kernel_5x5[25] = {
     1.0f/256.0f, 1.0f/64.0f, 3.0f/128.0f, 1.0f/64.0f, 1.0F/256.0f,
     1.0f/64.0f,  1.0f/16.0f, 3.0f/32.0f,  1.0f/16.0f, 1.0F/64.0f,
     3.0f/128.0f, 3.0f/32.0f, 9.0f/64.0f,  3.0f/32.0f, 3.0F/128.0f,

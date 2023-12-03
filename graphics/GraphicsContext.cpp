@@ -553,7 +553,7 @@ double render_frame(std::shared_ptr<GraphicsContext> context,
         for (uint32_t filter_level = 0; filter_level < context->num_filter_iterations_; filter_level++) {
             // to-do: can these all be pre-computed?
             float variance_rt = 0.001;
-            float variance_normal = 0.01;
+            float variance_normal = 0.0001;
             float variance_position = 0.0001;
 
             std::vector<std::byte> denoise_push_constants(128, std::byte{0});
