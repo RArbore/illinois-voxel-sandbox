@@ -328,7 +328,7 @@ GraphicsContext::GraphicsContext(std::shared_ptr<Window> window) {
     render_command_buffer_ = std::make_shared<Command>(command_pool_);
     download_command_buffer_ = std::make_shared<Command>(command_pool_);
 
-    num_filter_iterations_ = 4;
+    num_filter_iterations_ = 3;
     auto denoise_comp = std::make_shared<Shader>(device_, "denoise_comp");
     for (int i = 0; i < num_filter_iterations_; i++) {
 	// Create a descriptor per filter iteration. On the first iteration,
@@ -337,7 +337,7 @@ GraphicsContext::GraphicsContext(std::shared_ptr<Window> window) {
         DescriptorSetBuilder denoise_builder(descriptor_allocator_);
         denoise_builder.bind_image(0,
                                    {.sampler = VK_NULL_HANDLE,
-                                    .imageView = atrous_images_[i]->get_view(),
+                                    .imageView = atrous_images_[i % 2]->get_view(),
                                     .imageLayout = VK_IMAGE_LAYOUT_GENERAL},
                                    VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,
                                    VK_SHADER_STAGE_COMPUTE_BIT);
@@ -382,7 +382,7 @@ GraphicsContext::GraphicsContext(std::shared_ptr<Window> window) {
                                    {.sampler = VK_NULL_HANDLE,
                                     // depending on the number of iterations,
                                     // either the first or second image will contain the final result
-                                    .imageView = atrous_images_[(num_filter_iterations_ % 2) == 0 ? 0 : 1]->get_view(),
+                                    .imageView = atrous_images_[(num_filter_iterations_ % 2) == 0 ? 1 : 0]->get_view(),
                                     .imageLayout = VK_IMAGE_LAYOUT_GENERAL},
                                    VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,
                                    VK_SHADER_STAGE_COMPUTE_BIT);
@@ -552,9 +552,9 @@ double render_frame(std::shared_ptr<GraphicsContext> context,
         // Denoising pass
         for (uint32_t filter_level = 0; filter_level < context->num_filter_iterations_; filter_level++) {
             // to-do: can these all be pre-computed?
-            float variance_rt = 0.00001;
+            float variance_rt = 0.001;
             float variance_normal = 0.01;
-            float variance_position = 0.01;
+            float variance_position = 0.0001;
 
             std::vector<std::byte> denoise_push_constants(128, std::byte{0});
             memcpy(denoise_push_constants.data(), &filter_level, sizeof(uint32_t));
