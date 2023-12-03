@@ -60,7 +60,7 @@ generate_basic_filled_chunk(uint32_t width, uint32_t height, uint32_t depth) {
                 std::byte green = static_cast<std::byte>(y * 30);
                 std::byte blue = static_cast<std::byte>(z * 30);
 		        // Used in emissive format for intensity
-                std::byte alpha = static_cast<std::byte>(50);
+                std::byte alpha = static_cast<std::byte>(10);
 
                 size_t voxel_idx = x + y * width + z * width * height;
                 data.at(voxel_idx * 4) = red;

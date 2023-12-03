@@ -58,22 +58,22 @@ int main(int argc, char *argv[]) {
     glm::mat3x4 light_transform_2 = {1.0F, 0.0F,  0.0F, 40.0F, 0.0F, 1.0F,
                                      0.0F, 50.0F, 0.0F, 0.0F,  1.0F, 95.0F};
     auto light_object_2 = build_object(context, light, light_transform_2);
-    objects.emplace_back(std::move(light_object_2));
+    //objects.emplace_back(std::move(light_object_2));
 
     glm::mat3x4 light_transform_3 = {1.0F, 0.0F,  0.0F, 125.0F, 0.0F, 1.0F,
                                      0.0F, 75.0F, 0.0F, 0.0F,  1.0F, 70.0F};
     auto light_object_3 = build_object(context, light, light_transform_3);
-    objects.emplace_back(std::move(light_object_3));
+    //objects.emplace_back(std::move(light_object_3));
 
     glm::mat3x4 light_transform_4 = {0.5F, 0.0F,  0.0F, 45.0F, 0.0F, 0.5F,
                                      0.0F, 75.0F, 0.0F, 0.0F,  0.5F, 45.0F};
     auto light_object_4 = build_object(context, light, light_transform_4);
-    objects.emplace_back(std::move(light_object_4));
+    //objects.emplace_back(std::move(light_object_4));
 
     glm::mat3x4 light_transform_5 = {0.5F, 0.0F,  0.0F, 45.0F, 0.0F, 0.5F,
                                      0.0F, 75.0F, 0.0F, 0.0F,  0.5F, 95.0F};
     auto light_object_5 = build_object(context, light, light_transform_5);
-    objects.emplace_back(std::move(light_object_5));
+    //objects.emplace_back(std::move(light_object_5));
 
     auto scene = build_scene(context, objects);
 

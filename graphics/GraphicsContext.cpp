@@ -552,21 +552,21 @@ double render_frame(std::shared_ptr<GraphicsContext> context,
         // Denoising pass
         for (uint32_t filter_level = 0; filter_level < context->num_filter_iterations_; filter_level++) {
             // to-do: can these all be pre-computed?
-            double variance_rt = 0.01;
-            double variance_normal = 0.01;
-            double variance_position = 0.01;
+            float variance_rt = 0.00001;
+            float variance_normal = 0.01;
+            float variance_position = 0.01;
 
             std::vector<std::byte> denoise_push_constants(128, std::byte{0});
             memcpy(denoise_push_constants.data(), &filter_level, sizeof(uint32_t));
             memcpy(denoise_push_constants.data() + sizeof(uint32_t) +
-                       0 * sizeof(double),
-                   &variance_rt, sizeof(double));
+                       0 * sizeof(float),
+                   &variance_rt, sizeof(float));
             memcpy(denoise_push_constants.data() + sizeof(uint32_t) +
-                       1 * sizeof(double),
-                   &variance_normal, sizeof(double));
+                       1 * sizeof(float),
+                   &variance_normal, sizeof(float));
             memcpy(denoise_push_constants.data() + sizeof(uint32_t) +
-                       2 * sizeof(double),
-                   &variance_position, sizeof(double));
+                       2 * sizeof(float),
+                   &variance_position, sizeof(float));
             std::span<std::byte> denoise_push_constants_span(denoise_push_constants.data(),
                                                              denoise_push_constants.size());
 
