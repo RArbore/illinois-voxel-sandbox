@@ -328,7 +328,7 @@ GraphicsContext::GraphicsContext(std::shared_ptr<Window> window) {
     render_command_buffer_ = std::make_shared<Command>(command_pool_);
     download_command_buffer_ = std::make_shared<Command>(command_pool_);
 
-    num_filter_iterations_ = 3;
+    num_filter_iterations_ = 5;
     auto denoise_comp = std::make_shared<Shader>(device_, "denoise_comp");
     for (int i = 0; i < num_filter_iterations_; i++) {
 	// Create a descriptor per filter iteration. On the first iteration,
@@ -554,7 +554,7 @@ double render_frame(std::shared_ptr<GraphicsContext> context,
             // to-do: can these all be pre-computed?
             float variance_rt = 0.001;
             float variance_normal = 0.0001;
-            float variance_position = 0.0001;
+            float variance_position = 0.00001;
 
             std::vector<std::byte> denoise_push_constants(128, std::byte{0});
             memcpy(denoise_push_constants.data(), &filter_level, sizeof(uint32_t));
