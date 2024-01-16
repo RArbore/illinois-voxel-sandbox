@@ -18,12 +18,12 @@ int main(int argc, char *argv[]) {
     const auto file_size = std::filesystem::file_size(model_path);
     std::vector<std::byte> svdag = std::vector<std::byte>(file_size);
     stream.read(reinterpret_cast<char *>(svdag.data()), file_size);
-    std::cout << "Sponza SVDAG Size: " << svdag.size() << "\n";
 
     uint32_t *svdag_ptr = reinterpret_cast<uint32_t *>(svdag.data());
     uint32_t chunk_width = svdag_ptr[0], 
              chunk_height = svdag_ptr[1],
              chunk_depth = svdag_ptr[2];
+    std::cout << "Sponza SVDAG Size: " << svdag.size() << "   " << chunk_width << " x " << chunk_height << " x " << chunk_depth << "\n";
     VoxelChunkPtr chunk = chunk_manager.add_chunk(
         std::move(svdag), chunk_width, chunk_height, chunk_depth,
         VoxelChunk::Format::SVDAG, VoxelChunk::AttributeSet::Color);
