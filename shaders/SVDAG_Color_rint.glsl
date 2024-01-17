@@ -105,10 +105,13 @@ void main() {
 		    uint child_node_id = offset & 0x7FFFFFFF;
 		    if (bool(leaf)) {
 			vec3 obj_ray_voxel_intersect_point = obj_ray_pos + obj_ray_dir * max(hit.front_t, 0.0);
-			float intersect_time = length(gl_ObjectToWorldEXT * vec4(obj_ray_voxel_intersect_point, 1.0) - gl_ObjectToWorldEXT * vec4(obj_ray_pos, 1.0));
-			leaf_id = child_node_id;
-			reportIntersectionEXT(intersect_time, hit.k);
-			return;
+			if (all(lessThanEqual(first_low, obj_ray_voxel_intersect_point)) &&
+			    all(greaterThanEqual(first_high, obj_ray_voxel_intersect_point))) {
+			    float intersect_time = length(gl_ObjectToWorldEXT * vec4(obj_ray_voxel_intersect_point, 1.0) - gl_ObjectToWorldEXT * vec4(obj_ray_pos, 1.0));
+			    leaf_id = child_node_id;
+			    reportIntersectionEXT(intersect_time, hit.k);
+			    return;
+			}
 		    } else {
 			vec4 new_this_frame = vec4(stack_frame_low, uintBitsToFloat((stack_frame_node_info & 0x0FFFFFFF) | ((idx + 1) << 28)));
 			vec4 new_next_frame = vec4(sub_low, uintBitsToFloat(child_node_id & 0x0FFFFFFF));

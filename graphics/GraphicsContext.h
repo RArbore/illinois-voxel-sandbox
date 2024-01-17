@@ -27,7 +27,7 @@ double render_frame(std::shared_ptr<GraphicsContext> context,
                     CameraUB camera_info);
 
 std::shared_ptr<GraphicsModel>
-build_model(std::shared_ptr<GraphicsContext> context, VoxelChunkPtr chunk);
+build_model(std::shared_ptr<GraphicsContext> context, VoxelChunkPtr chunk, const std::vector<bool> &void_grid = {}, uint32_t void_grid_sub_region_size = 0);
 
 std::shared_ptr<GraphicsObject>
 build_object(std::shared_ptr<GraphicsContext> context,

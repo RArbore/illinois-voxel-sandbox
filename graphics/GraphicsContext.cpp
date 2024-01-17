@@ -549,15 +549,30 @@ double render_frame(std::shared_ptr<GraphicsContext> context,
 }
 
 std::shared_ptr<GraphicsModel>
-build_model(std::shared_ptr<GraphicsContext> context, VoxelChunkPtr chunk) {
-    std::vector<VkAabbPositionsKHR> aabbs = {
-        {0.0F, static_cast<float>(chunk->get_height()) / 2.0F, 0.0F, static_cast<float>(chunk->get_width()),
-         static_cast<float>(chunk->get_height()),
-         static_cast<float>(chunk->get_depth())},
-        {0.0F, 0.0F, 0.0F, static_cast<float>(chunk->get_width()),
-         static_cast<float>(chunk->get_height()) / 2.0F,
-         static_cast<float>(chunk->get_depth())},
-    };
+build_model(std::shared_ptr<GraphicsContext> context, VoxelChunkPtr chunk, const std::vector<bool> &void_grid, uint32_t void_grid_sub_region_size) {
+    std::vector<VkAabbPositionsKHR> aabbs;
+    if (void_grid_sub_region_size == 0) {
+	aabbs = {
+	    {0.0F, 0.0F, 0.0F, static_cast<float>(chunk->get_width()),
+	     static_cast<float>(chunk->get_height()),
+	     static_cast<float>(chunk->get_depth())},
+	};
+    } else {
+	for (uint32_t i = 0; i < chunk->get_width(); i += void_grid_sub_region_size) {
+	    for (uint32_t j = 0; j < chunk->get_height(); j += void_grid_sub_region_size) {
+		for (uint32_t k = 0; k < chunk->get_depth(); k += void_grid_sub_region_size) {
+		    aabbs.emplace_back(
+				       static_cast<float>(i),
+				       static_cast<float>(j),
+				       static_cast<float>(k),
+				       std::min(static_cast<float>(i + void_grid_sub_region_size), static_cast<float>(chunk->get_width())),
+				       std::min(static_cast<float>(j + void_grid_sub_region_size), static_cast<float>(chunk->get_height())),
+				       std::min(static_cast<float>(k + void_grid_sub_region_size), static_cast<float>(chunk->get_depth()))
+				       );
+		}
+	    }
+	}
+    }
     std::shared_ptr<BLAS> blas =
         std::make_shared<BLAS>(context->gpu_allocator_, context->command_pool_,
                                context->ring_buffer_, aabbs);

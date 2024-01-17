@@ -29,7 +29,7 @@ int main(int argc, char *argv[]) {
 
     auto window = create_window();
     auto context = create_graphics_context(window);
-    auto model = build_model(context, chunk);
+    auto model = build_model(context, chunk, void_grid, 128);
     const uint32_t min_dim =
         chunk_width < chunk_height
             ? chunk_width < chunk_depth ? chunk_width : chunk_depth
