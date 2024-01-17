@@ -12,36 +12,36 @@ int main(int argc, char *argv[]) {
     ChunkManager chunk_manager;
 
     const std::string models_directory = MODELS_DIRECTORY;
-    std::string model_path = models_directory + "/sponza";
+    std::string model_path = models_directory + "/sponza.raw";
  
     std::ifstream stream(model_path, std::ios::in | std::ios::binary);
     const auto file_size = std::filesystem::file_size(model_path);
-    std::vector<std::byte> svdag = std::vector<std::byte>(file_size);
-    stream.read(reinterpret_cast<char *>(svdag.data()), file_size);
-    std::cout << "Sponza SVDAG Size: " << svdag.size() << "\n";
-
-    uint32_t *svdag_ptr = reinterpret_cast<uint32_t *>(svdag.data());
-    uint32_t chunk_width = svdag_ptr[0], 
-             chunk_height = svdag_ptr[1],
-             chunk_depth = svdag_ptr[2];
-    VoxelChunkPtr chunk = chunk_manager.add_chunk(
-        std::move(svdag), chunk_width, chunk_height, chunk_depth,
-        VoxelChunk::Format::SVDAG, VoxelChunk::AttributeSet::Color);
+    std::vector<std::byte> raw = std::vector<std::byte>(file_size);
+    stream.read(reinterpret_cast<char *>(raw.data()), file_size);
+    std::cout << "Sponza RAW Size: " << raw.size() << "\n";
 
     std::vector<std::shared_ptr<GraphicsObject>> objects;
 
-    // Add Sponza
-    auto sponza_model = build_model(context, chunk);
-    const uint32_t min_dim =
-        chunk_width < chunk_height
-            ? chunk_width < chunk_depth ? chunk_width : chunk_depth
-        : chunk_height < chunk_depth ? chunk_height
-                                     : chunk_depth;
-    const float size = 100.0 / static_cast<float>(min_dim);
-    glm::mat3x4 sponza_transform = {size, 0.0F, 0.0F, 0.0F, 0.0F, size,
-                                    0.0F, 0.0F, 0.0F, 0.0F, size, 0.0F};
-    auto sponza_object = build_object(context, sponza_model, sponza_transform);
-    objects.emplace_back(std::move(sponza_object));
+    uint32_t chunk_width = 1861, chunk_height = 778, chunk_depth = 1145, sub_size = 200;
+    auto subdivided = subdivide_raw_model(raw, chunk_width, chunk_height, chunk_depth, sub_size, 4);
+    uint32_t s = 0;
+    for (uint32_t k = 0; k < chunk_depth; k += sub_size) {
+	for (uint32_t j = 0; j < chunk_height; j += sub_size) {
+	    for (uint32_t i = 0; i < chunk_width; i += sub_size) {
+		VoxelChunkPtr chunk = chunk_manager.add_chunk(std::move(subdivided.at(s++)), sub_size, sub_size, sub_size,
+							      VoxelChunk::Format::Raw, VoxelChunk::AttributeSet::Color);
+		
+		// Add Sponza
+		auto sponza_model = build_model(context, chunk);
+		const float size = 100.0 / static_cast<float>(sub_size);
+		glm::mat3x4 sponza_transform = {size, 0.0F, 0.0F, static_cast<float>(i) * size,
+						0.0F, size, 0.0F, static_cast<float>(j) * size,
+						0.0F, 0.0F, size, static_cast<float>(k) * size};
+		auto sponza_object = build_object(context, sponza_model, sponza_transform);
+		objects.emplace_back(std::move(sponza_object));
+	    }
+	}
+    }
 
     // Add emissive voxels
     auto emissive_block = generate_basic_filled_chunk(8, 8, 8);

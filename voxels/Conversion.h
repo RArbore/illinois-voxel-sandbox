@@ -16,3 +16,8 @@ std::vector<std::byte> convert_raw_to_svdag(const std::vector<std::byte> &raw,
 
 void debug_print_svdag(const std::vector<std::byte> &svdag,
 		       uint32_t bytes_per_voxel);
+
+std::vector<std::vector<std::byte>> subdivide_raw_model(const std::vector<std::byte> &raw,
+							uint32_t width, uint32_t height,
+							uint32_t depth, uint32_t sub_size,
+							uint32_t bytes_per_voxel);

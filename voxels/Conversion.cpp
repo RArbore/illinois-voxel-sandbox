@@ -430,3 +430,31 @@ void debug_print_svdag(const std::vector<std::byte> &svdag,
         debug_print_svdag_leaf_helper(std::span(svdag), bytes_per_voxel, 0);
     }
 }
+
+std::vector<std::vector<std::byte>> subdivide_raw_model(const std::vector<std::byte> &raw,
+							uint32_t width, uint32_t height,
+							uint32_t depth, uint32_t sub_size,
+							uint32_t bytes_per_voxel) {
+    std::vector<std::vector<std::byte>> subdivided_chunks;   
+    for (uint32_t k = 0; k < depth; k += sub_size) {
+	for (uint32_t j = 0; j < height; j += sub_size) {
+	    for (uint32_t i = 0; i < width; i += sub_size) {
+		std::vector<std::byte> chunk(sub_size * sub_size * sub_size * bytes_per_voxel);
+		uint32_t src_width = width - i > sub_size ? sub_size : width - i;
+		uint32_t src_height = height - j > sub_size ? sub_size : height - j;
+		uint32_t src_depth = depth - k > sub_size ? sub_size : depth - k;
+		for (uint32_t jj = 0; jj < src_height; ++jj) {
+		    for (uint32_t kk = 0; kk < src_depth; ++kk) {
+			memcpy(
+			       chunk.data() + (jj * sub_size + kk * sub_size * sub_size) * bytes_per_voxel,
+			       raw.data() + ((j + jj) * width + (k + kk) * width * height) * bytes_per_voxel,
+			       src_width * bytes_per_voxel
+			       );
+		    }
+		}
+		subdivided_chunks.emplace_back(std::move(chunk));
+	    }
+	}
+    }
+    return subdivided_chunks;
+}
