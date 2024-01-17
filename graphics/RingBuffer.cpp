@@ -214,13 +214,13 @@ void RingBuffer::copy_to_device(
         device_, VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT,
         VK_ACCESS_2_MEMORY_READ_BIT | VK_ACCESS_2_MEMORY_WRITE_BIT,
         VK_PIPELINE_STAGE_2_COPY_BIT, VK_ACCESS_2_MEMORY_WRITE_BIT,
-        dst->get_image(), VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+        dst->get_image(), VK_IMAGE_LAYOUT_UNDEFINED,
+        VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
 
     Barrier desired_layout_barrier(
-        device_, VK_PIPELINE_STAGE_2_COPY_BIT,
-        VK_ACCESS_2_MEMORY_WRITE_BIT,
+        device_, VK_PIPELINE_STAGE_2_COPY_BIT, VK_ACCESS_2_MEMORY_WRITE_BIT,
         VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT,
-	VK_ACCESS_2_MEMORY_READ_BIT | VK_ACCESS_2_MEMORY_WRITE_BIT,
+        VK_ACCESS_2_MEMORY_READ_BIT | VK_ACCESS_2_MEMORY_WRITE_BIT,
         dst->get_image(), VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, dst_layout);
 
     command->record([&](VkCommandBuffer command) {
@@ -237,7 +237,7 @@ void RingBuffer::copy_to_device(
         vkCmdCopyBufferToImage(command, buffer_->get_buffer(), dst->get_image(),
                                VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &copy);
 
-	desired_layout_barrier.record(command);
+        desired_layout_barrier.record(command);
     });
     device_->submit_command(command, wait_semaphores, signal_semaphores, fence);
 

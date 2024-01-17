@@ -8,5 +8,5 @@
 #include "Synchronization.h"
 
 std::shared_ptr<GPUImage> load_image(std::shared_ptr<GPUAllocator> allocator,
-				     std::shared_ptr<RingBuffer> ring_buffer,
+                                     std::shared_ptr<RingBuffer> ring_buffer,
                                      const std::string &image_name);

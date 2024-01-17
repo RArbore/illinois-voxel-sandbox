@@ -43,7 +43,8 @@ class GraphicsContext {
     std::shared_ptr<RingBuffer> ring_buffer_ = nullptr;
 
     std::shared_ptr<ComputePipeline> tonemap_pipeline_ = nullptr;
-    std::vector<std::shared_ptr<DescriptorSet>> tonemap_descriptors_; // Needed per swapchain image?
+    std::vector<std::shared_ptr<DescriptorSet>>
+        tonemap_descriptors_; // Needed per swapchain image?
 
     std::shared_ptr<Fence> frame_fence_ = nullptr;
     std::shared_ptr<Fence> download_fence_ = nullptr;
@@ -87,10 +88,11 @@ class GraphicsContext {
     void check_chunk_request_buffer(
         std::vector<std::shared_ptr<Semaphore>> &render_wait_semaphores);
 
-    void tick_download_models(std::vector<std::shared_ptr<Semaphore>> &render_wait_semaphores,
-			      std::shared_ptr<GraphicsScene> scene,
-			      std::span<std::byte> push_constants_span);
-    
+    void tick_download_models(
+        std::vector<std::shared_ptr<Semaphore>> &render_wait_semaphores,
+        std::shared_ptr<GraphicsScene> scene,
+        std::span<std::byte> push_constants_span);
+
     void bind_scene_descriptors(
         DescriptorSetBuilder &builder, std::shared_ptr<GraphicsScene> scene,
         std::vector<std::shared_ptr<GraphicsModel>> &&models);
@@ -125,7 +127,8 @@ class GraphicsScene {
                   std::shared_ptr<GPUBuffer> chunk_dimensions,
                   std::shared_ptr<GPUBuffer> emissive_voxels)
         : tlas_(tlas), objects_(objects), scene_descriptor_(scene_descriptor),
-          chunk_dimensions_(chunk_dimensions), emissive_voxels_{emissive_voxels} {}
+          chunk_dimensions_(chunk_dimensions),
+          emissive_voxels_{emissive_voxels} {}
 
     std::shared_ptr<TLAS> tlas_;
     std::vector<std::shared_ptr<GraphicsObject>> objects_;
@@ -171,11 +174,11 @@ GraphicsContext::GraphicsContext(std::shared_ptr<Window> window) {
                                VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR |
                                    VK_SHADER_STAGE_INTERSECTION_BIT_KHR);
     scene_builder.bind_buffer(3, {}, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
-			      VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR |
-			      VK_SHADER_STAGE_INTERSECTION_BIT_KHR);
+                              VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR |
+                                  VK_SHADER_STAGE_INTERSECTION_BIT_KHR);
     scene_builder.bind_buffer(4, {}, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
                               VK_SHADER_STAGE_RAYGEN_BIT_KHR);
-    
+
     chunk_request_buffer_ = std::make_shared<GPUBuffer>(
         gpu_allocator_, MAX_NUM_CHUNKS_LOADED_PER_FRAME * sizeof(uint64_t),
         sizeof(uint64_t), VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
@@ -211,18 +214,19 @@ GraphicsContext::GraphicsContext(std::shared_ptr<Window> window) {
     VkFormat luminance_format = VK_FORMAT_R16G16B16A16_SFLOAT;
     image_history_ = std::make_shared<GPUImage>(
         gpu_allocator_, swapchain_->get_extent(), luminance_format, 0,
-        VK_IMAGE_USAGE_STORAGE_BIT,
-        VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+        VK_IMAGE_USAGE_STORAGE_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
         VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT, 1, 1);
 
     image_normals_ = std::make_shared<GPUImage>(
         gpu_allocator_, swapchain_->get_extent(), swapchain_->get_format(), 0,
-        VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+        VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT,
+        VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
         VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT, 1, 1);
 
     image_positions_ = std::make_shared<GPUImage>(
         gpu_allocator_, swapchain_->get_extent(), swapchain_->get_format(), 0,
-        VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+        VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT,
+        VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
         VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT, 1, 1);
 
     blue_noise_ = load_image(gpu_allocator_, ring_buffer_, "LDR_RGBA_0.png");
@@ -280,8 +284,10 @@ GraphicsContext::GraphicsContext(std::shared_ptr<Window> window) {
     auto raw_color_rint = std::make_shared<Shader>(device_, "Raw_Color_rint");
     auto svo_color_rchit = std::make_shared<Shader>(device_, "SVO_Color_rchit");
     auto svo_color_rint = std::make_shared<Shader>(device_, "SVO_Color_rint");
-    auto svdag_color_rchit = std::make_shared<Shader>(device_, "SVDAG_Color_rchit");
-    auto svdag_color_rint = std::make_shared<Shader>(device_, "SVDAG_Color_rint");
+    auto svdag_color_rchit =
+        std::make_shared<Shader>(device_, "SVDAG_Color_rchit");
+    auto svdag_color_rint =
+        std::make_shared<Shader>(device_, "SVDAG_Color_rint");
     auto emissive_rchit = std::make_shared<Shader>(device_, "Emissive_rchit");
     auto download_rchit = std::make_shared<Shader>(device_, "Download_rchit");
     std::vector<std::vector<std::shared_ptr<Shader>>> shader_groups = {
@@ -398,7 +404,8 @@ double render_frame(std::shared_ptr<GraphicsContext> context,
     uint32_t download_bit = 1;
     std::vector<std::byte> push_constants(128, std::byte{0});
     memcpy(push_constants.data(), &context->elapsed_ms_, sizeof(double));
-    memcpy(push_constants.data() + sizeof(double), &download_bit, sizeof(uint32_t));
+    memcpy(push_constants.data() + sizeof(double), &download_bit,
+           sizeof(uint32_t));
     std::span<std::byte> push_constants_span(push_constants.data(),
                                              push_constants.size());
 
@@ -406,14 +413,16 @@ double render_frame(std::shared_ptr<GraphicsContext> context,
 
     if (!changed_scenes) {
         context->check_chunk_request_buffer(render_wait_semaphores);
-	context->tick_download_models(render_wait_semaphores, scene, push_constants_span);
+        context->tick_download_models(render_wait_semaphores, scene,
+                                      push_constants_span);
         if (context->frame_index_ % 512 == 0) {
             context->ring_buffer_->reap_in_flight_copies();
         }
     }
 
     download_bit = 0;
-    memcpy(push_constants.data() + sizeof(double), &download_bit, sizeof(uint32_t));
+    memcpy(push_constants.data() + sizeof(double), &download_bit,
+           sizeof(uint32_t));
 
     // To-do: histories should be recreated if the swapchain was recreated.
     // Alternatively, we can size the history to the max size somehow
@@ -576,11 +585,15 @@ build_scene(std::shared_ptr<GraphicsContext> context,
     for (const auto &object : objects) {
         VkTransformMatrixKHR transform{};
         memcpy(&transform, &object->transform_, sizeof(VkTransformMatrixKHR));
-	auto model_idx = referenced_models.at(object->model_);
-	bool model_on_gpu = object->model_->chunk_->get_state() == VoxelChunk::State::GPU && !context->uploading_models_.contains(model_idx) && !context->downloading_models_.contains(model_idx);
-        instances.emplace_back(transform, model_idx,
-                               0xFF, model_on_gpu ? object->model_->sbt_offset_ : UNLOADED_SBT_OFFSET, 0,
-                               object->model_->blas_->get_device_address());
+        auto model_idx = referenced_models.at(object->model_);
+        bool model_on_gpu =
+            object->model_->chunk_->get_state() == VoxelChunk::State::GPU &&
+            !context->uploading_models_.contains(model_idx) &&
+            !context->downloading_models_.contains(model_idx);
+        instances.emplace_back(transform, model_idx, 0xFF,
+                               model_on_gpu ? object->model_->sbt_offset_
+                                            : UNLOADED_SBT_OFFSET,
+                               0, object->model_->blas_->get_device_address());
 
         if (object->model_->chunk_->get_attribute_set() ==
             VoxelChunk::AttributeSet::Emissive) {
@@ -599,24 +612,25 @@ build_scene(std::shared_ptr<GraphicsContext> context,
     }
 
     std::shared_ptr<GPUBuffer> chunk_dimensions = std::make_shared<GPUBuffer>(
-									      context->gpu_allocator_, MAX_MODELS * sizeof(uint32_t) * 3,
-									      sizeof(uint64_t), VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
-									      VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
-									      VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
-									      VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT);
+        context->gpu_allocator_, MAX_MODELS * sizeof(uint32_t) * 3,
+        sizeof(uint64_t), VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
+        VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
+            VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+        VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT);
     auto chunk_dimensions_span = chunk_dimensions->cpu_map();
-    uint32_t *chunk_dimensions_ptr = reinterpret_cast<uint32_t *>(chunk_dimensions_span.data());
+    uint32_t *chunk_dimensions_ptr =
+        reinterpret_cast<uint32_t *>(chunk_dimensions_span.data());
     for (uint32_t i = 0; i < scene_models.size(); ++i) {
-	    chunk_dimensions_ptr[i * 3] = scene_models[i]->chunk_->get_width();
-	    chunk_dimensions_ptr[i * 3 + 1] = scene_models[i]->chunk_->get_height();
-	    chunk_dimensions_ptr[i * 3 + 2] = scene_models[i]->chunk_->get_depth();
+        chunk_dimensions_ptr[i * 3] = scene_models[i]->chunk_->get_width();
+        chunk_dimensions_ptr[i * 3 + 1] = scene_models[i]->chunk_->get_height();
+        chunk_dimensions_ptr[i * 3 + 2] = scene_models[i]->chunk_->get_depth();
     }
     chunk_dimensions->cpu_unmap();
 
     std::shared_ptr<GPUBuffer> emissive_voxels = std::make_shared<GPUBuffer>(
         context->gpu_allocator_,
-        sizeof(float) * (6 * num_emissive_chunks) + sizeof(uint32_t), sizeof(uint64_t),
-        VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
+        sizeof(float) * (6 * num_emissive_chunks) + sizeof(uint32_t),
+        sizeof(uint64_t), VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
         VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
             VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
         VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT);
@@ -626,9 +640,9 @@ build_scene(std::shared_ptr<GraphicsContext> context,
     num_emissive_voxels_ptr[0] = num_emissive_chunks;
 
     float *emissive_voxels_ptr =
-        reinterpret_cast<float *>(num_emissive_voxels_ptr + 1); 
+        reinterpret_cast<float *>(num_emissive_voxels_ptr + 1);
     uint32_t emissive_index = 0;
-    for (auto& object : objects) {
+    for (auto &object : objects) {
         // Note that emissive voxels MUST be axis-aligned at the moment.
         if (object->model_->chunk_->get_attribute_set() ==
             VoxelChunk::AttributeSet::Emissive) {
@@ -648,9 +662,9 @@ build_scene(std::shared_ptr<GraphicsContext> context,
         }
     }
     emissive_voxels->cpu_unmap();
-    
-    auto scene =
-        std::make_shared<GraphicsScene>(context, tlas, objects, nullptr, chunk_dimensions, emissive_voxels);
+
+    auto scene = std::make_shared<GraphicsScene>(
+        context, tlas, objects, nullptr, chunk_dimensions, emissive_voxels);
     context->bind_scene_descriptors(builder, scene, std::move(scene_models));
     scene->scene_descriptor_ = builder.build();
     return scene;
@@ -663,14 +677,14 @@ void GraphicsContext::check_chunk_request_buffer(
     std::vector<std::shared_ptr<GraphicsModel>> scene_models =
         current_scene_->assemble_models_in_order();
     for (uint32_t i = 0; i < MAX_NUM_CHUNKS_LOADED_PER_FRAME; ++i) {
-	uint32_t num_rays = 2 * i;
-	uint32_t crb_model = 2 * i + 1;
+        uint32_t num_rays = 2 * i;
+        uint32_t crb_model = 2 * i + 1;
         if (crb[crb_model] != 0xFFFFFFFF && crb[num_rays] >= 128) {
-            deduplicated_requests.emplace(crb[crb_model],
-                                          scene_models.at(crb[crb_model])->sbt_offset_);
+            deduplicated_requests.emplace(
+                crb[crb_model], scene_models.at(crb[crb_model])->sbt_offset_);
         }
-	crb[num_rays] = 0;
-	crb[crb_model] = 0xFFFFFFFF;
+        crb[num_rays] = 0;
+        crb[crb_model] = 0xFFFFFFFF;
     }
     for (auto [model_idx, sbt_offset] : deduplicated_requests) {
         if (!uploading_models_.contains(model_idx) &&
@@ -682,8 +696,7 @@ void GraphicsContext::check_chunk_request_buffer(
     deduplicated_requests.clear();
     for (auto [model_idx, sbt_offset] : uploading_models_) {
         auto &model = scene_models.at(model_idx);
-	model->chunk_->tick_gpu_upload(device_, gpu_allocator_,
-				       ring_buffer_);
+        model->chunk_->tick_gpu_upload(device_, gpu_allocator_, ring_buffer_);
         if (!model->chunk_->uploading()) {
             deduplicated_requests.emplace(model_idx, sbt_offset);
         }
@@ -705,53 +718,61 @@ void GraphicsContext::check_chunk_request_buffer(
     }
 }
 
-void GraphicsContext::tick_download_models(std::vector<std::shared_ptr<Semaphore>> &render_wait_semaphores,
-					   std::shared_ptr<GraphicsScene> scene,
-					   std::span<std::byte> push_constants_span) {
+void GraphicsContext::tick_download_models(
+    std::vector<std::shared_ptr<Semaphore>> &render_wait_semaphores,
+    std::shared_ptr<GraphicsScene> scene,
+    std::span<std::byte> push_constants_span) {
     std::vector<std::shared_ptr<GraphicsModel>> scene_models =
-	current_scene_->assemble_models_in_order();
-    std::erase_if(downloading_models_, 
-		  [&](uint64_t model_idx) { return !scene_models.at(model_idx)->chunk_->downloading(); });
+        current_scene_->assemble_models_in_order();
+    std::erase_if(downloading_models_, [&](uint64_t model_idx) {
+        return !scene_models.at(model_idx)->chunk_->downloading();
+    });
 
     if (frame_index_ % 128 == 0) {
-	download_fence_->reset();
-	memset(chunk_download_span_.data(), 0, chunk_download_span_.size());
+        download_fence_->reset();
+        memset(chunk_download_span_.data(), 0, chunk_download_span_.size());
 
-	download_command_buffer_->record([&](VkCommandBuffer command_buffer) {
-	    VkExtent2D extent = swapchain_->get_extent();
-	    download_ray_trace_pipeline_->record(
-						 command_buffer,
-						 {swapchain_->get_image_descriptor(0), // this is redundant for the time being
-						  scene->scene_descriptor_, wide_descriptor_},
-						 push_constants_span, extent.width, extent.height, 1);
-	});
+        download_command_buffer_->record([&](VkCommandBuffer command_buffer) {
+            VkExtent2D extent = swapchain_->get_extent();
+            download_ray_trace_pipeline_->record(
+                command_buffer,
+                {swapchain_->get_image_descriptor(
+                     0), // this is redundant for the time being
+                 scene->scene_descriptor_, wide_descriptor_},
+                push_constants_span, extent.width, extent.height, 1);
+        });
 
-	device_->submit_command(download_command_buffer_, {}, {}, download_fence_);
+        device_->submit_command(download_command_buffer_, {}, {},
+                                download_fence_);
 
-	download_fence_->wait();
-	uint32_t *cdb = reinterpret_cast<uint32_t *>(chunk_download_span_.data());
-	std::unordered_map<uint64_t, uint32_t> new_sbt_offsets;
-	for (uint64_t model_idx = 0; model_idx < scene_models.size(); ++model_idx) {
-	    auto &model = scene_models.at(model_idx);
-	    if (!uploading_models_.contains(model_idx) &&
-		!downloading_models_.contains(model_idx) &&
-		cdb[model_idx] < 4 &&
-		model->chunk_->get_state() == VoxelChunk::State::GPU) {
-		downloading_models_.insert(model_idx);
-		model->chunk_->tick_disk_download(device_, ring_buffer_);
-		new_sbt_offsets.emplace(model_idx, 0);
-	    }
-	}
-	
-	if (!new_sbt_offsets.empty()) {
-	    current_scene_->tlas_->update_model_sbt_offsets(std::move(new_sbt_offsets));
-	    render_wait_semaphores.emplace_back(current_scene_->tlas_->get_timeline());
-	    
-	    DescriptorSetBuilder builder(descriptor_allocator_);
-	    bind_scene_descriptors(builder, current_scene_,
-				   std::move(scene_models));
-	    builder.update(current_scene_->scene_descriptor_);
-	}
+        download_fence_->wait();
+        uint32_t *cdb =
+            reinterpret_cast<uint32_t *>(chunk_download_span_.data());
+        std::unordered_map<uint64_t, uint32_t> new_sbt_offsets;
+        for (uint64_t model_idx = 0; model_idx < scene_models.size();
+             ++model_idx) {
+            auto &model = scene_models.at(model_idx);
+            if (!uploading_models_.contains(model_idx) &&
+                !downloading_models_.contains(model_idx) &&
+                cdb[model_idx] < 4 &&
+                model->chunk_->get_state() == VoxelChunk::State::GPU) {
+                downloading_models_.insert(model_idx);
+                model->chunk_->tick_disk_download(device_, ring_buffer_);
+                new_sbt_offsets.emplace(model_idx, 0);
+            }
+        }
+
+        if (!new_sbt_offsets.empty()) {
+            current_scene_->tlas_->update_model_sbt_offsets(
+                std::move(new_sbt_offsets));
+            render_wait_semaphores.emplace_back(
+                current_scene_->tlas_->get_timeline());
+
+            DescriptorSetBuilder builder(descriptor_allocator_);
+            bind_scene_descriptors(builder, current_scene_,
+                                   std::move(scene_models));
+            builder.update(current_scene_->scene_descriptor_);
+        }
     }
 }
 
@@ -767,7 +788,8 @@ void GraphicsContext::bind_scene_descriptors(
         VK_SHADER_STAGE_RAYGEN_BIT_KHR);
 
     std::vector<std::pair<VkDescriptorImageInfo, uint32_t>> raw_volume_infos;
-    std::vector<std::pair<VkDescriptorBufferInfo, uint32_t>> sparse_buffer_infos;
+    std::vector<std::pair<VkDescriptorBufferInfo, uint32_t>>
+        sparse_buffer_infos;
     for (size_t i = 0; i < models.size(); ++i) {
         const auto &model = models.at(i);
         if (model->chunk_->get_state() == VoxelChunk::State::GPU &&
@@ -780,7 +802,7 @@ void GraphicsContext::bind_scene_descriptors(
             raw_volume_infos.emplace_back(raw_volume_info, i);
         } else if (model->chunk_->get_state() == VoxelChunk::State::GPU &&
                    (model->chunk_->get_format() == VoxelChunk::Format::SVO ||
-		    model->chunk_->get_format() == VoxelChunk::Format::SVDAG)) {
+                    model->chunk_->get_format() == VoxelChunk::Format::SVDAG)) {
             auto buffer = model->chunk_->get_gpu_buffer();
             VkDescriptorBufferInfo sparse_buffer_info{};
             sparse_buffer_info.buffer = buffer->get_buffer();
@@ -792,7 +814,8 @@ void GraphicsContext::bind_scene_descriptors(
     builder.bind_images(1, raw_volume_infos, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,
                         VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR |
                             VK_SHADER_STAGE_INTERSECTION_BIT_KHR);
-    builder.bind_buffers(2, sparse_buffer_infos, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
+    builder.bind_buffers(2, sparse_buffer_infos,
+                         VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
                          VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR |
                              VK_SHADER_STAGE_INTERSECTION_BIT_KHR);
 
@@ -800,9 +823,10 @@ void GraphicsContext::bind_scene_descriptors(
     chunk_dimensions_info.buffer = scene->chunk_dimensions_->get_buffer();
     chunk_dimensions_info.offset = 0;
     chunk_dimensions_info.range = scene->chunk_dimensions_->get_size();
-    builder.bind_buffer(3, chunk_dimensions_info, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
-			VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR |
-			VK_SHADER_STAGE_INTERSECTION_BIT_KHR);
+    builder.bind_buffer(3, chunk_dimensions_info,
+                        VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
+                        VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR |
+                            VK_SHADER_STAGE_INTERSECTION_BIT_KHR);
 
     VkDescriptorBufferInfo emissive_voxels_info{};
     emissive_voxels_info.buffer = scene->emissive_voxels_->get_buffer();

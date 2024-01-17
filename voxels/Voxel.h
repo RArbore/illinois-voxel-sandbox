@@ -1,12 +1,12 @@
 #pragma once
 
-#include <unordered_set>
-#include <filesystem>
 #include <atomic>
-#include <vector>
+#include <filesystem>
 #include <list>
-#include <span>
 #include <set>
+#include <span>
+#include <unordered_set>
+#include <vector>
 
 #include <external/CTPL/ctpl_stl.h>
 
@@ -28,7 +28,7 @@ class VoxelChunk {
     enum class Format {
         Raw,
         SVO,
-	SVDAG,
+        SVDAG,
     };
 
     enum class AttributeSet {
@@ -52,8 +52,8 @@ class VoxelChunk {
     Format get_format() const;
     AttributeSet get_attribute_set() const;
     void tick_gpu_upload(std::shared_ptr<Device> device,
-                          std::shared_ptr<GPUAllocator> allocator,
-                          std::shared_ptr<RingBuffer> ring_buffer);
+                         std::shared_ptr<GPUAllocator> allocator,
+                         std::shared_ptr<RingBuffer> ring_buffer);
     void tick_disk_download(std::shared_ptr<Device> device,
                             std::shared_ptr<RingBuffer> ring_buffer);
     bool uploading();
@@ -111,20 +111,21 @@ class ChunkManager {
     friend class VoxelChunkPtr;
 };
 
-const static std::unordered_map<VoxelChunk::State, std::string_view> state_names {
-    {VoxelChunk::State::CPU, "CPU"},
-    {VoxelChunk::State::GPU, "GPU"},
-    {VoxelChunk::State::Disk, "Disk"},
-};
+const static std::unordered_map<VoxelChunk::State, std::string_view>
+    state_names{
+        {VoxelChunk::State::CPU, "CPU"},
+        {VoxelChunk::State::GPU, "GPU"},
+        {VoxelChunk::State::Disk, "Disk"},
+    };
 
-const static std::unordered_map<VoxelChunk::Format, std::string_view> format_names {
-    {VoxelChunk::Format::Raw, "Raw"},
-    {VoxelChunk::Format::SVO, "SVO"},
-    {VoxelChunk::Format::SVDAG, "SVDAG"},
-};
+const static std::unordered_map<VoxelChunk::Format, std::string_view>
+    format_names{
+        {VoxelChunk::Format::Raw, "Raw"},
+        {VoxelChunk::Format::SVO, "SVO"},
+        {VoxelChunk::Format::SVDAG, "SVDAG"},
+    };
 
-const static std::unordered_map<VoxelChunk::AttributeSet, std::string_view> attribute_set_names {
-    {VoxelChunk::AttributeSet::Color, "Color"},
-    {VoxelChunk::AttributeSet::ColorNormal, "ColorNormal"},
-    {VoxelChunk::AttributeSet::Emissive, "Emissive"}
-};
+const static std::unordered_map<VoxelChunk::AttributeSet, std::string_view>
+    attribute_set_names{{VoxelChunk::AttributeSet::Color, "Color"},
+                        {VoxelChunk::AttributeSet::ColorNormal, "ColorNormal"},
+                        {VoxelChunk::AttributeSet::Emissive, "Emissive"}};
