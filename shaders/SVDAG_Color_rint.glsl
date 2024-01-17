@@ -70,13 +70,21 @@ void main() {
 
     int direction_kind = int(obj_ray_dir.x < 0.0) + 2 * int(obj_ray_dir.y < 0.0) + 4 * int(obj_ray_dir.z < 0.0);
 
-    vec3 first_low = vec3(0.0);
-    vec3 first_high = vec3(svdag_buffers[svdag_id].voxel_width, svdag_buffers[svdag_id].voxel_height, svdag_buffers[svdag_id].voxel_depth);
+    vec3 first_low = vec3(
+			  primitive_dimensions[svdag_id].primitive_aabbs[6 * gl_PrimitiveID],
+			  primitive_dimensions[svdag_id].primitive_aabbs[6 * gl_PrimitiveID + 1],
+			  primitive_dimensions[svdag_id].primitive_aabbs[6 * gl_PrimitiveID + 2]
+			  );
+    vec3 first_high = vec3(
+			  primitive_dimensions[svdag_id].primitive_aabbs[6 * gl_PrimitiveID + 3],
+			  primitive_dimensions[svdag_id].primitive_aabbs[6 * gl_PrimitiveID + 4],
+			  primitive_dimensions[svdag_id].primitive_aabbs[6 * gl_PrimitiveID + 5]
+			  );
     aabb_intersect_result bounding = hit_aabb(first_low, first_high, obj_ray_pos, obj_ray_dir);
     if (bounding.front_t != -FAR_AWAY) {
 	int level = 0;
 	SVDAGMarchStackFrame stack[MAX_DEPTH];
-	stack[level].info = vec4(first_low, uintBitsToFloat((svdag_buffers[svdag_id].num_nodes - 1) & 0x0FFFFFFF));
+	stack[level].info = vec4(0.0, 0.0, 0.0, uintBitsToFloat((svdag_buffers[svdag_id].num_nodes - 1) & 0x0FFFFFFF));
 	uint high_p2 = round_up_p2(max(svdag_buffers[svdag_id].voxel_width, max(svdag_buffers[svdag_id].voxel_height, svdag_buffers[svdag_id].voxel_depth)));
 	while (level >= 0 && level < MAX_DEPTH) {
 	    SVDAGMarchStackFrame stack_frame = stack[level];

@@ -22,7 +22,7 @@ BLAS::BLAS(std::shared_ptr<GPUAllocator> allocator,
         round_up_pow2(sizeof(VkAabbPositionsKHR)),
         VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR |
             VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT |
-            VK_BUFFER_USAGE_TRANSFER_DST_BIT,
+            VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
         VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, 0);
     timeline_ = std::make_shared<Semaphore>(allocator->get_device(), true);
     timeline_->set_signal_value(GEOMETRY_BUFFER_TIMELINE);
@@ -145,6 +145,10 @@ VkDeviceAddress BLAS::get_device_address() {
     return vkGetAccelerationStructureDeviceAddress(
         scratch_buffer_->get_allocator()->get_device()->get_device(),
         &acceleration_structure_device_address_info);
+}
+
+std::shared_ptr<GPUBuffer> BLAS::get_primitive_buffer() {
+    return geometry_buffer_;
 }
 
 TLAS::TLAS(std::shared_ptr<GPUAllocator> allocator,

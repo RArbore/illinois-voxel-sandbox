@@ -106,6 +106,10 @@ layout(set = 1, binding = 4) buffer direct_lights_ {
     float emissive_voxels[]; 
 };
 
+layout(set = 1, binding = 5) buffer PrimitiveSizes {
+    float primitive_aabbs[];
+} primitive_dimensions[];
+
 // Set 2 is not swapped out - it is for GraphicsContext-wide data.
 layout(set = 2, binding = 0) buffer chunk_request_buffer_ {
     uint32_t chunk_request_buffer[MAX_NUM_CHUNKS_LOADED_PER_FRAME];

@@ -19,9 +19,6 @@ int main(int argc, char *argv[]) {
     std::cout << "SVDAG Size: " << svdag.size() << "\n";
 
     auto void_grid = compute_void_grid_sub_regions_svdag(svdag, 4, 128);
-    for (bool empty : void_grid) {
-        std::cout << "Empty: " << empty << "\n";
-    }
 
     uint32_t *svdag_ptr = reinterpret_cast<uint32_t *>(svdag.data());
     uint32_t chunk_width = svdag_ptr[0], chunk_height = svdag_ptr[1],

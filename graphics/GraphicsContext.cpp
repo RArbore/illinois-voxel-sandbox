@@ -178,6 +178,9 @@ GraphicsContext::GraphicsContext(std::shared_ptr<Window> window) {
                                   VK_SHADER_STAGE_INTERSECTION_BIT_KHR);
     scene_builder.bind_buffer(4, {}, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
                               VK_SHADER_STAGE_RAYGEN_BIT_KHR);
+    scene_builder.bind_buffers(5, {}, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
+                              VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR |
+                                  VK_SHADER_STAGE_INTERSECTION_BIT_KHR);
 
     chunk_request_buffer_ = std::make_shared<GPUBuffer>(
         gpu_allocator_, MAX_NUM_CHUNKS_LOADED_PER_FRAME * sizeof(uint64_t),
@@ -548,9 +551,13 @@ double render_frame(std::shared_ptr<GraphicsContext> context,
 std::shared_ptr<GraphicsModel>
 build_model(std::shared_ptr<GraphicsContext> context, VoxelChunkPtr chunk) {
     std::vector<VkAabbPositionsKHR> aabbs = {
-        {0.0F, 0.0F, 0.0F, static_cast<float>(chunk->get_width()),
+        {0.0F, static_cast<float>(chunk->get_height()) / 2.0F, 0.0F, static_cast<float>(chunk->get_width()),
          static_cast<float>(chunk->get_height()),
-         static_cast<float>(chunk->get_depth())}};
+         static_cast<float>(chunk->get_depth())},
+        {0.0F, 0.0F, 0.0F, static_cast<float>(chunk->get_width()),
+         static_cast<float>(chunk->get_height()) / 2.0F,
+         static_cast<float>(chunk->get_depth())},
+    };
     std::shared_ptr<BLAS> blas =
         std::make_shared<BLAS>(context->gpu_allocator_, context->command_pool_,
                                context->ring_buffer_, aabbs);
@@ -835,4 +842,20 @@ void GraphicsContext::bind_scene_descriptors(
     builder.bind_buffer(4, emissive_voxels_info,
                         VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
                         VK_SHADER_STAGE_RAYGEN_BIT_KHR);
+
+    std::vector<std::pair<VkDescriptorBufferInfo, uint32_t>> primitive_buffer_infos;
+    for (size_t i = 0; i < models.size(); ++i) {
+        const auto &model = models.at(i);
+	auto buffer = model->blas_->get_primitive_buffer();
+	VkDescriptorBufferInfo primitive_buffer_info{};
+	primitive_buffer_info.buffer = buffer->get_buffer();
+	primitive_buffer_info.offset = 0;
+	primitive_buffer_info.range = buffer->get_size();
+	primitive_buffer_infos.emplace_back(primitive_buffer_info, i);
+    }
+
+    builder.bind_buffers(5, primitive_buffer_infos,
+                         VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
+                         VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR |
+                             VK_SHADER_STAGE_INTERSECTION_BIT_KHR);
 }

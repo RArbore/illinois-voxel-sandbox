@@ -21,6 +21,8 @@ class BLAS {
 
     VkDeviceAddress get_device_address();
 
+    std::shared_ptr<GPUBuffer> get_primitive_buffer();
+
     static const uint64_t GEOMETRY_BUFFER_TIMELINE = 1;
     static const uint64_t BLAS_BUILD_TIMELINE = 2;
 
