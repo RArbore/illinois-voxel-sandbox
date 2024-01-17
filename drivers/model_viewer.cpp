@@ -5,6 +5,7 @@
 #include <voxels/Voxel.h>
 #include <voxels/Voxelize.h>
 #include <voxels/VoxelChunkGeneration.h>
+#include <voxels/VoidGrid.h>
 
 int main(int argc, char *argv[]) {
     ASSERT(argv[1], "Must provide a SVDAG model to render.");
@@ -17,6 +18,11 @@ int main(int argc, char *argv[]) {
     std::vector<std::byte> svdag = std::vector<std::byte>(file_size);
     stream.read(reinterpret_cast<char*>(svdag.data()), file_size);
     std::cout << "SVDAG Size: " << svdag.size() << "\n";
+
+    auto void_grid = compute_void_grid_sub_regions_svdag(svdag, 4, 128);
+    for (bool empty : void_grid) {
+	std::cout << "Empty: " << empty << "\n";
+    }
 
     uint32_t *svdag_ptr = reinterpret_cast<uint32_t *>(svdag.data());
     uint32_t chunk_width = svdag_ptr[0], chunk_height = svdag_ptr[1], chunk_depth = svdag_ptr[2];
@@ -36,7 +42,7 @@ int main(int argc, char *argv[]) {
     objects.emplace_back(std::move(object));
     auto scene = build_scene(context, objects);
     
-    glm::vec3 camera_pos = glm::vec3(0.0f, 0.0f, -250.0f);
+    glm::vec3 camera_pos = glm::vec3(50.0f, 50.0f, -50.0f);
     auto camera = create_camera(window, camera_pos, 0.0f, 0.0f, 0.1f, 0.25f);
 
     while (!window->should_close()) {
