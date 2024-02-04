@@ -1,6 +1,7 @@
 #include <graphics/GraphicsContext.h>
 #include <voxels/Voxel.h>
 #include <voxels/VoxelChunkGeneration.h>
+#include <voxels/Conversion.h>
 
 int main(int argc, char *argv[]) {
     ChunkManager chunk_manager;
@@ -13,7 +14,7 @@ int main(int argc, char *argv[]) {
             static_cast<float>(i) / static_cast<float>(num_objects);
         const float radians = linear * 2.0F * 3.1415926;
         auto test_sphere_data =
-            generate_basic_sphere_chunk(64, 64, 64, 4.0F + 60.0F * linear);
+            append_metadata_to_raw(generate_basic_sphere_chunk(64, 64, 64, 4.0F + 60.0F * linear), 64, 64, 64);
         VoxelChunkPtr test_sphere = chunk_manager.add_chunk(
             std::move(test_sphere_data), 64, 64, 64, VoxelChunk::Format::Raw,
             VoxelChunk::AttributeSet::Color);

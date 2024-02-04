@@ -5,6 +5,40 @@
 #include "Conversion.h"
 #include "utils/Assert.h"
 
+struct RawColor {
+    uint8_t red_;
+    uint8_t green_;
+    uint8_t blue_;
+    uint8_t alpha_;
+};
+
+std::vector<std::byte> append_metadata_to_raw(const std::vector<std::byte>& raw,
+    uint32_t width, uint32_t height,
+    uint32_t depth) {
+    std::vector<std::byte> raw_data;
+    for (int i = 0; i < 3 * sizeof(uint32_t); i++) {
+        raw_data.emplace_back();
+    }
+
+    memcpy(&raw_data.at(0), &width, sizeof(uint32_t));
+    memcpy(&raw_data.at(sizeof(uint32_t)), &height, sizeof(uint32_t));
+    memcpy(&raw_data.at(sizeof(uint32_t) * 2), &depth, sizeof(uint32_t));
+    for (uint32_t i = 0; i < raw.size(); i += 4) {
+        RawColor voxel = {.red_ = static_cast<uint8_t>(raw.at(i)),
+                          .green_ = static_cast<uint8_t>(raw.at(i + 1)),
+                          .blue_ = static_cast<uint8_t>(raw.at(i + 2)),
+                          .alpha_ = static_cast<uint8_t>(raw.at(i + 3))};
+
+        for (uint32_t i = 0; i < sizeof(RawColor); ++i) {
+            raw_data.emplace_back();
+        }
+
+        memcpy(&raw_data.back() - sizeof(RawColor) + 1, &voxel, sizeof(RawColor));
+    }
+    // memcpy(&raw_data.at(sizeof(uint32_t) * 3), raw.data(), raw.size());
+    return raw_data;
+}
+
 struct SVONode {
     uint32_t child_offset_;
     uint32_t valid_mask_ : 8;

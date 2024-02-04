@@ -164,7 +164,7 @@ GraphicsContext::GraphicsContext(std::shared_ptr<Window> window) {
     DescriptorSetBuilder scene_builder(descriptor_allocator_);
     scene_builder.bind_acceleration_structure(0, {},
                                               VK_SHADER_STAGE_RAYGEN_BIT_KHR);
-    scene_builder.bind_images(1, {}, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,
+    scene_builder.bind_buffers(1, {}, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
                               VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR |
                                   VK_SHADER_STAGE_INTERSECTION_BIT_KHR);
     scene_builder.bind_buffers(2, {}, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
@@ -766,18 +766,18 @@ void GraphicsContext::bind_scene_descriptors(
         },
         VK_SHADER_STAGE_RAYGEN_BIT_KHR);
 
-    std::vector<std::pair<VkDescriptorImageInfo, uint32_t>> raw_volume_infos;
+    std::vector<std::pair<VkDescriptorBufferInfo, uint32_t>> raw_buffer_infos;
     std::vector<std::pair<VkDescriptorBufferInfo, uint32_t>> sparse_buffer_infos;
     for (size_t i = 0; i < models.size(); ++i) {
         const auto &model = models.at(i);
         if (model->chunk_->get_state() == VoxelChunk::State::GPU &&
             model->chunk_->get_format() == VoxelChunk::Format::Raw) {
-            auto volume = model->chunk_->get_gpu_volume();
-            VkDescriptorImageInfo raw_volume_info{};
-            raw_volume_info.imageView = volume->get_view();
-            raw_volume_info.sampler = VK_NULL_HANDLE;
-            raw_volume_info.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
-            raw_volume_infos.emplace_back(raw_volume_info, i);
+            auto buffer = model->chunk_->get_gpu_buffer();
+            VkDescriptorBufferInfo raw_buffer_info{};
+            raw_buffer_info.buffer = buffer->get_buffer();
+            raw_buffer_info.offset = 0;
+            raw_buffer_info.range = buffer->get_size();
+            raw_buffer_infos.emplace_back(raw_buffer_info, i);
         } else if (model->chunk_->get_state() == VoxelChunk::State::GPU &&
                    (model->chunk_->get_format() == VoxelChunk::Format::SVO ||
 		    model->chunk_->get_format() == VoxelChunk::Format::SVDAG)) {
@@ -789,7 +789,7 @@ void GraphicsContext::bind_scene_descriptors(
             sparse_buffer_infos.emplace_back(sparse_buffer_info, i);
         }
     }
-    builder.bind_images(1, raw_volume_infos, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,
+    builder.bind_buffers(1, raw_buffer_infos, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
                         VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR |
                             VK_SHADER_STAGE_INTERSECTION_BIT_KHR);
     builder.bind_buffers(2, sparse_buffer_infos, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,

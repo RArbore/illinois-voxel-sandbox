@@ -8,6 +8,13 @@
 #define MAX_MODELS (2 << 16)
 #define MAX_NUM_CHUNKS_LOADED_PER_FRAME 32
 
+struct RawColor {
+    uint8_t red_;
+    uint8_t green_;
+    uint8_t blue_;
+    uint8_t alpha_;
+};
+
 struct SVONode {
     uint32_t child_offset_;
     uint8_t valid_mask_;
@@ -59,7 +66,12 @@ layout(set = 0, binding = 0, rgba8) uniform image2D output_image;
 // Set 1 is swapped out per scene.
 layout(set = 1, binding = 0) uniform accelerationStructureEXT tlas;
 
-layout(set = 1, binding = 1, rgba8) uniform readonly image3D volumes[];
+layout(set = 1, binding = 1) buffer RawBuffer {
+    uint32_t voxel_width;
+    uint32_t voxel_height;
+    uint32_t voxel_depth;
+    RawColor voxel_colors[];
+} raw_buffers[];
 
 layout(set = 1, binding = 2) buffer SVOBuffer {
     uint32_t voxel_width;
@@ -158,4 +170,8 @@ aabb_intersect_result hit_aabb(const vec3 minimum, const vec3 maximum, const vec
 	r.k = tbot.z > ttop.z ? 5 : 4;
     }
     return r;
+}
+
+uint32_t linearize_index(ivec3 index, uint32_t width, uint32_t height, uint32_t depth) {
+    return uint32_t(index.x + width * index.y + width * height * index.z);
 }

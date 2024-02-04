@@ -23,12 +23,6 @@ std::shared_ptr<GPUBuffer> VoxelChunk::get_gpu_buffer() const {
     return buffer_data_;
 }
 
-std::shared_ptr<GPUVolume> VoxelChunk::get_gpu_volume() const {
-    ASSERT(state_ == State::GPU, "Tried to get GPU volume data of voxel chunk "
-                                 "without GPU data resident.");
-    return volume_data_;
-}
-
 std::shared_ptr<Semaphore> VoxelChunk::get_timeline() const {
     return timeline_;
 }
@@ -65,65 +59,47 @@ void VoxelChunk::tick_gpu_upload(std::shared_ptr<Device> device,
         std::filesystem::remove(disk_path_); 
 	});
     } else if (state_ == State::CPU) {
-	uploading_ = true;
-	if (timeline_ == nullptr) {
-	    timeline_ = std::make_shared<Semaphore>(device, true);
-	    timeline_->set_signal_value(1);
-	}
-	switch (format_) {
-	case Format::Raw: {
-	    VkExtent3D extent = {width_, height_, depth_};
-	    volume_data_ = std::make_shared<GPUVolume>(
-						       allocator, extent, VK_FORMAT_R8G8B8A8_UNORM, 0,
-						       VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_STORAGE_BIT,
-						       VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, 0, 1, 1);
-	    ring_buffer->copy_to_device(volume_data_, VK_IMAGE_LAYOUT_GENERAL,
-					get_cpu_data(), {timeline_}, {timeline_});
-	    break;
-	}
-	case Format::SVO:
-	case Format::SVDAG: {
-	    buffer_data_ =
-		std::make_shared<GPUBuffer>(allocator, get_cpu_data().size(), 8,
-					    VK_BUFFER_USAGE_TRANSFER_DST_BIT |
-                                            VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
-					    VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, 0);
-	    ring_buffer->copy_to_device(buffer_data_, 0, get_cpu_data(),
-					{timeline_}, {timeline_});
-	    break;
-	}
-	default: {
-	    ASSERT(false, "GPU upload for format is unimplemented.");
-	}
-	}
-	state_ = State::GPU;
-	timeline_->increment();
+	    uploading_ = true;
+	    if (timeline_ == nullptr) {
+	        timeline_ = std::make_shared<Semaphore>(device, true);
+	        timeline_->set_signal_value(1);
+	    }
+
+        // All formats now use buffers to store data
+        buffer_data_ = std::make_shared<GPUBuffer>(allocator, get_cpu_data().size(), 8,
+                                            VK_BUFFER_USAGE_TRANSFER_DST_BIT |
+                                                VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
+                                            VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, 0);
+        ring_buffer->copy_to_device(buffer_data_, 0, get_cpu_data(),
+                                    {timeline_}, {timeline_});
+
+	    state_ = State::GPU;
+	    timeline_->increment();
     } else if (state_ == State::GPU && timeline_->has_reached_wait()) {
-	uploading_ = false;
+	    uploading_ = false;
     }
 }
 
 void VoxelChunk::tick_disk_download(std::shared_ptr<Device> device,
                                     std::shared_ptr<RingBuffer> ring_buffer) {
     if (!downloading_ && state_ != State::Disk) {
-	buffer_data_ = nullptr;
-	volume_data_ = nullptr;
-	state_ = State::CPU;
-	downloading_ = true;
-	manager_->pool_.push([this](int _id){
-	    std::stringstream string_pointer;
-	    string_pointer << this;
-	    if (disk_path_.empty()) {
-		disk_path_ = manager_->chunks_directory_ / std::filesystem::path("chunk_" + string_pointer.str());
-	    }
-	    std::ofstream stream(disk_path_,
-				 std::ios::out | std::ios::binary);
-	    stream.write(reinterpret_cast<char*>(cpu_data_.data()), cpu_data_.size());
-	    cpu_data_.clear();
+	    buffer_data_ = nullptr;
+	    state_ = State::CPU;
+	    downloading_ = true;
+	    manager_->pool_.push([this](int _id){
+	        std::stringstream string_pointer;
+	        string_pointer << this;
+	        if (disk_path_.empty()) {
+		    disk_path_ = manager_->chunks_directory_ / std::filesystem::path("chunk_" + string_pointer.str());
+	        }
+	        std::ofstream stream(disk_path_,
+				     std::ios::out | std::ios::binary);
+	        stream.write(reinterpret_cast<char*>(cpu_data_.data()), cpu_data_.size());
+	        cpu_data_.clear();
 	    
-	    state_ = State::Disk;
-	    downloading_ = false;
-	});
+	        state_ = State::Disk;
+	        downloading_ = false;
+	    });
     }
 }
 
@@ -144,11 +120,7 @@ void VoxelChunk::debug_print() {
     } else {
 	std::cout << "  buffer_data_: (null)\n";
     }
-    if (volume_data_) {
-	std::cout << "  volume_data_: GPUVolume with dimensions (" << volume_data_->get_extent().width << ", " << volume_data_->get_extent().height << ", " << volume_data_->get_extent().depth << ")\n";
-    } else {
-	std::cout << "  volume_data_: (null)\n";
-    }
+    
     std::cout << "  timeline_: " << timeline_ << "\n";
     std::cout << "  width_: " << width_ << "\n";
     std::cout << "  height_: " << height_ << "\n";
