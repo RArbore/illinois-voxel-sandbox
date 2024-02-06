@@ -766,17 +766,7 @@ void GraphicsContext::bind_scene_descriptors(
     std::vector<std::pair<VkDescriptorBufferInfo, uint32_t>> buffer_infos;
     for (size_t i = 0; i < models.size(); ++i) {
         const auto &model = models.at(i);
-        if (model->chunk_->get_state() == VoxelChunk::State::GPU &&
-            model->chunk_->get_format() == VoxelChunk::Format::Raw) {
-            auto buffer = model->chunk_->get_gpu_buffer();
-            VkDescriptorBufferInfo buffer_info{};
-            buffer_info.buffer = buffer->get_buffer();
-            buffer_info.offset = 0;
-            buffer_info.range = buffer->get_size();
-            buffer_infos.emplace_back(buffer_info, i);
-        } else if (model->chunk_->get_state() == VoxelChunk::State::GPU &&
-                   (model->chunk_->get_format() == VoxelChunk::Format::SVO ||
-		    model->chunk_->get_format() == VoxelChunk::Format::SVDAG)) {
+        if (model->chunk_->get_state() == VoxelChunk::State::GPU) {
             auto buffer = model->chunk_->get_gpu_buffer();
             VkDescriptorBufferInfo buffer_info{};
             buffer_info.buffer = buffer->get_buffer();
