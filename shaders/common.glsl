@@ -73,7 +73,7 @@ layout(set = 1, binding = 1) buffer RawBuffer {
     RawColor voxel_colors[];
 } raw_buffers[];
 
-layout(set = 1, binding = 2) buffer SVOBuffer {
+layout(set = 1, binding = 1) buffer SVOBuffer {
     uint32_t voxel_width;
     uint32_t voxel_height;
     uint32_t voxel_depth;
@@ -81,7 +81,7 @@ layout(set = 1, binding = 2) buffer SVOBuffer {
     SVONode nodes[];
 } svo_buffers[];
 
-layout(set = 1, binding = 2) buffer SVOBuffer_Color {
+layout(set = 1, binding = 1) buffer SVOBuffer_Color {
     uint32_t voxel_width;
     uint32_t voxel_height;
     uint32_t voxel_depth;
@@ -89,7 +89,7 @@ layout(set = 1, binding = 2) buffer SVOBuffer_Color {
     SVOLeaf_Color nodes[];
 } svo_leaf_color_buffers[];
 
-layout(set = 1, binding = 2) buffer SVDAGBuffer {
+layout(set = 1, binding = 1) buffer SVDAGBuffer {
     uint32_t voxel_width;
     uint32_t voxel_height;
     uint32_t voxel_depth;
@@ -97,7 +97,7 @@ layout(set = 1, binding = 2) buffer SVDAGBuffer {
     SVDAGNode nodes[];
 } svdag_buffers[];
 
-layout(set = 1, binding = 2) buffer SVDAGBuffer_Color {
+layout(set = 1, binding = 1) buffer SVDAGBuffer_Color {
     uint32_t voxel_width;
     uint32_t voxel_height;
     uint32_t voxel_depth;
@@ -105,11 +105,11 @@ layout(set = 1, binding = 2) buffer SVDAGBuffer_Color {
     SVDAGLeaf_Color nodes[];
 } svdag_leaf_color_buffers[];
 
-layout(set = 1, binding = 3) buffer chunk_dimensions_ {
+layout(set = 1, binding = 2) buffer chunk_dimensions_ {
     uint32_t chunk_dimensions[MAX_MODELS * 3];
 };
 
-layout(set = 1, binding = 4) buffer direct_lights_ {
+layout(set = 1, binding = 3) buffer direct_lights_ {
     uint32_t num_emissive_voxels;
 
     // Each voxel uses 6 values

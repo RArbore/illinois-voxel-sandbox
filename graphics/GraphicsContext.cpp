@@ -165,15 +165,12 @@ GraphicsContext::GraphicsContext(std::shared_ptr<Window> window) {
     scene_builder.bind_acceleration_structure(0, {},
                                               VK_SHADER_STAGE_RAYGEN_BIT_KHR);
     scene_builder.bind_buffers(1, {}, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
-                              VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR |
-                                  VK_SHADER_STAGE_INTERSECTION_BIT_KHR);
-    scene_builder.bind_buffers(2, {}, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
                                VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR |
                                    VK_SHADER_STAGE_INTERSECTION_BIT_KHR);
-    scene_builder.bind_buffer(3, {}, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
+    scene_builder.bind_buffer(2, {}, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
 			      VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR |
 			      VK_SHADER_STAGE_INTERSECTION_BIT_KHR);
-    scene_builder.bind_buffer(4, {}, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
+    scene_builder.bind_buffer(3, {}, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
                               VK_SHADER_STAGE_RAYGEN_BIT_KHR);
     
     chunk_request_buffer_ = std::make_shared<GPUBuffer>(
@@ -766,41 +763,37 @@ void GraphicsContext::bind_scene_descriptors(
         },
         VK_SHADER_STAGE_RAYGEN_BIT_KHR);
 
-    std::vector<std::pair<VkDescriptorBufferInfo, uint32_t>> raw_buffer_infos;
-    std::vector<std::pair<VkDescriptorBufferInfo, uint32_t>> sparse_buffer_infos;
+    std::vector<std::pair<VkDescriptorBufferInfo, uint32_t>> buffer_infos;
     for (size_t i = 0; i < models.size(); ++i) {
         const auto &model = models.at(i);
         if (model->chunk_->get_state() == VoxelChunk::State::GPU &&
             model->chunk_->get_format() == VoxelChunk::Format::Raw) {
             auto buffer = model->chunk_->get_gpu_buffer();
-            VkDescriptorBufferInfo raw_buffer_info{};
-            raw_buffer_info.buffer = buffer->get_buffer();
-            raw_buffer_info.offset = 0;
-            raw_buffer_info.range = buffer->get_size();
-            raw_buffer_infos.emplace_back(raw_buffer_info, i);
+            VkDescriptorBufferInfo buffer_info{};
+            buffer_info.buffer = buffer->get_buffer();
+            buffer_info.offset = 0;
+            buffer_info.range = buffer->get_size();
+            buffer_infos.emplace_back(buffer_info, i);
         } else if (model->chunk_->get_state() == VoxelChunk::State::GPU &&
                    (model->chunk_->get_format() == VoxelChunk::Format::SVO ||
 		    model->chunk_->get_format() == VoxelChunk::Format::SVDAG)) {
             auto buffer = model->chunk_->get_gpu_buffer();
-            VkDescriptorBufferInfo sparse_buffer_info{};
-            sparse_buffer_info.buffer = buffer->get_buffer();
-            sparse_buffer_info.offset = 0;
-            sparse_buffer_info.range = buffer->get_size();
-            sparse_buffer_infos.emplace_back(sparse_buffer_info, i);
+            VkDescriptorBufferInfo buffer_info{};
+            buffer_info.buffer = buffer->get_buffer();
+            buffer_info.offset = 0;
+            buffer_info.range = buffer->get_size();
+            buffer_infos.emplace_back(buffer_info, i);
         }
     }
-    builder.bind_buffers(1, raw_buffer_infos, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
+    builder.bind_buffers(1, buffer_infos, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
                         VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR |
                             VK_SHADER_STAGE_INTERSECTION_BIT_KHR);
-    builder.bind_buffers(2, sparse_buffer_infos, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
-                         VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR |
-                             VK_SHADER_STAGE_INTERSECTION_BIT_KHR);
 
     VkDescriptorBufferInfo chunk_dimensions_info{};
     chunk_dimensions_info.buffer = scene->chunk_dimensions_->get_buffer();
     chunk_dimensions_info.offset = 0;
     chunk_dimensions_info.range = scene->chunk_dimensions_->get_size();
-    builder.bind_buffer(3, chunk_dimensions_info, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
+    builder.bind_buffer(2, chunk_dimensions_info, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
 			VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR |
 			VK_SHADER_STAGE_INTERSECTION_BIT_KHR);
 
@@ -808,7 +801,7 @@ void GraphicsContext::bind_scene_descriptors(
     emissive_voxels_info.buffer = scene->emissive_voxels_->get_buffer();
     emissive_voxels_info.offset = 0;
     emissive_voxels_info.range = scene->emissive_voxels_->get_size();
-    builder.bind_buffer(4, emissive_voxels_info,
+    builder.bind_buffer(3, emissive_voxels_info,
                         VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
                         VK_SHADER_STAGE_RAYGEN_BIT_KHR);
 }
