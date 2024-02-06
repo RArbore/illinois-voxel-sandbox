@@ -11,7 +11,7 @@ void main() {
     vec3 obj_ray_pos = gl_WorldToObjectEXT * vec4(gl_WorldRayOriginEXT, 1.0);
     vec3 obj_ray_dir = normalize(gl_WorldToObjectEXT * vec4(gl_WorldRayDirectionEXT, 0.0));
 
-    ivec3 volume_size = imageSize(volumes[volume_id]);
+    ivec3 volume_size = ivec3(raw_buffers[volume_id].voxel_width, raw_buffers[volume_id].voxel_height, raw_buffers[volume_id].voxel_depth);
     aabb_intersect_result r = hit_aabb(vec3(0.0), volume_size, obj_ray_pos, obj_ray_dir);
 
     if (r.front_t != -FAR_AWAY) {
@@ -24,7 +24,8 @@ void main() {
 	uint steps = 0;
 	uint max_steps = uint(volume_size.x) + uint(volume_size.y) + uint(volume_size.z);
 	while (steps < max_steps && all(greaterThanEqual(obj_ray_voxel, ivec3(0))) && all(lessThan(obj_ray_voxel, volume_size))) {
-	    float palette = imageLoad(volumes[volume_id], obj_ray_voxel).a;
+		uint32_t voxel_index = linearize_index(obj_ray_voxel, volume_size.x, volume_size.y, volume_size.z);
+	    float palette = float(raw_buffers[volume_id].voxel_colors[voxel_index].alpha_);
 	    
 	    if (palette != 0.0) {
 		aabb_intersect_result r = hit_aabb(obj_ray_voxel, obj_ray_voxel + 1, obj_ray_pos, obj_ray_dir);

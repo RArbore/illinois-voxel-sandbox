@@ -215,7 +215,7 @@ int main(int argc, char *argv[]) {
     
 
     // Add emissive voxels
-    auto emissive_block = generate_basic_filled_chunk(8, 8, 8);
+    auto emissive_block = append_metadata_to_raw(generate_basic_filled_chunk(8, 8, 8), 8, 8, 8);
     VoxelChunkPtr test_light = chunk_manager.add_chunk(
         std::move(emissive_block), 8, 8, 8, VoxelChunk::Format::Raw,
         VoxelChunk::AttributeSet::Emissive);
