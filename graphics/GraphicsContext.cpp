@@ -23,6 +23,7 @@ const std::map<std::pair<VoxelChunk::Format, VoxelChunk::AttributeSet>,
         {{VoxelChunk::Format::SVO, VoxelChunk::AttributeSet::Color}, 2},
         {{VoxelChunk::Format::SVDAG, VoxelChunk::AttributeSet::Color}, 3},
         {{VoxelChunk::Format::Raw, VoxelChunk::AttributeSet::Emissive}, 4},
+        {{VoxelChunk::Format::DF, VoxelChunk::AttributeSet::Color}, 5},
 };
 
 const uint32_t MAX_NUM_CHUNKS_LOADED_PER_FRAME = 32;
@@ -279,6 +280,8 @@ GraphicsContext::GraphicsContext(std::shared_ptr<Window> window) {
     auto svo_color_rint = std::make_shared<Shader>(device_, "SVO_Color_rint");
     auto svdag_color_rchit = std::make_shared<Shader>(device_, "SVDAG_Color_rchit");
     auto svdag_color_rint = std::make_shared<Shader>(device_, "SVDAG_Color_rint");
+    auto df_color_rchit = std::make_shared<Shader>(device_, "DF_Color_rchit");
+    auto df_color_rint = std::make_shared<Shader>(device_, "DF_Color_rint");
     auto emissive_rchit = std::make_shared<Shader>(device_, "Emissive_rchit");
     auto download_rchit = std::make_shared<Shader>(device_, "Download_rchit");
     std::vector<std::vector<std::shared_ptr<Shader>>> shader_groups = {
@@ -289,6 +292,7 @@ GraphicsContext::GraphicsContext(std::shared_ptr<Window> window) {
         {svo_color_rchit, svo_color_rint},
         {svdag_color_rchit, svdag_color_rint},
         {emissive_rchit, raw_color_rint},
+        {df_color_rchit, df_color_rint},
     };
     std::vector<std::vector<std::shared_ptr<Shader>>> download_shader_groups = {
         {rgen},
@@ -298,6 +302,7 @@ GraphicsContext::GraphicsContext(std::shared_ptr<Window> window) {
         {download_rchit, svo_color_rint},
         {download_rchit, svdag_color_rint},
         {download_rchit, raw_color_rint},
+        {download_rchit, df_color_rint},
     };
     std::vector<VkDescriptorSetLayout> layouts = {
         swapchain_->get_image_descriptor(0)->get_layout(),

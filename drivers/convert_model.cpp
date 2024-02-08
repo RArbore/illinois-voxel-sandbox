@@ -22,6 +22,9 @@ int main(int argc, char *argv[]) {
 	model = convert_raw_to_svdag(raw_vox, chunk_width, chunk_height, chunk_depth, 4);
     } else if (!strcmp(argv[3], "raw")) {
 	model = append_metadata_to_raw(raw_vox, chunk_width, chunk_height, chunk_depth);
+    } else if (!strcmp(argv[3], "df")) {
+	model = convert_raw_color_to_df(raw_vox, chunk_width, chunk_height, chunk_depth, 4);
+	model = append_metadata_to_raw(model, chunk_width, chunk_height, chunk_depth);
     } else {
 	ASSERT(false, "Unrecognized model format.");
     }

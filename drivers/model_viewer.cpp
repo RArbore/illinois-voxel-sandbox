@@ -37,6 +37,13 @@ int main(int argc, char *argv[]) {
 	chunk = chunk_manager.add_chunk(
 					std::move(model_bytes), chunk_width, chunk_height, chunk_depth, VoxelChunk::Format::Raw,
 					VoxelChunk::AttributeSet::Color);
+    } else if (!strcmp(argv[2], "df")) {
+	chunk_width = model_ptr[0];
+	chunk_height = model_ptr[1];
+	chunk_depth = model_ptr[2];
+	chunk = chunk_manager.add_chunk(
+					std::move(model_bytes), chunk_width, chunk_height, chunk_depth, VoxelChunk::Format::DF,
+					VoxelChunk::AttributeSet::Color);
     } else {
 	ASSERT(false, "Unrecognized model format.");
     }
