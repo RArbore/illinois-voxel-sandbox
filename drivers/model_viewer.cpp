@@ -1,3 +1,4 @@
+#include <cstring>
 #include <fstream>
 
 #include <graphics/GraphicsContext.h>
@@ -7,22 +8,45 @@
 #include <voxels/VoxelChunkGeneration.h>
 
 int main(int argc, char *argv[]) {
-    ASSERT(argv[1], "Must provide a SVDAG model to render.");
+    ASSERT(argv[1], "Must provide a model to render.");
+    ASSERT(argv[2], "Must provide a format of the model.");
     std::string model_path(argv[1]);
 
     ChunkManager chunk_manager;
     std::ifstream stream(model_path,
 			 std::ios::in | std::ios::binary);
     const auto file_size = std::filesystem::file_size(model_path);
-    std::vector<std::byte> svdag = std::vector<std::byte>(file_size);
-    stream.read(reinterpret_cast<char*>(svdag.data()), file_size);
-    std::cout << "SVDAG Size: " << svdag.size() << "\n";
+    std::vector<std::byte> model_bytes = std::vector<std::byte>(file_size);
+    stream.read(reinterpret_cast<char*>(model_bytes.data()), file_size);
+    std::cout << "Model size: " << model_bytes.size() << " bytes\n";
 
-    uint32_t *svdag_ptr = reinterpret_cast<uint32_t *>(svdag.data());
-    uint32_t chunk_width = svdag_ptr[0], chunk_height = svdag_ptr[1], chunk_depth = svdag_ptr[2];
-    VoxelChunkPtr chunk = chunk_manager.add_chunk(
-						  std::move(svdag), chunk_width, chunk_height, chunk_depth, VoxelChunk::Format::SVDAG,
-						  VoxelChunk::AttributeSet::Color);
+    uint32_t *model_ptr = reinterpret_cast<uint32_t *>(model_bytes.data());
+    VoxelChunkPtr chunk;
+    uint32_t chunk_width, chunk_height, chunk_depth;
+    if (!strcmp(argv[2], "svdag")) {
+	chunk_width = model_ptr[0];
+	chunk_height = model_ptr[1];
+	chunk_depth = model_ptr[2];
+	chunk = chunk_manager.add_chunk(
+					std::move(model_bytes), chunk_width, chunk_height, chunk_depth, VoxelChunk::Format::SVDAG,
+					VoxelChunk::AttributeSet::Color);
+    } else if (!strcmp(argv[2], "raw")) {
+	chunk_width = model_ptr[0];
+	chunk_height = model_ptr[1];
+	chunk_depth = model_ptr[2];
+	chunk = chunk_manager.add_chunk(
+					std::move(model_bytes), chunk_width, chunk_height, chunk_depth, VoxelChunk::Format::Raw,
+					VoxelChunk::AttributeSet::Color);
+    } else if (!strcmp(argv[2], "df")) {
+	chunk_width = model_ptr[0];
+	chunk_height = model_ptr[1];
+	chunk_depth = model_ptr[2];
+	chunk = chunk_manager.add_chunk(
+					std::move(model_bytes), chunk_width, chunk_height, chunk_depth, VoxelChunk::Format::DF,
+					VoxelChunk::AttributeSet::Color);
+    } else {
+	ASSERT(false, "Unrecognized model format.");
+    }
     
     auto window = create_window();
     auto context = create_graphics_context(window);

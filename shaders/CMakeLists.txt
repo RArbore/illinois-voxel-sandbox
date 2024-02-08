@@ -16,6 +16,8 @@ set(GLSL_SHADER_FILES
   tonemap_comp.glsl
   Emissive_rchit.glsl
   Download_rchit.glsl
+  DF_Color_rchit.glsl
+  DF_Color_rint.glsl
 )
 
 foreach(FILE ${GLSL_SHADER_FILES})

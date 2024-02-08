@@ -464,3 +464,41 @@ void debug_print_svdag(const std::vector<std::byte> &svdag,
         debug_print_svdag_leaf_helper(std::span(svdag), bytes_per_voxel, 0);
     }
 }
+
+std::vector<std::byte> convert_raw_color_to_df(const std::vector<std::byte> &raw,
+					       uint32_t width, uint32_t height,
+					       uint32_t depth, uint32_t max_dist) {
+    std::vector<std::byte> df(raw);
+    for (uint32_t z = 0; z < depth; ++z) {
+	for (uint32_t y = 0; y < height; ++y) {
+	    for (uint32_t x = 0; x < width; ++x) {
+		size_t voxel_offset = (x + y * width + z * width * height) * 4;
+		if (raw[voxel_offset+3] != static_cast<std::byte>(0)) {
+		    df[voxel_offset+3] = static_cast<std::byte>(0);
+		} else {
+		    uint32_t min_dist = max_dist;
+		    for (uint32_t kz = z > max_dist ? z - max_dist : 0; kz <= z + max_dist && kz < depth; ++kz) {
+			for (uint32_t ky = y > max_dist ? y - max_dist : 0; ky <= y + max_dist && ky < height; ++ky) {
+			    for (uint32_t kx = x > max_dist ? x - max_dist : 0; kx <= x + max_dist && kx < width; ++kx) {
+				size_t kvoxel_offset = (kx + ky * width + kz * width * height) * 4;
+				if (raw[kvoxel_offset+3] != static_cast<std::byte>(0)) {
+				    uint32_t dist =
+					(z > kz ? z - kz : kz - z) +
+					(y > ky ? y - ky : ky - y) +
+					(x > kx ? x - kx : kx - x);
+				    if (dist < min_dist) {
+					min_dist = dist;
+				    }
+				}
+			    }
+			}
+		    }
+		    ASSERT(min_dist > 0, "The minimum distance from an empty voxel to a non-empty voxel cannot be 0.");
+		    df[voxel_offset+3] = static_cast<std::byte>(min_dist);
+		}
+	    }
+	}
+	printf("%u/%u\n", z + 1, depth);
+    }
+    return df;
+}
