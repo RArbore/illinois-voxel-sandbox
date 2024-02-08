@@ -29,6 +29,7 @@ class VoxelChunk {
         Raw,
         SVO,
 	SVDAG,
+	DF,
     };
 
     enum class AttributeSet {

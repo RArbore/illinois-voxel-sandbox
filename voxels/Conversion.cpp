@@ -464,3 +464,36 @@ void debug_print_svdag(const std::vector<std::byte> &svdag,
         debug_print_svdag_leaf_helper(std::span(svdag), bytes_per_voxel, 0);
     }
 }
+
+std::vector<std::byte> convert_raw_color_to_df(const std::vector<std::byte> &raw,
+					       uint32_t width, uint32_t height,
+					       uint32_t depth) {
+    std::vector<std::byte> df(raw);
+    for (uint32_t z = 0; z < depth; ++z) {
+	for (uint32_t y = 0; y < height; ++y) {
+	    for (uint32_t x = 0; x < width; ++x) {
+		size_t voxel_offset = (x + y * width + z * width * width) * 4;
+		if (df[voxel_offset+3] != static_cast<std::byte>(0)) {
+		    df[voxel_offset+3] = static_cast<std::byte>(0);
+		} else {
+		    uint32_t min_dist = 255;
+		    for (uint32_t kz = z > 255 ? z - 255 : 0; kz <= z + 255 && kz < depth; ++kz) {
+			for (uint32_t ky = y > 255 ? y - 255 : 0; ky <= y + 255 && ky < height; ++ky) {
+			    for (uint32_t kx = x > 255 ? x - 255 : 0; kx <= x + 255 && kx < width; ++kx) {
+				uint32_t dist =
+				    (z - kz > 0 ? z - kz : kz - z) +
+				    (y - ky > 0 ? y - ky : ky - y) +
+				    (x - kx > 0 ? x - kx : kx - x);
+				if (dist < min_dist) {
+				    min_dist = dist;
+				}
+			    }
+			}
+		    }
+		    df[voxel_offset+3] = static_cast<std::byte>(min_dist);
+		}
+	    }
+	}
+    }
+    return df;
+}
