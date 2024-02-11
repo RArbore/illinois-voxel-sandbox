@@ -19,6 +19,6 @@ struct InstantiatedFormat {
 
 std::vector<InstantiatedFormat> parse_format(std::string_view format_string);
 
-std::tuple<uint32_t, uint32_t, uint32_t> calculate_bounds(const std::vector<InstantiatedFormat> &format);
+std::tuple<uint32_t, uint32_t, uint32_t> calculate_bounds(const std::vector<InstantiatedFormat> &format, uint32_t starting_level = 0);
 
 std::string generate_construction_cpp(const std::vector<InstantiatedFormat> &format);
