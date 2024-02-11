@@ -6,7 +6,10 @@
 std::vector<InstantiatedFormat> parse_format(std::string_view format_string) {
     std::vector<InstantiatedFormat> format;
 
-    auto eat = [&](uint32_t num) {
+    auto eat = [&](std::size_t num) {
+	if (num == std::string::npos) {
+	    return;
+	}
 	format_string = format_string.substr(num);
     };
 
@@ -23,11 +26,11 @@ std::vector<InstantiatedFormat> parse_format(std::string_view format_string) {
 	clear_white_space();
 	for (uint32_t i = 0; i < num; ++i) {
 	    auto first_non_number = format_string.find_first_not_of("0123456789");
-	    if (first_non_number == 0) {
+	    if (first_non_number == 0 || first_non_number == std::string::npos) {
 		return false;
 	    }
 	    uint32_t number;
-	    if (std::from_chars(format_string.data(), format_string.data() + first_non_number, number).ec != std::errc{}) {
+	    if (std::from_chars(format_string.data(), format_string.data() + first_non_number, number).ec != std::errc{} || number == 0) {
 		return false;
 	    }
 	    dst[i] = number;
@@ -54,31 +57,31 @@ std::vector<InstantiatedFormat> parse_format(std::string_view format_string) {
 
     clear_white_space();
     while (!format_string.empty()) {
-	InstantiatedFormat format;
-	memset(&format, 0, sizeof(format));
+	InstantiatedFormat single_format;
+	memset(&single_format, 0, sizeof(single_format));
 
 	if (format_string.starts_with("Raw")) {
-	    format.format_ = Format::Raw;
+	    single_format.format_ = Format::Raw;
 	    eat(3);
-	    if (!parse_parameters(format.parameters_, 3)) {
+	    if (!parse_parameters(single_format.parameters_, 3)) {
 		return {};
 	    }
 	} else if (format_string.starts_with("DF")) {
-	    format.format_ = Format::DF;
+	    single_format.format_ = Format::DF;
 	    eat(2);
-	    if (!parse_parameters(format.parameters_, 3)) {
+	    if (!parse_parameters(single_format.parameters_, 3)) {
 		return {};
 	    }
 	} else if (format_string.starts_with("SVO")) {
-	    format.format_ = Format::SVO;
+	    single_format.format_ = Format::SVO;
 	    eat(3);
-	    if (!parse_parameters(format.parameters_, 1)) {
+	    if (!parse_parameters(single_format.parameters_, 1)) {
 		return {};
 	    }
 	} else if (format_string.starts_with("SVDAG")) {
-	    format.format_ = Format::SVDAG;
+	    single_format.format_ = Format::SVDAG;
 	    eat(5);
-	    if (!parse_parameters(format.parameters_, 1)) {
+	    if (!parse_parameters(single_format.parameters_, 1)) {
 		return {};
 	    }
 	} else {
@@ -86,6 +89,7 @@ std::vector<InstantiatedFormat> parse_format(std::string_view format_string) {
 	}
 
 	clear_white_space();
+	format.push_back(single_format);
     }
 
     return format;
