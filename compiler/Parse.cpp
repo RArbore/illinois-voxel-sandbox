@@ -94,3 +94,24 @@ std::vector<InstantiatedFormat> parse_format(std::string_view format_string) {
 
     return format;
 }
+
+std::tuple<uint32_t, uint32_t, uint32_t> calculate_bounds(const std::vector<InstantiatedFormat> &format) {
+    uint32_t running_w = 1, running_h = 1, running_d = 1;
+    for (const auto &level : format) {
+	switch (level.format_) {
+	case Format::Raw:
+	case Format::DF:
+	    running_w *= level.parameters_[0];
+	    running_h *= level.parameters_[1];
+	    running_d *= level.parameters_[2];
+	    break;
+	case Format::SVO:
+	case Format::SVDAG:
+	    running_w *= 1 << (level.parameters_[0] - 1);
+	    running_h *= 1 << (level.parameters_[0] - 1);
+	    running_d *= 1 << (level.parameters_[0] - 1);
+	    break;
+	};
+    }
+    return {running_w, running_h, running_d};
+}

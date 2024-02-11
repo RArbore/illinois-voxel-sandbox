@@ -25,4 +25,9 @@ int main(int argc, char *argv[]) {
 	    break;
 	};
     }
+
+    auto [w, h, d] = calculate_bounds(format);
+    std::cout << w << " x " << h << " x " << d << "\n";
+
+    std::cout << generate_construction_cpp(format);
 }

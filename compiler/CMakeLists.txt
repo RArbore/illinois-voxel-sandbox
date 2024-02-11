@@ -1,7 +1,8 @@
 cmake_minimum_required(VERSION 3.0)
 
 set (COMPILER_SRC
-  Compiler.cpp
+  Parse.cpp
+  Construction.cpp
 )
 
 add_library(compiler ${COMPILER_SRC})
