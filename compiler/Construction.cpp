@@ -51,6 +51,19 @@ std::string generate_construction_cpp(const std::vector<InstantiatedFormat> &for
 	    }
 	}
     };
+
+    auto print_format_node_accessor = [&](uint32_t level = 0) {
+	if (level < format.size()) {
+	    switch(format[level].format_) {
+	    case Format::SVO:
+	    case Format::SVDAG:
+		ss << ".first";
+		break;
+	    default:
+		break;
+	    }
+	}
+    };
     
     ss << R"(#include <cstdint>
 #include <vector>
@@ -89,7 +102,7 @@ static uint32_t push_node_to_buffer(std::vector<uint32_t> &buffer, const std::ar
 	print_level_node_type(i);
 	ss << R"( )";
 	print_format_identifier(i);
-	ss << R"(_construct_node(Voxelizer &voxelizer, std::vector<uint32_t> &buffer, uint32_t lower_x, uint32_t lower_y, uint32_t lower_z);
+	ss << R"(_construct_node(Voxelizer &voxelizer, std::vector<uint32_t> &buffer, uint32_t lower_x, uint32_t lower_y, uint32_t lower_z, bool &is_empty);
 
 )";
     }
@@ -100,10 +113,13 @@ static uint32_t push_node_to_buffer(std::vector<uint32_t> &buffer, const std::ar
 
     ss << R"(_construct(Voxelizer &voxelizer) {
     std::vector<uint32_t> buffer;
+    bool is_empty;
     auto root_node = )";
 
     print_format_identifier();
-    ss << R"(_construct_node(voxelizer, buffer, 0, 0, 0);)";
+    ss << R"(_construct_node(voxelizer, buffer, 0, 0, 0, is_empty))";
+    print_format_node_accessor(0);
+    ss << R"(;)";
 
     ss << R"(
     push_node_to_buffer(buffer, root_node);
@@ -117,7 +133,7 @@ static )";
 	print_level_node_type(i);
 	ss << R"( )";
 	print_format_identifier(i);
-	ss << R"(_construct_node(Voxelizer &voxelizer, std::vector<uint32_t> &buffer, uint32_t lower_x, uint32_t lower_y, uint32_t lower_z) {
+	ss << R"(_construct_node(Voxelizer &voxelizer, std::vector<uint32_t> &buffer, uint32_t lower_x, uint32_t lower_y, uint32_t lower_z, bool &is_empty) {
 )";
 	auto [sub_w, sub_h, sub_d] = calculate_bounds(format, i + 1);
 	auto [inc_w, inc_h, inc_d] = calculate_bounds(format, i);
@@ -126,9 +142,25 @@ static )";
 	switch (format[i].format_) {
 	case Format::Raw:
 	    ss << R"(    std::vector<uint32_t> raw_chunk;
+    is_empty = true;
     for (uint32_t g_x = 0; g_x < )" << this_w << R"(; ++g_x) {
         for (uint32_t g_y = 0; g_y < )" << this_h << R"(; ++g_y) {
             for (uint32_t g_z = 0; g_z < )" << this_d << R"(; ++g_z) {
+                uint32_t sub_lower_x = lower_x + g_x * )" << sub_w << R"(;
+                uint32_t sub_lower_y = lower_y + g_y * )" << sub_h << R"(;
+                uint32_t sub_lower_z = lower_z + g_z * )" << sub_d << R"(;
+                bool sub_is_empty;
+                auto sub_chunk = )";
+	    print_format_identifier(i + 1);
+	    ss << R"(_construct_node(voxelizer, buffer, sub_lower_x, sub_lower_y, sub_lower_z, sub_is_empty);
+                if (sub_is_empty) {
+                    raw_chunk.push_back(0);
+                } else {
+                    raw_chunk.push_back(push_node_to_buffer(buffer, sub_chunk)";
+	    print_format_node_accessor(i + 1);
+	    ss << R"());
+                }
+                is_empty = is_empty && sub_is_empty;
             }
         }
     }
@@ -144,8 +176,10 @@ static )";
     }
 
     ss << R"(
-static uint32_t _construct_node(Voxelizer &voxelizer, std::vector<uint32_t> &buffer, uint32_t lower_x, uint32_t lower_y, uint32_t lower_z) {
-    return voxelizer.at(lower_x, lower_y, lower_z);
+static uint32_t _construct_node(Voxelizer &voxelizer, std::vector<uint32_t> &buffer, uint32_t lower_x, uint32_t lower_y, uint32_t lower_z, bool &is_empty) {
+    uint32_t voxel = voxelizer.at(lower_x, lower_y, lower_z);
+    is_empty = voxel == 0;
+    return voxel;
 }
 )";
     
