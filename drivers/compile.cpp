@@ -9,6 +9,7 @@ int main(int argc, char *argv[]) {
     auto format = parse_format(argv[1]);
     ASSERT(format.size() > 0, "Failed to parse format.");
     
+    /*
     for (const auto &level : format) {
 	switch (level.format_) {
 	case Format::Raw:
@@ -28,6 +29,7 @@ int main(int argc, char *argv[]) {
 
     auto [w, h, d] = calculate_bounds(format);
     std::cout << w << " x " << h << " x " << d << "\n";
+    */
 
     std::cout << generate_construction_cpp(format);
 }

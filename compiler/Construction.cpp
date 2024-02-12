@@ -40,18 +40,44 @@ std::string generate_construction_cpp(const std::vector<InstantiatedFormat> &for
 		ss << "std::vector<uint32_t>";
 		break;
 	    case Format::SVO:
-		ss << "std::pair<std::array<2, uint32_t>, bool>";
+		ss << "std::pair<std::array<uint32_t, 2>, bool>";
 		break;
 	    case Format::SVDAG:
-		ss << "std::pair<std::array<8, uint32_t>, bool>";
+		ss << "std::pair<std::array<uint32_t, 8>, bool>";
 		break;
 	    }
 	}
     };
     
-    ss << R"(#include <vector>
+    ss << R"(#include <cstdint>
+#include <vector>
+#include <array>
 
 #include "Voxel.h"
+
+static uint32_t push_node_to_buffer(std::vector<uint32_t> &buffer, uint32_t node) {
+    uint32_t offset = buffer.size();
+    buffer.push_back(node);
+    return offset;
+}
+
+static uint32_t push_node_to_buffer(std::vector<uint32_t> &buffer, const std::vector<uint32_t> &node) {
+    uint32_t offset = buffer.size();
+    buffer.insert(buffer.end(), node.cbegin(), node.cend());
+    return offset;
+}
+
+static uint32_t push_node_to_buffer(std::vector<uint32_t> &buffer, const std::array<uint32_t, 2> &node) {
+    uint32_t offset = buffer.size();
+    buffer.insert(buffer.end(), node.cbegin(), node.cend());
+    return offset;
+}
+
+static uint32_t push_node_to_buffer(std::vector<uint32_t> &buffer, const std::array<uint32_t, 8> &node) {
+    uint32_t offset = buffer.size();
+    buffer.insert(buffer.end(), node.cbegin(), node.cend());
+    return offset;
+}
 
 )";
 
@@ -60,7 +86,7 @@ std::string generate_construction_cpp(const std::vector<InstantiatedFormat> &for
 	print_level_node_type(i);
 	ss << R"( )";
 	print_format_identifier(i);
-	ss << R"(_construct(Voxelizer &voxelizer, std::vector<uint32_t> &buffer, uint32_t lower_x, uint32_t lower_y, uint32_t lower_z);
+	ss << R"(_construct_node(Voxelizer &voxelizer, std::vector<uint32_t> &buffer, uint32_t lower_x, uint32_t lower_y, uint32_t lower_z);
 
 )";
     }
@@ -71,8 +97,33 @@ std::string generate_construction_cpp(const std::vector<InstantiatedFormat> &for
 
     ss << R"(_construct(Voxelizer &voxelizer) {
     std::vector<uint32_t> buffer;
+    auto root_node = )";
 
+    print_format_identifier();
+    ss << R"(_construct_node(voxelizer, buffer, 0, 0, 0);)";
+
+    ss << R"(
+    push_node_to_buffer(buffer, root_node);
     return buffer;
+}
+)";
+
+    for (uint32_t i = 0; i < format.size(); ++i) {
+	ss << R"(
+static )";
+	print_level_node_type(i);
+	ss << R"( )";
+	print_format_identifier(i);
+	ss << R"(_construct_node(Voxelizer &voxelizer, std::vector<uint32_t> &buffer, uint32_t lower_x, uint32_t lower_y, uint32_t lower_z) {
+)";
+
+	ss << R"(}
+)";
+    }
+
+    ss << R"(
+static uint32_t _construct_node(Voxelizer &voxelizer, std::vector<uint32_t> &buffer, uint32_t lower_x, uint32_t lower_y, uint32_t lower_z) {
+    return voxelizer.at(lower_x, lower_y, lower_z);
 }
 )";
     
