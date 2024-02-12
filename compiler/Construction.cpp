@@ -1,4 +1,7 @@
 #include <sstream>
+
+#include <utils/Assert.h>
+
 #include "Compiler.h"
 
 std::string generate_construction_cpp(const std::vector<InstantiatedFormat> &format) {
@@ -116,6 +119,25 @@ static )";
 	print_format_identifier(i);
 	ss << R"(_construct_node(Voxelizer &voxelizer, std::vector<uint32_t> &buffer, uint32_t lower_x, uint32_t lower_y, uint32_t lower_z) {
 )";
+	auto [sub_w, sub_h, sub_d] = calculate_bounds(format, i + 1);
+	auto [inc_w, inc_h, inc_d] = calculate_bounds(format, i);
+	auto this_w = inc_w / sub_w, this_h = inc_h / sub_h, this_d = inc_d / sub_d;
+
+	switch (format[i].format_) {
+	case Format::Raw:
+	    ss << R"(    std::vector<uint32_t> raw_chunk;
+    for (uint32_t g_x = 0; g_x < )" << this_w << R"(; ++g_x) {
+        for (uint32_t g_y = 0; g_y < )" << this_h << R"(; ++g_y) {
+            for (uint32_t g_z = 0; g_z < )" << this_d << R"(; ++g_z) {
+            }
+        }
+    }
+    return raw_chunk;
+)";
+	    break;
+	default:
+	    ASSERT(false, "Unhandled format.");
+	};
 
 	ss << R"(}
 )";
