@@ -112,7 +112,7 @@ static uint32_t push_node_to_buffer(std::vector<uint32_t> &buffer, const std::ar
     print_format_identifier();
 
     ss << R"(_construct(Voxelizer &voxelizer) {
-    std::vector<uint32_t> buffer;
+    std::vector<uint32_t> buffer {0};
     bool is_empty;
     auto root_node = )";
 
@@ -122,7 +122,7 @@ static uint32_t push_node_to_buffer(std::vector<uint32_t> &buffer, const std::ar
     ss << R"(;)";
 
     ss << R"(
-    push_node_to_buffer(buffer, root_node);
+    buffer.at(0) = push_node_to_buffer(buffer, root_node);
     return buffer;
 }
 )";
