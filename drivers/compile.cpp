@@ -31,5 +31,6 @@ int main(int argc, char *argv[]) {
     std::cout << w << " x " << h << " x " << d << "\n";
     */
 
-    std::cout << generate_construction_cpp(format);
+    std::cout << generate_construction_cpp(format) << "\n";
+    std::cout << generate_intersection_glsl(format) << "\n";
 }
