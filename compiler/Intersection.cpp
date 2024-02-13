@@ -18,16 +18,16 @@ std::string generate_intersection_glsl(const std::vector<InstantiatedFormat> &fo
 
 hitAttributeEXT uint leaf_id;
 
-bool intersect_format_)" << format.size() << R"((uint volume_id, uint node_id, vec3 obj_ray_pos, vec3 obj_ray_dir, float t) {
+bool intersect_format_)" << format.size() << R"((uint volume_id, uint node_id, vec3 obj_ray_pos, vec3 obj_ray_dir, float t, uint hit_kind) {
     leaf_id = node_id;
-    reportIntersectionEXT(t, 0);
+    reportIntersectionEXT(t, hit_kind);
     return true;
 }
 )";
 
     for (int32_t i = format.size() - 1; i >= 0; --i) {
 	ss << R"(
-bool intersect_format_)" << i << R"((uint volume_id, uint node_id, vec3 obj_ray_pos, vec3 obj_ray_dir, float t) {
+bool intersect_format_)" << i << R"((uint volume_id, uint node_id, vec3 obj_ray_pos, vec3 obj_ray_dir, float t, uint hit_kind) {
 )";
 	
 	auto [sub_w, sub_h, sub_d] = calculate_bounds(format, i + 1);
@@ -63,7 +63,7 @@ bool intersect_format_)" << i << R"((uint volume_id, uint node_id, vec3 obj_ray_
         if (child_id != 0) {
             aabb_intersect_result r = hit_aabb(chunk_ray_voxel, chunk_ray_voxel + 1, chunk_ray_pos, chunk_ray_dir);
             float intersect_time = length(gl_ObjectToWorldEXT * vec4(chunk_ray_pos + chunk_ray_dir * r.front_t, 1.0) - gl_ObjectToWorldEXT * vec4(chunk_ray_pos, 1.0));
-            if (intersect_format_)" << i + 1 << R"((volume_id, child_id, obj_ray_pos, obj_ray_dir, intersect_time)) {
+            if (intersect_format_)" << i + 1 << R"((volume_id, child_id, obj_ray_pos, obj_ray_dir, intersect_time, r.k)) {
                 return true;
             }
         }
@@ -92,7 +92,7 @@ void main() {
 
     aabb_intersect_result r = hit_aabb(vec3(0.0), vec3()" << total_w << R"(.0, )" << total_h << R"(.0, )" << total_d << R"(.0), obj_ray_pos, obj_ray_dir);
     if (r.front_t != -FAR_AWAY) {
-        intersect_format_0(volume_id, root_id, obj_ray_pos, obj_ray_dir, r.front_t);
+        intersect_format_0(volume_id, root_id, obj_ray_pos, obj_ray_dir, r.front_t, r.k);
     }
 }
 )";
