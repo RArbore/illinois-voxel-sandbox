@@ -61,12 +61,36 @@ Shader::Shader(std::shared_ptr<Device> device, std::string_view shader_name) {
     shader_name_ = shader_name;
 }
 
+Shader::~Shader() {
+    vkDestroyShaderModule(device_->get_device(), module_, nullptr);
+}
+
 VkShaderModule Shader::get_module() { return module_; }
 
 VkShaderStageFlagBits Shader::get_stage() { return stage_; }
 
-Shader::~Shader() {
-    vkDestroyShaderModule(device_->get_device(), module_, nullptr);
+std::vector<std::string> gather_custom_intersection_shader_names() {
+    std::vector<std::string_view> possible_prefixes = {
+        "./",
+        "build/",
+        "illinois-voxel-sandbox/build/",
+        "../",
+        "../../",
+        "../../../",
+        "../../../../"};
+
+    std::unordered_set<std::string> shader_names;
+    for (const auto &prefix : possible_prefixes) {
+        if (std::filesystem::exists(prefix)) {
+	    for (const auto &dir_entry : std::filesystem::directory_iterator(prefix)) {
+		if (std::string(dir_entry.path()).ends_with("_intersect.spv")) {
+		    shader_names.emplace(dir_entry.path().filename());
+		}
+	    }
+	}
+    }
+
+    return std::vector<std::string>(shader_names.begin(), shader_names.end());
 }
 
 RayTracePipeline::RayTracePipeline(

@@ -24,6 +24,8 @@ class Shader {
     std::string_view shader_name_;
 };
 
+std::vector<std::string> gather_custom_intersection_shader_names();
+
 class RayTracePipeline {
   public:
     RayTracePipeline(

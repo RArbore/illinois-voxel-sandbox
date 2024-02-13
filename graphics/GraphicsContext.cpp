@@ -43,6 +43,8 @@ class GraphicsContext {
     std::shared_ptr<DescriptorAllocator> descriptor_allocator_ = nullptr;
     std::shared_ptr<RingBuffer> ring_buffer_ = nullptr;
 
+    std::map<std::string, uint32_t> custom_intersection_shaders_;
+
     std::shared_ptr<ComputePipeline> tonemap_pipeline_ = nullptr;
     std::vector<std::shared_ptr<DescriptorSet>> tonemap_descriptors_; // Needed per swapchain image?
 
@@ -304,6 +306,9 @@ GraphicsContext::GraphicsContext(std::shared_ptr<Window> window) {
         {download_rchit, raw_color_rint},
         {download_rchit, df_color_rint},
     };
+
+    auto customs = gather_custom_intersection_shader_names();
+
     std::vector<VkDescriptorSetLayout> layouts = {
         swapchain_->get_image_descriptor(0)->get_layout(),
         scene_builder.get_layout()->get_layout(),
