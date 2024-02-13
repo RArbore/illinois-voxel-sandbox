@@ -47,7 +47,7 @@ std::string generate_construction_cpp(const std::vector<InstantiatedFormat> &for
 #include <vector>
 #include <array>
 
-#include "Voxel.h"
+#include "Voxelize.h"
 
 static uint32_t push_node_to_buffer(std::vector<uint32_t> &buffer, uint32_t node) {
     uint32_t offset = buffer.size();

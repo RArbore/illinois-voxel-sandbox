@@ -1,4 +1,5 @@
 #include <filesystem>
+#include <cstring>
 #include <cmath>
 
 #include <external/tinyobjloader/tiny_obj_loader.h>
@@ -350,4 +351,12 @@ std::vector<std::byte> raw_voxelize_obj(std::string_view filepath, float voxel_s
     out_chunk_height = chunk_height;
     out_chunk_depth = chunk_depth;
     return data;
+}
+
+uint32_t Voxelizer::at(uint32_t x, uint32_t y, uint32_t z) {
+    static_assert(4 * sizeof(std::byte) == sizeof(uint32_t));
+    size_t linear_index = x + width_ * y + width_ * height_ * z;
+    uint32_t voxel;
+    memcpy(&voxel, voxels_.data() + 4 * linear_index, sizeof(uint32_t));
+    return voxel;
 }

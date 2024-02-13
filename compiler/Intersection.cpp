@@ -58,9 +58,9 @@ bool intersect_format_)" << i << R"((uint volume_id, uint node_id, vec3 obj_ray_
 
     while (all(greaterThanEqual(chunk_ray_voxel, ivec3(0))) && all(lessThan(chunk_ray_voxel, ivec3()" << this_w << R"(, )" << this_h << R"(, )" << this_d << R"()))) {
         uint32_t voxel_index = linearize_index(chunk_ray_voxel, )" << this_w << R"(, )" << this_h << R"(, )" << this_d << R"();
-        uint32_t child_id = voxel_buffers[volume_id][node_id + voxel_index];
+        uint32_t child_id = voxel_buffers[volume_id].voxels[node_id + voxel_index];
 
-        if (palette != 0) {
+        if (child_id != 0) {
             aabb_intersect_result r = hit_aabb(chunk_ray_voxel, chunk_ray_voxel + 1, chunk_ray_pos, chunk_ray_dir);
             float intersect_time = length(gl_ObjectToWorldEXT * vec4(chunk_ray_pos + chunk_ray_dir * r.front_t, 1.0) - gl_ObjectToWorldEXT * vec4(chunk_ray_pos, 1.0));
             if (intersect_format_)" << i + 1 << R"((volume_id, child_id, obj_ray_pos, obj_ray_dir, intersect_time)) {
@@ -85,7 +85,7 @@ bool intersect_format_)" << i << R"((uint volume_id, uint node_id, vec3 obj_ray_
     ss << R"(
 void main() {
     uint volume_id = gl_InstanceCustomIndexEXT;
-    uint root_id = voxel_buffers[volume_id][0];
+    uint root_id = voxel_buffers[volume_id].voxels[0];
 
     vec3 obj_ray_pos = gl_WorldToObjectEXT * vec4(gl_WorldRayOriginEXT, 1.0);
     vec3 obj_ray_dir = normalize(gl_WorldToObjectEXT * vec4(gl_WorldRayDirectionEXT, 0.0));

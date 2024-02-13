@@ -66,6 +66,10 @@ layout(set = 0, binding = 0, rgba8) uniform image2D output_image;
 // Set 1 is swapped out per scene.
 layout(set = 1, binding = 0) uniform accelerationStructureEXT tlas;
 
+layout(set = 1, binding = 1) buffer VoxelBuffer {
+    uint32_t voxels[];
+} voxel_buffers[];
+
 layout(set = 1, binding = 1) buffer RawBuffer {
     uint32_t voxel_width;
     uint32_t voxel_height;
