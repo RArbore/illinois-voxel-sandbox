@@ -59,78 +59,34 @@ static std::vector<uint32_t> df_24_24_24_8_raw_16_16_16_construct_node(Voxelizer
                 } else {
                     df_chunk.push_back(push_node_to_buffer(buffer, sub_chunk));
                 }
-                df_chunk.push_back(k);
+                df_chunk.push_back(1);
                 is_empty = is_empty && sub_is_empty;
             }
         }
     }
     if (!is_empty) {
-        for (uint32_t g_x = 0; g_x < 24; ++g_x) {
+        for (uint32_t g_z = 0; g_z < 24; ++g_z) {
             for (uint32_t g_y = 0; g_y < 24; ++g_y) {
-                for (uint32_t g_z = 0; g_z < 24; ++g_z) {
+                for (uint32_t g_x = 0; g_x < 24; ++g_x) {
                     uint32_t g_voxel_offset = (g_x + g_y * 24 + g_z * 24 * 24);
-                    if (df_chunk[g_voxel_offset * 2]) {
-                        uint32_t limit_nx = 0, limit_ny = 0, limit_nz = 0, limit_px = 0, limit_py = 0, limit_pz = 0;
-                        for (uint32_t d = 1; d < k && !(limit_nx && limit_ny && limit_nz && limit_px && limit_py && limit_pz); ++d) {
-                            uint32_t bound_nx = limit_nx ? limit_nx : d > g_x ? 0 : g_x - d;
-                            uint32_t bound_ny = limit_ny ? limit_ny : d > g_y ? 0 : g_y - d;
-                            uint32_t bound_nz = limit_nz ? limit_nz : d > g_z ? 0 : g_z - d;
-                            uint32_t bound_px = limit_px ? limit_px : d + g_x < 24 ? 23 : g_x + d;
-                            uint32_t bound_py = limit_py ? limit_py : d + g_y < 24 ? 23 : g_y + d;
-                            uint32_t bound_pz = limit_pz ? limit_pz : d + g_z < 24 ? 23 : g_z + d;
-                            for (uint32_t k_x = bound_nx; k_x <= bound_px; ++k_x) {
-                                for (uint32_t k_y = bound_ny; k_y <= bound_py; ++k_y) {
-                                    uint32_t k_n_voxel_offset = (k_x + k_y * 24 + bound_nz * 24 * 24);
-                                    uint32_t prev_n = df_chunk[k_n_voxel_offset * 2 + 1];
-                                    if (df_chunk[k_n_voxel_offset * 2]) {
-                                        limit_nz = bound_nz;
-                                    }
-                                    df_chunk[k_n_voxel_offset * 2 + 1] = prev_n > d ? d : prev_n;
-
-                                    uint32_t k_p_voxel_offset = (k_x + k_y * 24 + bound_pz * 24 * 24);
-                                    uint32_t prev_p = df_chunk[k_p_voxel_offset * 2 + 1];
-                                    if (df_chunk[k_p_voxel_offset * 2]) {
-                                        limit_pz = bound_pz;
-                                    }
-                                    df_chunk[k_p_voxel_offset * 2 + 1] = prev_p > d ? d : prev_p;
-                                }
-                            }
-                            for (uint32_t k_x = bound_nx; k_x <= bound_px; ++k_x) {
-                                for (uint32_t k_z = bound_nz; k_z <= bound_pz; ++k_z) {
-                                    uint32_t k_n_voxel_offset = (k_x + bound_ny * 24 + k_z * 24 * 24);
-                                    uint32_t prev_n = df_chunk[k_n_voxel_offset * 2 + 1];
-                                    if (df_chunk[k_n_voxel_offset * 2]) {
-                                        limit_ny = bound_ny;
-                                    }
-                                    df_chunk[k_n_voxel_offset * 2 + 1] = prev_n > d ? d : prev_n;
-
-                                    uint32_t k_p_voxel_offset = (k_x + bound_py * 24 + k_z * 24 * 24);
-                                    uint32_t prev_p = df_chunk[k_p_voxel_offset * 2 + 1];
-                                    if (df_chunk[k_p_voxel_offset * 2]) {
-                                        limit_py = bound_py;
-                                    }
-                                    df_chunk[k_p_voxel_offset * 2 + 1] = prev_p > d ? d : prev_p;
-                                }
-                            }
-                            for (uint32_t k_y = bound_ny; k_y <= bound_py; ++k_y) {
-                                for (uint32_t k_z = bound_nz; k_z <= bound_pz; ++k_z) {
-                                    uint32_t k_n_voxel_offset = (bound_nx + k_y * 24 + k_z * 24 * 24);
-                                    uint32_t prev_n = df_chunk[k_n_voxel_offset * 2 + 1];
-                                    if (df_chunk[k_n_voxel_offset * 2]) {
-                                        limit_nx = bound_nx;
-                                    }
-                                    df_chunk[k_n_voxel_offset * 2 + 1] = prev_n > d ? d : prev_n;
-
-                                    uint32_t k_p_voxel_offset = (bound_px + k_y * 24 + k_z * 24 * 24);
-                                    uint32_t prev_p = df_chunk[k_p_voxel_offset * 2 + 1];
-                                    if (df_chunk[k_p_voxel_offset * 2]) {
-                                        limit_px = bound_px;
-                                    }
-                                    df_chunk[k_p_voxel_offset * 2 + 1] = prev_p > d ? d : prev_p;
-                                }
-                            }
-                        }
-                    }
+		    uint32_t min_dist = k;
+		    for (uint32_t kz = g_z > k ? g_z - k : 0; kz <= g_z + k && kz < 24; ++kz) {
+			for (uint32_t ky = g_y > k ? g_y - k : 0; ky <= g_y + k && ky < 24; ++ky) {
+			    for (uint32_t kx = g_x > k ? g_x - k : 0; kx <= g_x + k && kx < 24; ++kx) {
+				size_t k_voxel_offset = kx + ky * 24 + kz * 24 * 24;
+				if (df_chunk[k_voxel_offset * 2] != 0) {
+				    uint32_t dist =
+					(g_z > kz ? g_z - kz : kz - g_z) +
+					(g_y > ky ? g_y - ky : ky - g_y) +
+					(g_x > kx ? g_x - kx : kx - g_x);
+				    if (dist < min_dist && dist) {
+					min_dist = dist;
+				    }
+				}
+			    }
+			}
+		    }
+                    df_chunk[g_voxel_offset * 2 + 1] = min_dist;
                 }
             }
         }
