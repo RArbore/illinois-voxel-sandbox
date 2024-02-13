@@ -49,6 +49,17 @@ int main(int argc, char *argv[]) {
 	chunk_width = 384;
 	chunk_height = 384;
 	chunk_depth = 384;
+
+	auto root_node = model_ptr[0];
+	for (uint32_t i = 0; i < 24; i += 23) {
+	    for (uint32_t j = 0; j < 24; j += 23) {
+		for (uint32_t k = 0; k < 24; k += 23) {
+		    uint32_t l = i + j * 24 + k * 24 * 24;
+		    std::cout << i << " " << j << " " << k << " " << model_ptr[root_node + 2 * l] << " " << model_ptr[root_node + 2 * l + 1] << "\n";
+		}
+	    }
+	}
+		    
 	chunk = chunk_manager.add_chunk(
 					std::move(model_bytes), chunk_width, chunk_height, chunk_depth, argv[2]);
     }

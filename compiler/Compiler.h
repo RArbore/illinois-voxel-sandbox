@@ -14,7 +14,7 @@ enum class Format {
 
 struct InstantiatedFormat {
     Format format_;
-    uint32_t parameters_[3];
+    uint32_t parameters_[4];
 };
 
 std::vector<InstantiatedFormat> parse_format(std::string_view format_string);

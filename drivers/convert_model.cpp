@@ -10,6 +10,8 @@
 
 std::vector<uint32_t> raw_24_24_24_raw_16_16_16_construct(Voxelizer &voxelizer);
 
+std::vector<uint32_t> df_24_24_24_8_raw_16_16_16_construct(Voxelizer &voxelizer);
+
 int main(int argc, char *argv[]) {
     ASSERT(argv[1], "Must provide a .obj model to convert.");
     std::string model_path(argv[1]);
@@ -40,6 +42,11 @@ int main(int argc, char *argv[]) {
     } else if (!strcmp(argv[3], "raw_24_24_24_raw_16_16_16")) {
 	Voxelizer voxelizer(std::move(raw_vox), chunk_width, chunk_height, chunk_depth);
 	auto model = raw_24_24_24_raw_16_16_16_construct(voxelizer);
+	write(reinterpret_cast<const char *>(model.data()), model.size() * sizeof(uint32_t));
+	return 0;
+    } else if (!strcmp(argv[3], "df_24_24_24_8_raw_16_16_16")) {
+	Voxelizer voxelizer(std::move(raw_vox), chunk_width, chunk_height, chunk_depth);
+	auto model = df_24_24_24_8_raw_16_16_16_construct(voxelizer);
 	write(reinterpret_cast<const char *>(model.data()), model.size() * sizeof(uint32_t));
 	return 0;
     } else {

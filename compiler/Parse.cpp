@@ -70,7 +70,7 @@ std::vector<InstantiatedFormat> parse_format(std::string_view format_string) {
 	} else if (format_string.starts_with("DF")) {
 	    single_format.format_ = Format::DF;
 	    eat(2);
-	    if (!parse_parameters(single_format.parameters_, 3)) {
+	    if (!parse_parameters(single_format.parameters_, 4)) {
 		return {};
 	    }
 	} else if (format_string.starts_with("SVO")) {
@@ -126,7 +126,7 @@ std::string format_identifier(const std::vector<InstantiatedFormat> &format, uin
 	    ss << "raw_" << format[level].parameters_[0] << "_" << format[level].parameters_[1] << "_" << format[level].parameters_[2];
 	    break;
 	case Format::DF:
-	    ss << "df_" << format[level].parameters_[0] << "_" << format[level].parameters_[1] << "_" << format[level].parameters_[2];
+	    ss << "df_" << format[level].parameters_[0] << "_" << format[level].parameters_[1] << "_" << format[level].parameters_[2] << "_" << format[level].parameters_[3];
 	    break;
 	case Format::SVO:
 	    ss << "svo_" << format[level].parameters_[0];
