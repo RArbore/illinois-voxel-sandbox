@@ -18,16 +18,17 @@ std::string generate_intersection_glsl(const std::vector<InstantiatedFormat> &fo
 
 hitAttributeEXT uint leaf_id;
 
-bool intersect_format_)" << format.size() << R"((uint volume_id, uint node_id, vec3 obj_ray_pos, vec3 obj_ray_dir, float t, uint hit_kind) {
+bool intersect_format_)" << format.size() << R"((uint volume_id, uint node_id, vec3 obj_ray_pos, vec3 obj_ray_dir, vec3 lower, float o_t, uint hit_kind) {
     leaf_id = node_id;
-    reportIntersectionEXT(t, hit_kind);
+    float intersect_time = length(gl_ObjectToWorldEXT * vec4(obj_ray_pos + obj_ray_dir * o_t, 1.0) - gl_ObjectToWorldEXT * vec4(obj_ray_pos, 1.0));
+    reportIntersectionEXT(intersect_time, hit_kind);
     return true;
 }
 )";
 
     for (int32_t i = format.size() - 1; i >= 0; --i) {
 	ss << R"(
-bool intersect_format_)" << i << R"((uint volume_id, uint node_id, vec3 obj_ray_pos, vec3 obj_ray_dir, float t, uint hit_kind) {
+bool intersect_format_)" << i << R"((uint volume_id, uint node_id, vec3 obj_ray_pos, vec3 obj_ray_dir, vec3 lower, float o_t, uint hit_kind) {
 )";
 	
 	auto [sub_w, sub_h, sub_d] = calculate_bounds(format, i + 1);
@@ -48,9 +49,9 @@ bool intersect_format_)" << i << R"((uint volume_id, uint node_id, vec3 obj_ray_
 
 	switch (format[i].format_) {
 	case Format::Raw:
-	    ss << R"(    vec3 chunk_ray_pos = obj_ray_pos / vec3(sub_w, sub_h, sub_d);
+	    ss << R"(    vec3 chunk_ray_pos = (obj_ray_pos - lower) / vec3(sub_w, sub_h, sub_d);
     vec3 chunk_ray_dir = obj_ray_dir;
-    vec3 chunk_ray_intersect_point = chunk_ray_pos + chunk_ray_dir * max(t, 0.0) / vec3(sub_w, sub_h, sub_d);
+    vec3 chunk_ray_intersect_point = chunk_ray_pos + chunk_ray_dir * max(o_t, 0.0) / vec3(sub_w, sub_h, sub_d);
     ivec3 chunk_ray_voxel = ivec3(min(chunk_ray_intersect_point, ivec3()" << (this_w - 1) << R"(, )" <<  (this_h - 1) << R"(, )" << (this_d - 1) << R"()));
     ivec3 chunk_ray_step = ivec3(sign(chunk_ray_dir));
     vec3 chunk_ray_delta = abs(vec3(length(chunk_ray_dir)) / chunk_ray_dir);
@@ -61,9 +62,8 @@ bool intersect_format_)" << i << R"((uint volume_id, uint node_id, vec3 obj_ray_
         uint32_t child_id = voxel_buffers[volume_id].voxels[node_id + voxel_index];
 
         if (child_id != 0) {
-            aabb_intersect_result r = hit_aabb(chunk_ray_voxel, chunk_ray_voxel + 1, chunk_ray_pos, chunk_ray_dir);
-            float intersect_time = length(gl_ObjectToWorldEXT * vec4(chunk_ray_pos + chunk_ray_dir * r.front_t, 1.0) - gl_ObjectToWorldEXT * vec4(chunk_ray_pos, 1.0));
-            if (intersect_format_)" << i + 1 << R"((volume_id, child_id, obj_ray_pos, obj_ray_dir, intersect_time, r.k)) {
+            aabb_intersect_result r = hit_aabb(chunk_ray_voxel * vec3(sub_w, sub_h, sub_d) + lower, (chunk_ray_voxel + 1) * vec3(sub_w, sub_h, sub_d) + lower, obj_ray_pos, obj_ray_dir);
+            if (intersect_format_)" << i + 1 << R"((volume_id, child_id, obj_ray_pos, obj_ray_dir, chunk_ray_voxel * vec3(sub_w, sub_h, sub_d) + lower, r.front_t, r.k)) {
                 return true;
             }
         }
@@ -92,7 +92,7 @@ void main() {
 
     aabb_intersect_result r = hit_aabb(vec3(0.0), vec3()" << total_w << R"(.0, )" << total_h << R"(.0, )" << total_d << R"(.0), obj_ray_pos, obj_ray_dir);
     if (r.front_t != -FAR_AWAY) {
-        intersect_format_0(volume_id, root_id, obj_ray_pos, obj_ray_dir, r.front_t, r.k);
+        intersect_format_0(volume_id, root_id, obj_ray_pos, obj_ray_dir, vec3(0.0), r.front_t, r.k);
     }
 }
 )";
