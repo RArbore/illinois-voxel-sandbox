@@ -8,12 +8,24 @@
 #include <voxels/VoxelChunkGeneration.h>
 #include <utils/Assert.h>
 
+std::vector<uint32_t> raw_24_24_24_raw_16_16_16_construct(Voxelizer &voxelizer);
+
 int main(int argc, char *argv[]) {
     ASSERT(argv[1], "Must provide a .obj model to convert.");
     std::string model_path(argv[1]);
     ASSERT(model_path.ends_with(".obj"), "Must provide a .obj model to convert.");
     ASSERT(argv[2], "Must provide a resolution to voxelize at.");
     ASSERT(argv[3], "Must provide a format to output.");
+
+    auto write = [&](const char *ptr, std::size_t num_bytes) {
+	std::cout << "Model size: " << num_bytes << "\n";
+	
+	model_path = model_path.substr(0, model_path.size() - 4);
+	std::ofstream stream(model_path,
+			     std::ios::out | std::ios::binary);
+	stream.write(ptr, num_bytes);
+    };
+    
     float res = std::stof(std::string(argv[2]));
     uint32_t chunk_width, chunk_height, chunk_depth;
     auto raw_vox = raw_voxelize_obj(model_path, res, chunk_width, chunk_height, chunk_depth);
@@ -25,13 +37,13 @@ int main(int argc, char *argv[]) {
     } else if (!strcmp(argv[3], "df")) {
 	model = convert_raw_color_to_df(raw_vox, chunk_width, chunk_height, chunk_depth, 4);
 	model = append_metadata_to_raw(model, chunk_width, chunk_height, chunk_depth);
+    } else if (!strcmp(argv[3], "raw_24_24_24_raw_16_16_16")) {
+	Voxelizer voxelizer(std::move(raw_vox), chunk_width, chunk_height, chunk_depth);
+	auto model = raw_24_24_24_raw_16_16_16_construct(voxelizer);
+	write(reinterpret_cast<const char *>(model.data()), model.size() * sizeof(uint32_t));
+	return 0;
     } else {
 	ASSERT(false, "Unrecognized model format.");
     }
-    std::cout << "Model size: " << model.size() << "\n";
-
-    model_path = model_path.substr(0, model_path.size() - 4);
-    std::ofstream stream(model_path,
-			 std::ios::out | std::ios::binary);
-    stream.write(reinterpret_cast<char*>(model.data()), model.size());
+    write(reinterpret_cast<const char *>(model.data()), model.size());
 }

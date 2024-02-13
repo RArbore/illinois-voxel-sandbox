@@ -286,6 +286,13 @@ GraphicsContext::GraphicsContext(std::shared_ptr<Window> window) {
     auto df_color_rint = std::make_shared<Shader>(device_, "DF_Color_rint");
     auto emissive_rchit = std::make_shared<Shader>(device_, "Emissive_rchit");
     auto download_rchit = std::make_shared<Shader>(device_, "Download_rchit");
+    auto generic_rchit = std::make_shared<Shader>(device_, "Generic_rchit");
+
+    auto customs = gather_custom_intersection_shader_names();
+    for (uint32_t i = 0; i < customs.size(); ++i) {
+	custom_intersection_shaders_.emplace(customs[i], i + FORMAT_TO_SBT_OFFSET.size() + 1);
+    }
+
     std::vector<std::vector<std::shared_ptr<Shader>>> shader_groups = {
         {rgen},
         {rmiss},
@@ -307,7 +314,11 @@ GraphicsContext::GraphicsContext(std::shared_ptr<Window> window) {
         {download_rchit, df_color_rint},
     };
 
-    auto customs = gather_custom_intersection_shader_names();
+    for (const std::string &custom : customs) {
+	auto shader = std::make_shared<Shader>(device_, custom);
+	shader_groups.push_back({generic_rchit, shader});
+	download_shader_groups.push_back({download_rchit, shader});
+    }
 
     std::vector<VkDescriptorSetLayout> layouts = {
         swapchain_->get_image_descriptor(0)->get_layout(),
@@ -552,8 +563,9 @@ build_model(std::shared_ptr<GraphicsContext> context, VoxelChunkPtr chunk) {
     std::shared_ptr<BLAS> blas =
         std::make_shared<BLAS>(context->gpu_allocator_, context->command_pool_,
                                context->ring_buffer_, aabbs);
-    uint32_t sbt_offset = FORMAT_TO_SBT_OFFSET.at(
-        {chunk->get_format(), chunk->get_attribute_set()});
+    uint32_t sbt_offset = chunk->get_custom_format().empty()
+	? FORMAT_TO_SBT_OFFSET.at({chunk->get_format(), chunk->get_attribute_set()})
+	: context->custom_intersection_shaders_.at(chunk->get_custom_format() + "_intersect");
     return std::make_shared<GraphicsModel>(blas, chunk, sbt_offset);
 }
 

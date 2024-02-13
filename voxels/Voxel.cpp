@@ -11,6 +11,12 @@ VoxelChunk::VoxelChunk(std::vector<std::byte> &&data, uint32_t width,
     : cpu_data_(data), width_(width), height_(height), depth_(depth),
       state_(state), format_(format), attribute_set_(attribute_set), manager_(manager) {}
 
+VoxelChunk::VoxelChunk(std::vector<std::byte> &&data, uint32_t width,
+                       uint32_t height, uint32_t depth, State state,
+                       std::string custom_format, ChunkManager *manager)
+    : cpu_data_(data), width_(width), height_(height), depth_(depth),
+      state_(state), custom_format_(custom_format), manager_(manager) {}
+
 std::span<const std::byte> VoxelChunk::get_cpu_data() const {
     ASSERT(state_ == State::CPU,
            "Tried to get CPU data of voxel chunk without CPU data resident.");
@@ -39,6 +45,10 @@ VoxelChunk::Format VoxelChunk::get_format() const { return format_; }
 
 VoxelChunk::AttributeSet VoxelChunk::get_attribute_set() const {
     return attribute_set_;
+}
+
+const std::string &VoxelChunk::get_custom_format() const {
+    return custom_format_;
 }
 
 void VoxelChunk::tick_gpu_upload(std::shared_ptr<Device> device,
@@ -160,6 +170,16 @@ VoxelChunkPtr ChunkManager::add_chunk(std::vector<std::byte> &&data,
     VoxelChunkPtr ptr;
     chunks_.emplace_front(std::move(data), width, height, depth,
 			  VoxelChunk::State::CPU, format, attribute_set, this);
+    ptr.it_ = chunks_.begin();
+    return ptr;
+}
+
+VoxelChunkPtr ChunkManager::add_chunk(std::vector<std::byte> &&data,
+                                      uint32_t width, uint32_t height,
+                                      uint32_t depth, std::string custom_format) {
+    VoxelChunkPtr ptr;
+    chunks_.emplace_front(std::move(data), width, height, depth,
+			  VoxelChunk::State::CPU, custom_format, this);
     ptr.it_ = chunks_.begin();
     return ptr;
 }

@@ -42,6 +42,10 @@ class VoxelChunk {
                uint32_t depth, State state, Format format,
                AttributeSet attribute_set, ChunkManager *manager);
 
+    VoxelChunk(std::vector<std::byte> &&data, uint32_t width, uint32_t height,
+               uint32_t depth, State state, std::string custom_format,
+               ChunkManager *manager);
+
     std::span<const std::byte> get_cpu_data() const;
     std::shared_ptr<GPUBuffer> get_gpu_buffer() const;
     std::shared_ptr<Semaphore> get_timeline() const;
@@ -51,6 +55,7 @@ class VoxelChunk {
     State get_state() const;
     Format get_format() const;
     AttributeSet get_attribute_set() const;
+    const std::string &get_custom_format() const;
     void tick_gpu_upload(std::shared_ptr<Device> device,
                           std::shared_ptr<GPUAllocator> allocator,
                           std::shared_ptr<RingBuffer> ring_buffer);
@@ -72,6 +77,7 @@ class VoxelChunk {
     std::atomic<State> state_;
     Format format_;
     AttributeSet attribute_set_;
+    std::string custom_format_;
     std::atomic_bool uploading_ = false;
     std::atomic_bool downloading_ = false;
     ChunkManager *manager_;
@@ -98,6 +104,10 @@ class ChunkManager {
                             uint32_t height, uint32_t depth,
                             VoxelChunk::Format format,
                             VoxelChunk::AttributeSet attribute_set);
+
+    VoxelChunkPtr add_chunk(std::vector<std::byte> &&data, uint32_t width,
+                            uint32_t height, uint32_t depth,
+                            std::string custom_format);
 
     void debug_print();
 
