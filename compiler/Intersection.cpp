@@ -56,7 +56,7 @@ bool intersect_format_)" << i << R"((uint volume_id, uint node_id, vec3 obj_ray_
     vec3 chunk_ray_delta = abs(vec3(length(chunk_ray_dir)) / chunk_ray_dir);
     vec3 chunk_side_dist = (sign(chunk_ray_dir) * (vec3(chunk_ray_voxel) - chunk_ray_intersect_point) + (sign(chunk_ray_dir) * 0.5) + 0.5) * chunk_ray_delta;
 
-    while (all(greaterThanEqual(obj_ray_voxel, ivec3(0))) && all(lessThan(obj_ray_voxel, ivec3()" << this_w << R"(, )" << this_h << R"(, )" << this_d << R"()))) {
+    while (all(greaterThanEqual(chunk_ray_voxel, ivec3(0))) && all(lessThan(chunk_ray_voxel, ivec3()" << this_w << R"(, )" << this_h << R"(, )" << this_d << R"()))) {
         uint32_t voxel_index = linearize_index(chunk_ray_voxel, )" << this_w << R"(, )" << this_h << R"(, )" << this_d << R"();
         uint32_t child_id = voxel_buffers[volume_id][node_id + voxel_index];
 
@@ -94,8 +94,7 @@ void main() {
     if (r.front_t != -FAR_AWAY) {
         intersect_format_0(volume_id, root_id, obj_ray_pos, obj_ray_dir, r.front_t);
     }
-}
-)";
+})";
     
     return ss.str();
 }
