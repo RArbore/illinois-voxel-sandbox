@@ -7,30 +7,8 @@
 std::string generate_construction_cpp(const std::vector<InstantiatedFormat> &format) {
     std::stringstream ss;
 
-    auto print_level_identifier = [&](uint32_t level) {
-	    switch (format[level].format_) {
-	    case Format::Raw:
-		ss << "raw_" << format[level].parameters_[0] << "_" << format[level].parameters_[1] << "_" << format[level].parameters_[2];
-		break;
-	    case Format::DF:
-		ss << "df_" << format[level].parameters_[0] << "_" << format[level].parameters_[1] << "_" << format[level].parameters_[2];
-		break;
-	    case Format::SVO:
-		ss << "svo_" << format[level].parameters_[0];
-		break;
-	    case Format::SVDAG:
-		ss << "svdag_" << format[level].parameters_[0];
-		break;
-	    };
-    };
-
     auto print_format_identifier = [&](uint32_t starting_level = 0) {
-	for (uint32_t i = starting_level; i < format.size(); ++i) {
-	    print_level_identifier(i);
-	    if (i + 1 < format.size()) {
-		ss << "_";
-	    }
-	}
+	ss << format_identifier(format, starting_level);
     };
 
     auto print_level_node_type = [&](uint32_t level) {

@@ -94,7 +94,8 @@ void main() {
     if (r.front_t != -FAR_AWAY) {
         intersect_format_0(volume_id, root_id, obj_ray_pos, obj_ray_dir, r.front_t);
     }
-})";
+}
+)";
     
     return ss.str();
 }

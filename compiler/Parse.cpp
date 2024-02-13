@@ -1,5 +1,6 @@
 #include <charconv>
 #include <cstring>
+#include <sstream>
 
 #include "Compiler.h"
 
@@ -114,4 +115,31 @@ std::tuple<uint32_t, uint32_t, uint32_t> calculate_bounds(const std::vector<Inst
 	};
     }
     return {running_w, running_h, running_d};
+}
+
+std::string format_identifier(const std::vector<InstantiatedFormat> &format, uint32_t starting_level) {
+    std::stringstream ss;
+
+    for (uint32_t level = starting_level; level < format.size(); ++level) {
+	switch (format[level].format_) {
+	case Format::Raw:
+	    ss << "raw_" << format[level].parameters_[0] << "_" << format[level].parameters_[1] << "_" << format[level].parameters_[2];
+	    break;
+	case Format::DF:
+	    ss << "df_" << format[level].parameters_[0] << "_" << format[level].parameters_[1] << "_" << format[level].parameters_[2];
+	    break;
+	case Format::SVO:
+	    ss << "svo_" << format[level].parameters_[0];
+	    break;
+	case Format::SVDAG:
+	    ss << "svdag_" << format[level].parameters_[0];
+	    break;
+	};
+	
+	if (level + 1 < format.size()) {
+	    ss << "_";
+	}
+    }
+    
+    return ss.str();
 }
