@@ -12,6 +12,35 @@ std::vector<uint32_t> raw_24_24_24_raw_16_16_16_construct(Voxelizer &voxelizer);
 
 std::vector<uint32_t> df_24_24_24_8_raw_16_16_16_construct(Voxelizer &voxelizer);
 
+std::vector<uint32_t> svo_10_construct(Voxelizer &voxelizer);
+
+std::vector<uint32_t> svo_4_construct(Voxelizer &voxelizer);
+
+void print_svo(const std::vector<uint32_t> &svo, uint32_t node, std::string spacing) {
+    std::cout << spacing << "Internal Node @ " << node << "\n";
+    std::cout << spacing << "Child Offset: " << svo[node] << "\n";
+    std::cout << spacing << "Valid Mask: " << (svo[node + 1] & 0xFF) << "\n";
+    std::cout << spacing << "Leaf Mask: " << ((svo[node + 1] >> 8) & 0xFF) << "\n";
+    ASSERT((svo[node + 1] & 0xFFFF0000) == 0, "");
+    for (uint32_t i = 0, count = 0; i < 8; ++i) {
+	if ((svo[node + 1] >> (7 - i)) & 1) {
+	    if ((svo[node + 1] >> (15 - i)) & 1) {
+		std::cout << spacing << "  Leaf Node @ " << (svo[node] + count * 2) << "\n";
+		std::cout << spacing << "  Data: " << svo[svo[node] + count * 2] << "\n";
+	    } else {
+		print_svo(svo, svo[node] + count * 2, spacing + "  ");
+	    }
+	    ++count;
+	}
+    }
+}
+
+void print_svo(const std::vector<uint32_t> &svo) {
+    std::cout << std::hex;
+    print_svo(svo, svo[0], "");
+    std::cout << std::dec;
+}
+
 int main(int argc, char *argv[]) {
     ASSERT(argv[1], "Must provide a .obj model to convert.");
     std::string model_path(argv[1]);
@@ -47,6 +76,17 @@ int main(int argc, char *argv[]) {
     } else if (!strcmp(argv[3], "df_24_24_24_8_raw_16_16_16")) {
 	Voxelizer voxelizer(std::move(raw_vox), chunk_width, chunk_height, chunk_depth);
 	auto model = df_24_24_24_8_raw_16_16_16_construct(voxelizer);
+	write(reinterpret_cast<const char *>(model.data()), model.size() * sizeof(uint32_t));
+	return 0;
+    } else if (!strcmp(argv[3], "svo_10")) {
+	Voxelizer voxelizer(std::move(raw_vox), chunk_width, chunk_height, chunk_depth);
+	auto model = svo_10_construct(voxelizer);
+	write(reinterpret_cast<const char *>(model.data()), model.size() * sizeof(uint32_t));
+	return 0;
+    } else if (!strcmp(argv[3], "svo_4")) {
+	Voxelizer voxelizer(std::move(raw_vox), chunk_width, chunk_height, chunk_depth);
+	auto model = svo_4_construct(voxelizer);
+	print_svo(model);
 	write(reinterpret_cast<const char *>(model.data()), model.size() * sizeof(uint32_t));
 	return 0;
     } else {
