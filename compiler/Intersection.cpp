@@ -118,7 +118,7 @@ bool intersect_format_)" << i << R"((uint volume_id, uint node_id, vec3 obj_ray_
     vec3 first_low = lower;
     vec3 first_high = lower + vec3(inc_w, inc_h, inc_d);
     vec4 stack[)" << format[i].parameters_[0] << R"(];
-    stack[0].info = vec4(first_low, uintBitsToFloat(node_id & 0x1FFFFFFF));
+    stack[0] = vec4(first_low, uintBitsToFloat(node_id & 0x1FFFFFFF));
     int level = 0;
     while (level >= 0 && level < )" << format[i].parameters_[0] << R"() {
         vec4 stack_frame = stack[level];
@@ -140,19 +140,19 @@ bool intersect_format_)" << i << R"((uint volume_id, uint node_id, vec3 obj_ray_
                     uint num_valid = bitCount((curr_node_masks & 0xFF) >> (8 - child));
                     uint child_node_id = curr_node_child + num_valid;
                     if (bool(leaf)) {
-                        if (intersect_format_)" << i + 1 << R"((volume_id, voxel_buffers[volume_id].voxels[child_node_id], obj_ray_pos, obj_ray_dir, sub_low, r.front_t, r.k) {
+                        if (intersect_format_)" << i + 1 << R"((volume_id, voxel_buffers[volume_id].voxels[child_node_id], obj_ray_pos, obj_ray_dir, sub_low, hit.front_t, hit.k)) {
                             return true;
                         } else if (idx != 7) {
-                            stack[level].info = vec4(low, uintBitsToFloat(curr_node_id | ((idx + 1) << 29)));
+                            stack[level] = vec4(low, uintBitsToFloat(curr_node_id | ((idx + 1) << 29)));
                             ++level;
                         }
                     } else if (idx == 7) {
-                        stack[level].info = vec4(low, uintBitsToFloat(child_node_id));
+                        stack[level] = vec4(low, uintBitsToFloat(child_node_id));
                         ++level;
                     } else {
-                        stack[level].info = vec4(low, uintBitsToFloat(curr_node_id | ((idx + 1) << 29)));
+                        stack[level] = vec4(low, uintBitsToFloat(curr_node_id | ((idx + 1) << 29)));
                         ++level;
-                        stack[level].info = vec4(low, uintBitsToFloat(child_node_id));
+                        stack[level] = vec4(low, uintBitsToFloat(child_node_id));
                         ++level;
                     }
                     break;

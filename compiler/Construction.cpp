@@ -34,6 +34,8 @@ std::string generate_construction_cpp(const std::vector<InstantiatedFormat> &for
 #include <vector>
 #include <array>
 
+#include <external/libmorton/include/libmorton/morton.h>
+
 #include "Voxelize.h"
 
 static uint32_t push_node_to_buffer(std::vector<uint32_t> &buffer, uint32_t node) {
@@ -189,7 +191,7 @@ static )";
     std::vector<std::vector<std::array<uint32_t, 2>>> queues(power_of_two + 1);
     const uint64_t num_voxels = bounded_edge_length * bounded_edge_length * bounded_edge_length;
 
-    auto node_equal = [](const std::array<uint32_t, 2> &a, const std::array<uint32_t, 2> &b) {
+    auto nodes_equal = [](const std::array<uint32_t, 2> &a, const std::array<uint32_t, 2> &b) {
         return a[0] == b[0] && a[1] == b[1];
     };
 
@@ -202,19 +204,17 @@ static )";
     };
 
     for (uint64_t morton = 0; morton < num_voxels; ++morton) {
-        uint32_t x = 0, y = 0, z = 0;
+        uint_fast32_t x = 0, y = 0, z = 0;
         libmorton::morton3D_64_decode(morton, x, y, z);
 
         std::array<uint32_t, 2> node = {0, 0};
-        if (x < width && y < height && d < depth) {
-            uint32_t sub_lower_x = x + lower_x, sub_lower_y = y + lower_y, sub_lower_z = z + lower_z;
-            bool sub_is_empty;
-            auto sub_chunk = )";
-	    print_format_identifier(i + 1);
-	    ss << R"(_construct_node(voxelizer, buffer, sub_lower_x, sub_lower_y, sub_lower_z, sub_is_empty);
-            if (!sub_is_empty) {
-                node.first = push_node_to_buffer(buffer, sub_chunk);
-            }
+        uint32_t sub_lower_x = x + lower_x, sub_lower_y = y + lower_y, sub_lower_z = z + lower_z;
+        bool sub_is_empty;
+        auto sub_chunk = )";
+	print_format_identifier(i + 1);
+	ss << R"(_construct_node(voxelizer, buffer, sub_lower_x, sub_lower_y, sub_lower_z, sub_is_empty);
+        if (!sub_is_empty) {
+            node[0] = push_node_to_buffer(buffer, sub_chunk);
         }
 
         queues.at(power_of_two).emplace_back(node);

@@ -8,6 +8,7 @@ add_library(
 	Voxelize.cpp 
 	raw_24_24_24_raw_16_16_16_construct.cpp
 	df_24_24_24_8_raw_16_16_16_construct.cpp
+	svo_10_construct.cpp
 	)
 
 target_include_directories(voxels PUBLIC ${CMAKE_SOURCE_DIR})
