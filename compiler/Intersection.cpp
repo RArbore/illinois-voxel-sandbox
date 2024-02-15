@@ -18,6 +18,14 @@ std::string generate_intersection_glsl(const std::vector<InstantiatedFormat> &fo
 
 hitAttributeEXT uint leaf_id;
 
+vec3 subpositions(uint child) {
+    return vec3(
+		bool(child % 2) ? 1.0 : 0.0,
+		bool((child / 2) % 2) ? 1.0 : 0.0,
+		bool((child / 4) % 2) ? 1.0 : 0.0
+		);
+}
+
 bool intersect_format_)" << format.size() << R"((uint volume_id, uint node_id, vec3 obj_ray_pos, vec3 obj_ray_dir, vec3 lower, float o_t, uint hit_kind) {
     leaf_id = node_id;
     float intersect_time = length(gl_ObjectToWorldEXT * vec4(obj_ray_pos + obj_ray_dir * o_t, 1.0) - gl_ObjectToWorldEXT * vec4(obj_ray_pos, 1.0));
@@ -106,13 +114,52 @@ bool intersect_format_)" << i << R"((uint volume_id, uint node_id, vec3 obj_ray_
 )";
 	    break;
 	case Format::SVO:
-	    ss << R"(    vec3 first_low = lower;
+	    ss << R"(    int direction_kind = int(obj_ray_dir.x < 0.0) + 2 * int(obj_ray_dir.y < 0.0) + 4 * int(obj_ray_dir.z < 0.0);
+    vec3 first_low = lower;
     vec3 first_high = lower + vec3(inc_w, inc_h, inc_d);
     vec4 stack[)" << format[i].parameters_[0] << R"(];
     stack[0].info = vec4(first_low, uintBitsToFloat(node_id & 0x1FFFFFFF));
     int level = 0;
     while (level >= 0 && level < )" << format[i].parameters_[0] << R"() {
         vec4 stack_frame = stack[level];
+        vec3 low = stack_frame.xyz;
+        uint curr_node_id = floatBitsToUint(stack_frame.w) & 0x1FFFFFFF;
+        uint curr_node_child = voxel_buffers[volume_id].voxels[curr_node_id];
+        uint curr_node_masks = voxel_buffers[volume_id].voxels[curr_node_id + 1];
+        uint left_off = floatBitsToUint(stack_frame.w) >> 29;
+        float diff = float(1 << )" << format[i].parameters_[0] << R"() * pow(0.5, level + 1);
+        for (uint idx = left_off; idx < 8; ++idx) {
+            uint child = direction_kind ^ idx;
+            uint valid = (curr_node_masks >> (7 - child)) & 1;
+            if (bool(valid)) {
+                vec3 sub_low = low + subpositions(child) * diff;
+                vec3 sub_high = sub_low + diff;
+                aabb_intersect_result hit = hit_aabb(sub_low, sub_high, obj_ray_pos, obj_ray_dir);
+                if (hit.front_t != -FAR_AWAY) {
+                    uint leaf = (curr_node_masks >> (15 - child)) & 1;
+                    uint num_valid = bitCount((curr_node_masks & 0xFF) >> (8 - child));
+                    uint child_node_id = curr_node_child + num_valid;
+                    if (bool(leaf)) {
+                        if (intersect_format_)" << i + 1 << R"((volume_id, voxel_buffers[volume_id].voxels[child_node_id], obj_ray_pos, obj_ray_dir, sub_low, r.front_t, r.k) {
+                            return true;
+                        } else if (idx != 7) {
+                            stack[level].info = vec4(low, uintBitsToFloat(curr_node_id | ((idx + 1) << 29)));
+                            ++level;
+                        }
+                    } else if (idx == 7) {
+                        stack[level].info = vec4(low, uintBitsToFloat(child_node_id));
+                        ++level;
+                    } else {
+                        stack[level].info = vec4(low, uintBitsToFloat(curr_node_id | ((idx + 1) << 29)));
+                        ++level;
+                        stack[level].info = vec4(low, uintBitsToFloat(child_node_id));
+                        ++level;
+                    }
+                    break;
+                }
+            }
+        }
+        --level;
     }
 )";
 	    break;
