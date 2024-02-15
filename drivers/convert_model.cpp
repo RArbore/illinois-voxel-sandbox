@@ -26,7 +26,7 @@ void print_svo(const std::vector<uint32_t> &svo, uint32_t node, std::string spac
 	if ((svo[node + 1] >> (7 - i)) & 1) {
 	    if ((svo[node + 1] >> (15 - i)) & 1) {
 		std::cout << spacing << "  Leaf Node @ " << (svo[node] + count * 2) << "\n";
-		std::cout << spacing << "  Data: " << svo[svo[node] + count * 2] << "\n";
+		std::cout << spacing << "  Data: " << svo[svo[svo[node] + count * 2]] << "\n";
 	    } else {
 		print_svo(svo, svo[node] + count * 2, spacing + "  ");
 	    }
