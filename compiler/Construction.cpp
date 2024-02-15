@@ -21,23 +21,10 @@ std::string generate_construction_cpp(const std::vector<InstantiatedFormat> &for
 		ss << "std::vector<uint32_t>";
 		break;
 	    case Format::SVO:
-		ss << "std::pair<std::array<uint32_t, 2>, bool>";
+		ss << "std::array<uint32_t, 2>";
 		break;
 	    case Format::SVDAG:
-		ss << "std::pair<std::array<uint32_t, 8>, bool>";
-		break;
-	    }
-	}
-    };
-
-    auto print_format_node_accessor = [&](uint32_t level = 0) {
-	if (level < format.size()) {
-	    switch(format[level].format_) {
-	    case Format::SVO:
-	    case Format::SVDAG:
-		ss << ".first";
-		break;
-	    default:
+		ss << "std::array<uint32_t, 8>";
 		break;
 	    }
 	}
@@ -96,7 +83,6 @@ static uint32_t push_node_to_buffer(std::vector<uint32_t> &buffer, const std::ar
 
     print_format_identifier();
     ss << R"(_construct_node(voxelizer, buffer, 0, 0, 0, is_empty))";
-    print_format_node_accessor(0);
     ss << R"(;)";
 
     ss << R"(
@@ -134,9 +120,7 @@ static )";
                 if (sub_is_empty) {
                     raw_chunk.push_back(0);
                 } else {
-                    raw_chunk.push_back(push_node_to_buffer(buffer, sub_chunk)";
-	    print_format_node_accessor(i + 1);
-	    ss << R"());
+                    raw_chunk.push_back(push_node_to_buffer(buffer, sub_chunk));
                 }
                 is_empty = is_empty && sub_is_empty;
             }
@@ -162,9 +146,7 @@ static )";
                 if (sub_is_empty) {
                     df_chunk.push_back(0);
                 } else {
-                    df_chunk.push_back(push_node_to_buffer(buffer, sub_chunk)";
-	    print_format_node_accessor(i + 1);
-	    ss << R"());
+                    df_chunk.push_back(push_node_to_buffer(buffer, sub_chunk));
                 }
                 df_chunk.push_back(1);
                 is_empty = is_empty && sub_is_empty;
@@ -199,6 +181,35 @@ static )";
         }
     }
     return df_chunk;
+)";
+	    break;
+	case Format::SVO:
+	    ss << R"(    uint32_t power_of_two = )" << format[i].parameters_[0] << R"(;
+    uint32_t bounded_edge_length = 1 << power_of_two;
+    std::vector<std::vector<std::pair<uint64_t, bool>>> queues(power_of_two + 1);
+    const uint64_t num_voxels = bounded_edge_length * bounded_edge_length * bounded_edge_length;
+    for (uint64_t morton = 0; morton < num_voxels; ++morton) {
+        uint32_t x = 0, y = 0, z = 0;
+        libmorton::morton3D_64_decode(morton, x, y, z);
+
+        uint64_t node = 0;
+        if (x < width && y < height && d < depth) {
+            uint32_t sub_lower_x = x + lower_x, sub_lower_y = y + lower_y, sub_lower_z = z + lower_z;
+            bool sub_is_empty;
+            auto sub_chunk = )";
+	    print_format_identifier(i + 1);
+	    ss << R"(_construct_node(voxelizer, buffer, sub_lower_x, sub_lower_y, sub_lower_z, sub_is_empty);
+            if (!sub_is_empty) {
+                node = push_node_to_buffer(buffer, sub_chunk);
+            }
+        }
+
+        queues.at(power_of_two).emplace_back(node, true);
+        uint32_t d = power_of_two;
+        while (d > 0 && queues.at(d).size() == 8) {
+            
+        }
+    }
 )";
 	    break;
 	default:
