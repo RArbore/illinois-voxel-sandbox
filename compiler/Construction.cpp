@@ -186,13 +186,26 @@ static )";
 	case Format::SVO:
 	    ss << R"(    uint32_t power_of_two = )" << format[i].parameters_[0] << R"(;
     uint32_t bounded_edge_length = 1 << power_of_two;
-    std::vector<std::vector<std::pair<uint64_t, bool>>> queues(power_of_two + 1);
+    std::vector<std::vector<std::array<uint32_t, 2>>> queues(power_of_two + 1);
     const uint64_t num_voxels = bounded_edge_length * bounded_edge_length * bounded_edge_length;
+
+    auto node_equal = [](const std::array<uint32_t, 2> &a, const std::array<uint32_t, 2> &b) {
+        return a[0] == b[0] && a[1] == b[1];
+    };
+
+    auto is_node_empty = [](const std::array<uint32_t, 2> &node) {
+        return !node[0] && !node[1];
+    };
+
+    auto is_node_leaf = [](const std::array<uint32_t, 2> &node) {
+        return !node[1];
+    };
+
     for (uint64_t morton = 0; morton < num_voxels; ++morton) {
         uint32_t x = 0, y = 0, z = 0;
         libmorton::morton3D_64_decode(morton, x, y, z);
 
-        uint64_t node = 0;
+        std::array<uint32_t, 2> node = {0, 0};
         if (x < width && y < height && d < depth) {
             uint32_t sub_lower_x = x + lower_x, sub_lower_y = y + lower_y, sub_lower_z = z + lower_z;
             bool sub_is_empty;
@@ -200,16 +213,45 @@ static )";
 	    print_format_identifier(i + 1);
 	    ss << R"(_construct_node(voxelizer, buffer, sub_lower_x, sub_lower_y, sub_lower_z, sub_is_empty);
             if (!sub_is_empty) {
-                node = push_node_to_buffer(buffer, sub_chunk);
+                node.first = push_node_to_buffer(buffer, sub_chunk);
             }
         }
 
-        queues.at(power_of_two).emplace_back(node, true);
+        queues.at(power_of_two).emplace_back(node);
         uint32_t d = power_of_two;
         while (d > 0 && queues.at(d).size() == 8) {
-            
+            std::array<uint32_t, 2> node = {0, 0};
+
+            bool identical = true;
+            for (uint32_t i = 0; i < 8; ++i) {
+                bool child_is_valid = !is_node_empty(queues.at(d).at(i));
+                bool child_is_leaf = is_node_leaf(queues.at(d).at(i));
+                node[1] |= child_is_valid << (7 - i);
+                node[1] |= (child_is_valid && child_is_leaf) << (7 - i + 8);
+                identical = identical && nodes_equal(queues.at(d).at(i), queues.at(d).at(0));
+            }
+
+            if (identical) {
+                node = queues.at(d).at(0);
+            } else {
+                uint32_t first_child_idx = 0;
+                for (uint32_t i = 0; i < 8; ++i) {
+                    auto child = queues.at(d).at(i);
+                    if (!is_node_empty(child)) {
+                        uint32_t child_idx = push_node_to_buffer(buffer, child);
+                        first_child_idx = first_child_idx ? first_child_idx : child_idx;
+                    }
+                }
+                node[0] = first_child_idx;
+            }
+
+            queues.at(d - 1).emplace_back(node);
+            queues.at(d).clear();
+            --d;
         }
     }
+
+    return queues.at(0).at(0);
 )";
 	    break;
 	default:
