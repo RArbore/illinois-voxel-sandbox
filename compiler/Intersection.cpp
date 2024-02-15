@@ -105,6 +105,17 @@ bool intersect_format_)" << i << R"((uint volume_id, uint node_id, vec3 obj_ray_
     }
 )";
 	    break;
+	case Format::SVO:
+	    ss << R"(    vec3 first_low = lower;
+    vec3 first_high = lower + vec3(inc_w, inc_h, inc_d);
+    vec4 stack[)" << format[i].parameters_[0] << R"(];
+    stack[0].info = vec4(first_low, uintBitsToFloat(node_id & 0x1FFFFFFF));
+    int level = 0;
+    while (level >= 0 && level < )" << format[i].parameters_[0] << R"() {
+        vec4 stack_frame = stack[level];
+    }
+)";
+	    break;
 	default:
 	    ASSERT(false, "Unhandled format.");
 	}
