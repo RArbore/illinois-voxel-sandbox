@@ -117,10 +117,10 @@ bool intersect_format_)" << i << R"((uint volume_id, uint node_id, vec3 obj_ray_
 	    ss << R"(    int direction_kind = int(obj_ray_dir.x < 0.0) + 2 * int(obj_ray_dir.y < 0.0) + 4 * int(obj_ray_dir.z < 0.0);
     vec3 first_low = lower;
     vec3 first_high = lower + vec3(inc_w, inc_h, inc_d);
-    vec4 stack[)" << format[i].parameters_[0] << R"(];
+    vec4 stack[)" << (format[i].parameters_[0] + 2) << R"(];
     stack[0] = vec4(first_low, uintBitsToFloat(node_id & 0x1FFFFFFF));
     int level = 0;
-    while (level >= 0 && level < )" << format[i].parameters_[0] << R"() {
+    while (level >= 0 && level < )" << (format[i].parameters_[0] + 1) << R"() {
         vec4 stack_frame = stack[level];
         vec3 low = stack_frame.xyz;
         uint curr_node_id = floatBitsToUint(stack_frame.w) & 0x1FFFFFFF;
@@ -138,7 +138,7 @@ bool intersect_format_)" << i << R"((uint volume_id, uint node_id, vec3 obj_ray_
                 if (hit.front_t != -FAR_AWAY) {
                     uint leaf = (curr_node_masks >> (15 - child)) & 1;
                     uint num_valid = bitCount((curr_node_masks & 0xFF) >> (8 - child));
-                    uint child_node_id = curr_node_child + num_valid;
+                    uint child_node_id = curr_node_child + num_valid * 2;
                     if (bool(leaf)) {
                         if (intersect_format_)" << i + 1 << R"((volume_id, voxel_buffers[volume_id].voxels[child_node_id], obj_ray_pos, obj_ray_dir, sub_low, hit.front_t, hit.k)) {
                             return true;

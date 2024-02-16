@@ -108,9 +108,9 @@ std::tuple<uint32_t, uint32_t, uint32_t> calculate_bounds(const std::vector<Inst
 	    break;
 	case Format::SVO:
 	case Format::SVDAG:
-	    running_w *= 1 << (format[i].parameters_[0] - 1);
-	    running_h *= 1 << (format[i].parameters_[0] - 1);
-	    running_d *= 1 << (format[i].parameters_[0] - 1);
+	    running_w *= 1 << format[i].parameters_[0];
+	    running_h *= 1 << format[i].parameters_[0];
+	    running_d *= 1 << format[i].parameters_[0];
 	    break;
 	};
     }

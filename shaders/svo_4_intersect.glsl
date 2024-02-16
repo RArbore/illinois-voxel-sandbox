@@ -26,20 +26,20 @@ bool intersect_format_0(uint volume_id, uint node_id, vec3 obj_ray_pos, vec3 obj
     float sub_w = 1.0;
     float sub_h = 1.0;
     float sub_d = 1.0;
-    float inc_w = 8.0;
-    float inc_h = 8.0;
-    float inc_d = 8.0;
-    float this_w = 8.0;
-    float this_h = 8.0;
-    float this_d = 8.0;
+    float inc_w = 16.0;
+    float inc_h = 16.0;
+    float inc_d = 16.0;
+    float this_w = 16.0;
+    float this_h = 16.0;
+    float this_d = 16.0;
 
     int direction_kind = int(obj_ray_dir.x < 0.0) + 2 * int(obj_ray_dir.y < 0.0) + 4 * int(obj_ray_dir.z < 0.0);
     vec3 first_low = lower;
     vec3 first_high = lower + vec3(inc_w, inc_h, inc_d);
-    vec4 stack[4];
+    vec4 stack[6];
     stack[0] = vec4(first_low, uintBitsToFloat(node_id & 0x1FFFFFFF));
     int level = 0;
-    while (level >= 0 && level < 4) {
+    while (level >= 0 && level < 5) {
         vec4 stack_frame = stack[level];
         vec3 low = stack_frame.xyz;
         uint curr_node_id = floatBitsToUint(stack_frame.w) & 0x1FFFFFFF;
@@ -57,7 +57,7 @@ bool intersect_format_0(uint volume_id, uint node_id, vec3 obj_ray_pos, vec3 obj
                 if (hit.front_t != -FAR_AWAY) {
                     uint leaf = (curr_node_masks >> (15 - child)) & 1;
                     uint num_valid = bitCount((curr_node_masks & 0xFF) >> (8 - child));
-                    uint child_node_id = curr_node_child + num_valid;
+                    uint child_node_id = curr_node_child + num_valid * 2;
                     if (bool(leaf)) {
                         if (intersect_format_1(volume_id, voxel_buffers[volume_id].voxels[child_node_id], obj_ray_pos, obj_ray_dir, sub_low, hit.front_t, hit.k)) {
                             return true;
@@ -89,7 +89,7 @@ void main() {
     vec3 obj_ray_pos = gl_WorldToObjectEXT * vec4(gl_WorldRayOriginEXT, 1.0);
     vec3 obj_ray_dir = normalize(gl_WorldToObjectEXT * vec4(gl_WorldRayDirectionEXT, 0.0));
 
-    aabb_intersect_result r = hit_aabb(vec3(0.0), vec3(8.0, 8.0, 8.0), obj_ray_pos, obj_ray_dir);
+    aabb_intersect_result r = hit_aabb(vec3(0.0), vec3(16.0, 16.0, 16.0), obj_ray_pos, obj_ray_dir);
     if (r.front_t != -FAR_AWAY) {
         intersect_format_0(volume_id, root_id, obj_ray_pos, obj_ray_dir, vec3(0.0), r.front_t, r.k);
     }

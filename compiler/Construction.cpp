@@ -227,7 +227,7 @@ static )";
                 bool child_is_valid = !is_node_empty(queues.at(d).at(i));
                 bool child_is_leaf = is_node_leaf(queues.at(d).at(i));
                 node[1] |= child_is_valid << (7 - i);
-                node[1] |= (child_is_valid && child_is_leaf) << (7 - i + 8);
+                node[1] |= (child_is_valid && child_is_leaf) << (15 - i);
                 identical = identical && nodes_equal(queues.at(d).at(i), queues.at(d).at(0));
             }
 

@@ -64,15 +64,15 @@ static std::array<uint32_t, 2> svo_4_construct_node(Voxelizer &voxelizer, std::v
         uint_fast32_t x = 0, y = 0, z = 0;
         libmorton::morton3D_64_decode(morton, x, y, z);
 
-        std::array<uint32_t, 2> leaf_node = {0, 0};
+        std::array<uint32_t, 2> node = {0, 0};
         uint32_t sub_lower_x = x + lower_x, sub_lower_y = y + lower_y, sub_lower_z = z + lower_z;
         bool sub_is_empty;
         auto sub_chunk = _construct_node(voxelizer, buffer, sub_lower_x, sub_lower_y, sub_lower_z, sub_is_empty);
         if (!sub_is_empty) {
-            leaf_node[0] = push_node_to_buffer(buffer, sub_chunk);
+            node[0] = push_node_to_buffer(buffer, sub_chunk);
         }
 
-        queues.at(power_of_two).emplace_back(leaf_node);
+        queues.at(power_of_two).emplace_back(node);
         uint32_t d = power_of_two;
         while (d > 0 && queues.at(d).size() == 8) {
             std::array<uint32_t, 2> node = {0, 0};
@@ -82,7 +82,7 @@ static std::array<uint32_t, 2> svo_4_construct_node(Voxelizer &voxelizer, std::v
                 bool child_is_valid = !is_node_empty(queues.at(d).at(i));
                 bool child_is_leaf = is_node_leaf(queues.at(d).at(i));
                 node[1] |= child_is_valid << (7 - i);
-                node[1] |= (child_is_valid && child_is_leaf) << (7 - i + 8);
+                node[1] |= (child_is_valid && child_is_leaf) << (15 - i);
                 identical = identical && nodes_equal(queues.at(d).at(i), queues.at(d).at(0));
             }
 
