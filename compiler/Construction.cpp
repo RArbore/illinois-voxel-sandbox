@@ -8,26 +8,26 @@ std::string generate_construction_cpp(const std::vector<InstantiatedFormat> &for
     std::stringstream ss;
 
     auto print_format_identifier = [&](uint32_t starting_level = 0) {
-	ss << format_identifier(format, starting_level);
+    ss << format_identifier(format, starting_level);
     };
 
     auto print_level_node_type = [&](uint32_t level) {
-	if (level >= format.size()) {
-	    ss << "uint32_t";
-	} else {
-	    switch(format[level].format_) {
-	    case Format::Raw:
-	    case Format::DF:
-		ss << "std::vector<uint32_t>";
-		break;
-	    case Format::SVO:
-		ss << "std::array<uint32_t, 2>";
-		break;
-	    case Format::SVDAG:
-		ss << "std::array<uint32_t, 8>";
-		break;
-	    }
-	}
+    if (level >= format.size()) {
+        ss << "uint32_t";
+    } else {
+        switch(format[level].format_) {
+        case Format::Raw:
+        case Format::DF:
+        ss << "std::vector<uint32_t>";
+        break;
+        case Format::SVO:
+        ss << "std::array<uint32_t, 2>";
+        break;
+        case Format::SVDAG:
+        ss << "std::array<uint32_t, 8>";
+        break;
+        }
+    }
     };
     
     ss << R"(#include <cstdint>
@@ -66,11 +66,11 @@ static uint32_t push_node_to_buffer(std::vector<uint32_t> &buffer, const std::ar
 )";
 
     for (uint32_t i = 0; i < format.size() + 1; ++i) {
-	ss << R"(static )";
-	print_level_node_type(i);
-	ss << R"( )";
-	print_format_identifier(i);
-	ss << R"(_construct_node(Voxelizer &voxelizer, std::vector<uint32_t> &buffer, uint32_t lower_x, uint32_t lower_y, uint32_t lower_z, bool &is_empty);
+    ss << R"(static )";
+    print_level_node_type(i);
+    ss << R"( )";
+    print_format_identifier(i);
+    ss << R"(_construct_node(Voxelizer &voxelizer, std::vector<uint32_t> &buffer, uint32_t lower_x, uint32_t lower_y, uint32_t lower_z, bool &is_empty);
 
 )";
     }
@@ -95,31 +95,31 @@ static uint32_t push_node_to_buffer(std::vector<uint32_t> &buffer, const std::ar
 )";
 
     for (uint32_t i = 0; i < format.size(); ++i) {
-	ss << R"(
+    ss << R"(
 static )";
-	print_level_node_type(i);
-	ss << R"( )";
-	print_format_identifier(i);
-	ss << R"(_construct_node(Voxelizer &voxelizer, std::vector<uint32_t> &buffer, uint32_t lower_x, uint32_t lower_y, uint32_t lower_z, bool &is_empty) {
+    print_level_node_type(i);
+    ss << R"( )";
+    print_format_identifier(i);
+    ss << R"(_construct_node(Voxelizer &voxelizer, std::vector<uint32_t> &buffer, uint32_t lower_x, uint32_t lower_y, uint32_t lower_z, bool &is_empty) {
 )";
-	auto [sub_w, sub_h, sub_d] = calculate_bounds(format, i + 1);
-	auto [inc_w, inc_h, inc_d] = calculate_bounds(format, i);
-	auto this_w = inc_w / sub_w, this_h = inc_h / sub_h, this_d = inc_d / sub_d;
+    auto [sub_w, sub_h, sub_d] = calculate_bounds(format, i + 1);
+    auto [inc_w, inc_h, inc_d] = calculate_bounds(format, i);
+    auto this_w = inc_w / sub_w, this_h = inc_h / sub_h, this_d = inc_d / sub_d;
 
-	switch (format[i].format_) {
-	case Format::Raw:
-	    ss << R"(    std::vector<uint32_t> raw_chunk;
+    switch (format[i].format_) {
+    case Format::Raw:
+        ss << R"(    std::vector<uint32_t> raw_chunk;
     is_empty = true;
-    for (uint32_t g_x = 0; g_x < )" << this_w << R"(; ++g_x) {
+    for (uint32_t g_z = 0; g_z < )" << this_d << R"(; ++g_z) {
         for (uint32_t g_y = 0; g_y < )" << this_h << R"(; ++g_y) {
-            for (uint32_t g_z = 0; g_z < )" << this_d << R"(; ++g_z) {
+            for (uint32_t g_x = 0; g_x < )" << this_w << R"(; ++g_x) {
                 uint32_t sub_lower_x = lower_x + g_x * )" << sub_w << R"(;
                 uint32_t sub_lower_y = lower_y + g_y * )" << sub_h << R"(;
                 uint32_t sub_lower_z = lower_z + g_z * )" << sub_d << R"(;
                 bool sub_is_empty;
                 auto sub_chunk = )";
-	    print_format_identifier(i + 1);
-	    ss << R"(_construct_node(voxelizer, buffer, sub_lower_x, sub_lower_y, sub_lower_z, sub_is_empty);
+        print_format_identifier(i + 1);
+        ss << R"(_construct_node(voxelizer, buffer, sub_lower_x, sub_lower_y, sub_lower_z, sub_is_empty);
                 if (sub_is_empty) {
                     raw_chunk.push_back(0);
                 } else {
@@ -131,21 +131,21 @@ static )";
     }
     return raw_chunk;
 )";
-	    break;
-	case Format::DF:
-	    ss << R"(    std::vector<uint32_t> df_chunk;
+        break;
+    case Format::DF:
+        ss << R"(    std::vector<uint32_t> df_chunk;
     is_empty = true;
     uint32_t k = )" << format[i].parameters_[3] << R"(;
-    for (uint32_t g_x = 0; g_x < )" << this_w << R"(; ++g_x) {
+    for (uint32_t g_z = 0; g_z < )" << this_d << R"(; ++g_z) {
         for (uint32_t g_y = 0; g_y < )" << this_h << R"(; ++g_y) {
-            for (uint32_t g_z = 0; g_z < )" << this_d << R"(; ++g_z) {
+            for (uint32_t g_x = 0; g_x < )" << this_w << R"(; ++g_x) {
                 uint32_t sub_lower_x = lower_x + g_x * )" << sub_w << R"(;
                 uint32_t sub_lower_y = lower_y + g_y * )" << sub_h << R"(;
                 uint32_t sub_lower_z = lower_z + g_z * )" << sub_d << R"(;
                 bool sub_is_empty;
                 auto sub_chunk = )";
-	    print_format_identifier(i + 1);
-	    ss << R"(_construct_node(voxelizer, buffer, sub_lower_x, sub_lower_y, sub_lower_z, sub_is_empty);
+        print_format_identifier(i + 1);
+        ss << R"(_construct_node(voxelizer, buffer, sub_lower_x, sub_lower_y, sub_lower_z, sub_is_empty);
                 if (sub_is_empty) {
                     df_chunk.push_back(0);
                 } else {
@@ -156,38 +156,36 @@ static )";
             }
         }
     }
-    if (!is_empty) {
-        for (uint32_t g_z = 0; g_z < )" << this_d << R"(; ++g_z) {
-            for (uint32_t g_y = 0; g_y < )" << this_h << R"(; ++g_y) {
-                for (uint32_t g_x = 0; g_x < )" << this_w << R"(; ++g_x) {
-                    uint32_t g_voxel_offset = (g_x + g_y * )" << this_w << R"( + g_z * )" << this_w << R"( * )" << this_h << R"();
-		    uint32_t min_dist = k;
-		    for (uint32_t kz = g_z > k ? g_z - k : 0; kz <= g_z + k && kz < )" << this_d << R"(; ++kz) {
-			for (uint32_t ky = g_y > k ? g_y - k : 0; ky <= g_y + k && ky < )" << this_h << R"(; ++ky) {
-			    for (uint32_t kx = g_x > k ? g_x - k : 0; kx <= g_x + k && kx < )" << this_w << R"(; ++kx) {
-				size_t k_voxel_offset = kx + ky * )" << this_w << R"( + kz * )" << this_w << R"( * )" << this_h << R"(;
-				if (df_chunk[k_voxel_offset * 2] != 0) {
-				    uint32_t dist =
-					(g_z > kz ? g_z - kz : kz - g_z) +
-					(g_y > ky ? g_y - ky : ky - g_y) +
-					(g_x > kx ? g_x - kx : kx - g_x);
-				    if (dist < min_dist && dist) {
-					min_dist = dist;
-				    }
-				}
-			    }
-			}
-		    }
-                    df_chunk[g_voxel_offset * 2 + 1] = min_dist;
+    for (uint32_t g_z = 0; g_z < )" << this_d << R"(; ++g_z) {
+        for (uint32_t g_y = 0; g_y < )" << this_h << R"(; ++g_y) {
+            for (uint32_t g_x = 0; g_x < )" << this_w << R"(; ++g_x) {
+                uint32_t g_voxel_offset = (g_x + g_y * )" << this_w << R"( + g_z * )" << this_w << R"( * )" << this_h << R"();
+            uint32_t min_dist = k;
+            for (uint32_t kz = g_z > k ? g_z - k : 0; kz <= g_z + k && kz < )" << this_d << R"(; ++kz) {
+                for (uint32_t ky = g_y > k ? g_y - k : 0; ky <= g_y + k && ky < )" << this_h << R"(; ++ky) {
+                    for (uint32_t kx = g_x > k ? g_x - k : 0; kx <= g_x + k && kx < )" << this_w << R"(; ++kx) {
+                        size_t k_voxel_offset = kx + ky * )" << this_w << R"( + kz * )" << this_w << R"( * )" << this_h << R"(;
+                        if (df_chunk[k_voxel_offset * 2] != 0) {
+                            uint32_t dist =
+                            (g_z > kz ? g_z - kz : kz - g_z) +
+                            (g_y > ky ? g_y - ky : ky - g_y) +
+                            (g_x > kx ? g_x - kx : kx - g_x);
+                            if (dist < min_dist && dist) {
+                                min_dist = dist;
+                            }
+                        }
+                    }
                 }
+            }
+                df_chunk[g_voxel_offset * 2 + 1] = min_dist;
             }
         }
     }
     return df_chunk;
 )";
-	    break;
-	case Format::SVO:
-	    ss << R"(    uint32_t power_of_two = )" << format[i].parameters_[0] << R"(;
+        break;
+    case Format::SVO:
+        ss << R"(    uint32_t power_of_two = )" << format[i].parameters_[0] << R"(;
     uint32_t bounded_edge_length = 1 << power_of_two;
     std::vector<std::vector<std::array<uint32_t, 2>>> queues(power_of_two + 1);
     const uint64_t num_voxels = bounded_edge_length * bounded_edge_length * bounded_edge_length;
@@ -204,6 +202,8 @@ static )";
         return !node[1];
     };
 
+    is_empty = true;
+
     for (uint64_t morton = 0; morton < num_voxels; ++morton) {
         uint_fast32_t x = 0, y = 0, z = 0;
         libmorton::morton3D_64_decode(morton, x, y, z);
@@ -216,6 +216,7 @@ static )";
 	ss << R"(_construct_node(voxelizer, buffer, sub_lower_x, sub_lower_y, sub_lower_z, sub_is_empty);
         if (!sub_is_empty) {
             node[0] = push_node_to_buffer(buffer, sub_chunk);
+            is_empty = false;
         }
 
         queues.at(power_of_two).emplace_back(node);
@@ -254,9 +255,9 @@ static )";
 
     return queues.at(0).at(0);
 )";
-	    break;
-	case Format::SVDAG:
-	    ss << R"(    uint32_t power_of_two = )" << format[i].parameters_[0] << R"(;
+        break;
+    case Format::SVDAG:
+        ss << R"(    uint32_t power_of_two = )" << format[i].parameters_[0] << R"(;
     uint32_t bounded_edge_length = 1 << power_of_two;
     std::vector<std::vector<std::array<uint32_t, 8>>> queues(power_of_two + 1);
     const uint64_t num_voxels = bounded_edge_length * bounded_edge_length * bounded_edge_length;
@@ -271,6 +272,8 @@ static )";
 
     std::map<std::array<uint32_t, 8>, uint32_t> deduplication_map;
 
+    is_empty = true;
+
     for (uint64_t morton = 0; morton < num_voxels; ++morton) {
         uint_fast32_t x = 0, y = 0, z = 0;
         libmorton::morton3D_64_decode(morton, x, y, z);
@@ -284,6 +287,7 @@ static )";
         if (!sub_is_empty) {
             node[0] = push_node_to_buffer(buffer, sub_chunk);
             node[1] = 0xFFFFFFFF;
+            is_empty = false;
         }
 
         queues.at(power_of_two).emplace_back(node);
@@ -321,12 +325,12 @@ static )";
 
     return queues.at(0).at(0);
 )";
-	    break;
-	default:
-	    ASSERT(false, "Unhandled format.");
-	};
+        break;
+    default:
+        ASSERT(false, "Unhandled format.");
+    };
 
-	ss << R"(}
+    ss << R"(}
 )";
     }
 

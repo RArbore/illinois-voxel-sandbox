@@ -16,6 +16,10 @@ std::vector<uint32_t> svo_9_construct(Voxelizer &voxelizer);
 
 std::vector<uint32_t> svdag_9_construct(Voxelizer &voxelizer);
 
+std::vector<uint32_t> df_12_12_12_12_svo_5_construct(Voxelizer &voxelizer);
+
+std::vector<uint32_t> df_12_12_12_12_df_32_32_32_16_construct(Voxelizer &voxelizer);
+
 void print_svo(const std::vector<uint32_t> &svo, uint32_t node, std::string spacing) {
     std::cout << spacing << "Internal Node @ " << node << "\n";
     std::cout << spacing << "Child Offset: " << svo[node] << "\n";
@@ -107,6 +111,16 @@ int main(int argc, char *argv[]) {
     } else if (!strcmp(argv[3], "svdag_9")) {
 	Voxelizer voxelizer(std::move(raw_vox), chunk_width, chunk_height, chunk_depth);
 	auto model = svdag_9_construct(voxelizer);
+	write(reinterpret_cast<const char *>(model.data()), model.size() * sizeof(uint32_t));
+	return 0;
+    } else if (!strcmp(argv[3], "df_12_12_12_12_svo_5")) {
+	Voxelizer voxelizer(std::move(raw_vox), chunk_width, chunk_height, chunk_depth);
+	auto model = df_12_12_12_12_svo_5_construct(voxelizer);
+	write(reinterpret_cast<const char *>(model.data()), model.size() * sizeof(uint32_t));
+	return 0;
+    } else if (!strcmp(argv[3], "df_12_12_12_12_df_32_32_32_16")) {
+	Voxelizer voxelizer(std::move(raw_vox), chunk_width, chunk_height, chunk_depth);
+	auto model = df_12_12_12_12_df_32_32_32_16_construct(voxelizer);
 	write(reinterpret_cast<const char *>(model.data()), model.size() * sizeof(uint32_t));
 	return 0;
     } else {
