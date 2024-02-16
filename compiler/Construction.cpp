@@ -269,17 +269,13 @@ static )";
         return !node[0] && !node[1] && !node[2] && !node[3] && !node[4] && !node[5] && !node[6] && !node[7];
     };
 
-    auto is_node_leaf = [](const std::array<uint32_t, 8> &node) {
-        return node[1] == 0xFFFFFFFF;
-    };
-
     std::map<std::array<uint32_t, 8>, uint32_t> deduplication_map;
 
     for (uint64_t morton = 0; morton < num_voxels; ++morton) {
         uint_fast32_t x = 0, y = 0, z = 0;
         libmorton::morton3D_64_decode(morton, x, y, z);
 
-        std::array<uint32_t, 8> node = {0, 0xFFFFFFFF, 0, 0, 0, 0, 0, 0};
+        std::array<uint32_t, 8> node = {0, 0, 0, 0, 0, 0, 0, 0};
         uint32_t sub_lower_x = x + lower_x, sub_lower_y = y + lower_y, sub_lower_z = z + lower_z;
         bool sub_is_empty;
         auto sub_chunk = )";
@@ -287,12 +283,13 @@ static )";
 	ss << R"(_construct_node(voxelizer, buffer, sub_lower_x, sub_lower_y, sub_lower_z, sub_is_empty);
         if (!sub_is_empty) {
             node[0] = push_node_to_buffer(buffer, sub_chunk);
+            node[1] = 0xFFFFFFFF;
         }
 
         queues.at(power_of_two).emplace_back(node);
         uint32_t d = power_of_two;
         while (d > 0 && queues.at(d).size() == 8) {
-            std::array<uint32_t, 2> node = {0, 0, 0, 0, 0, 0, 0, 0};
+            std::array<uint32_t, 8> node = {0, 0, 0, 0, 0, 0, 0, 0};
 
             bool identical = true;
             for (uint32_t i = 0; i < 8; ++i) {

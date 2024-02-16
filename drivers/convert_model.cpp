@@ -14,6 +14,8 @@ std::vector<uint32_t> df_24_24_24_8_raw_16_16_16_construct(Voxelizer &voxelizer)
 
 std::vector<uint32_t> svo_9_construct(Voxelizer &voxelizer);
 
+std::vector<uint32_t> svdag_9_construct(Voxelizer &voxelizer);
+
 void print_svo(const std::vector<uint32_t> &svo, uint32_t node, std::string spacing) {
     std::cout << spacing << "Internal Node @ " << node << "\n";
     std::cout << spacing << "Child Offset: " << svo[node] << "\n";
@@ -33,9 +35,30 @@ void print_svo(const std::vector<uint32_t> &svo, uint32_t node, std::string spac
     }
 }
 
+void print_svdag(const std::vector<uint32_t> &svdag, uint32_t node, std::string spacing) {
+    if (svdag[node + 1] == 0xFFFFFFFF) {
+	std::cout << spacing << "  Leaf Node @ " << node << "\n";
+	std::cout << spacing << "  Data: @ " << svdag[svdag[node]] << "\n";
+    } else {
+	std::cout << spacing << "Internal Node @ " << node << "\n";
+	std::cout << spacing << "Child Offsets: " << svdag[node] << " " << svdag[node + 1] << " " << svdag[node + 2] << " " << svdag[node + 3] << " " << svdag[node + 4] << " " << svdag[node + 5] << " " << svdag[node + 6] << " " << svdag[node + 7] << " " << "\n";
+	for (uint32_t i = 0; i < 8; ++i) {
+	    if (svdag[node + i]) {
+		print_svdag(svdag, svdag[node + i], spacing + "  ");
+	    }
+	}
+    }
+}
+
 void print_svo(const std::vector<uint32_t> &svo) {
     std::cout << std::hex;
     print_svo(svo, svo[0], "");
+    std::cout << std::dec;
+}
+
+void print_svdag(const std::vector<uint32_t> &svdag) {
+    std::cout << std::hex;
+    print_svdag(svdag, svdag[0], "");
     std::cout << std::dec;
 }
 
@@ -79,6 +102,11 @@ int main(int argc, char *argv[]) {
     } else if (!strcmp(argv[3], "svo_9")) {
 	Voxelizer voxelizer(std::move(raw_vox), chunk_width, chunk_height, chunk_depth);
 	auto model = svo_9_construct(voxelizer);
+	write(reinterpret_cast<const char *>(model.data()), model.size() * sizeof(uint32_t));
+	return 0;
+    } else if (!strcmp(argv[3], "svdag_9")) {
+	Voxelizer voxelizer(std::move(raw_vox), chunk_width, chunk_height, chunk_depth);
+	auto model = svdag_9_construct(voxelizer);
 	write(reinterpret_cast<const char *>(model.data()), model.size() * sizeof(uint32_t));
 	return 0;
     } else {
