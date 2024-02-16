@@ -33,6 +33,7 @@ std::string generate_construction_cpp(const std::vector<InstantiatedFormat> &for
     ss << R"(#include <cstdint>
 #include <vector>
 #include <array>
+#include <map>
 
 #include <external/libmorton/include/libmorton/morton.h>
 
@@ -243,6 +244,76 @@ static )";
                     }
                 }
                 node[0] = first_child_idx;
+            }
+
+            queues.at(d - 1).emplace_back(node);
+            queues.at(d).clear();
+            --d;
+        }
+    }
+
+    return queues.at(0).at(0);
+)";
+	    break;
+	case Format::SVDAG:
+	    ss << R"(    uint32_t power_of_two = )" << format[i].parameters_[0] << R"(;
+    uint32_t bounded_edge_length = 1 << power_of_two;
+    std::vector<std::vector<std::array<uint32_t, 8>>> queues(power_of_two + 1);
+    const uint64_t num_voxels = bounded_edge_length * bounded_edge_length * bounded_edge_length;
+
+    auto nodes_equal = [](const std::array<uint32_t, 8> &a, const std::array<uint32_t, 8> &b) {
+        return a == b;
+    };
+
+    auto is_node_empty = [](const std::array<uint32_t, 8> &node) {
+        return !node[0] && !node[1] && !node[2] && !node[3] && !node[4] && !node[5] && !node[6] && !node[7];
+    };
+
+    auto is_node_leaf = [](const std::array<uint32_t, 8> &node) {
+        return node[1] == 0xFFFFFFFF;
+    };
+
+    std::map<std::array<uint32_t, 8>, uint32_t> deduplication_map;
+
+    for (uint64_t morton = 0; morton < num_voxels; ++morton) {
+        uint_fast32_t x = 0, y = 0, z = 0;
+        libmorton::morton3D_64_decode(morton, x, y, z);
+
+        std::array<uint32_t, 8> node = {0, 0xFFFFFFFF, 0, 0, 0, 0, 0, 0};
+        uint32_t sub_lower_x = x + lower_x, sub_lower_y = y + lower_y, sub_lower_z = z + lower_z;
+        bool sub_is_empty;
+        auto sub_chunk = )";
+	print_format_identifier(i + 1);
+	ss << R"(_construct_node(voxelizer, buffer, sub_lower_x, sub_lower_y, sub_lower_z, sub_is_empty);
+        if (!sub_is_empty) {
+            node[0] = push_node_to_buffer(buffer, sub_chunk);
+        }
+
+        queues.at(power_of_two).emplace_back(node);
+        uint32_t d = power_of_two;
+        while (d > 0 && queues.at(d).size() == 8) {
+            std::array<uint32_t, 2> node = {0, 0, 0, 0, 0, 0, 0, 0};
+
+            bool identical = true;
+            for (uint32_t i = 0; i < 8; ++i) {
+                identical = identical && nodes_equal(queues.at(d).at(i), queues.at(d).at(0));
+            }
+
+            if (identical) {
+                node = queues.at(d).at(0);
+            } else {
+                for (uint32_t i = 0; i < 8; ++i) {
+                    auto child = queues.at(d).at(i);
+                    if (!is_node_empty(child)) {
+                        if (deduplication_map.contains(child)) {
+                            node[i] = deduplication_map[child];
+                        } else {
+                            uint32_t child_idx = push_node_to_buffer(buffer, child);
+                            node[i] = child_idx;
+                            deduplication_map.emplace(child, child_idx);
+                        }
+                    }
+                }
             }
 
             queues.at(d - 1).emplace_back(node);
