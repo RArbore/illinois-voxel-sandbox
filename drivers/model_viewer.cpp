@@ -46,9 +46,9 @@ int main(int argc, char *argv[]) {
 					VoxelChunk::AttributeSet::Color);
     } else {
 	std::cout << "Interpreting " << argv[2] << " as a custom format.\n";
-	chunk_width = 384;
-	chunk_height = 384;
-	chunk_depth = 384;
+	chunk_width = 512;
+	chunk_height = 512;
+	chunk_depth = 512;
 	chunk = chunk_manager.add_chunk(
 					std::move(model_bytes), chunk_width, chunk_height, chunk_depth, argv[2]);
     }

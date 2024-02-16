@@ -30,20 +30,20 @@ static uint32_t push_node_to_buffer(std::vector<uint32_t> &buffer, const std::ar
     return offset;
 }
 
-static std::array<uint32_t, 2> svo_10_construct_node(Voxelizer &voxelizer, std::vector<uint32_t> &buffer, uint32_t lower_x, uint32_t lower_y, uint32_t lower_z, bool &is_empty);
+static std::array<uint32_t, 2> svo_9_construct_node(Voxelizer &voxelizer, std::vector<uint32_t> &buffer, uint32_t lower_x, uint32_t lower_y, uint32_t lower_z, bool &is_empty);
 
 static uint32_t _construct_node(Voxelizer &voxelizer, std::vector<uint32_t> &buffer, uint32_t lower_x, uint32_t lower_y, uint32_t lower_z, bool &is_empty);
 
-std::vector<uint32_t> svo_10_construct(Voxelizer &voxelizer) {
+std::vector<uint32_t> svo_9_construct(Voxelizer &voxelizer) {
     std::vector<uint32_t> buffer {0};
     bool is_empty;
-    auto root_node = svo_10_construct_node(voxelizer, buffer, 0, 0, 0, is_empty);
+    auto root_node = svo_9_construct_node(voxelizer, buffer, 0, 0, 0, is_empty);
     buffer.at(0) = push_node_to_buffer(buffer, root_node);
     return buffer;
 }
 
-static std::array<uint32_t, 2> svo_10_construct_node(Voxelizer &voxelizer, std::vector<uint32_t> &buffer, uint32_t lower_x, uint32_t lower_y, uint32_t lower_z, bool &is_empty) {
-    uint32_t power_of_two = 10;
+static std::array<uint32_t, 2> svo_9_construct_node(Voxelizer &voxelizer, std::vector<uint32_t> &buffer, uint32_t lower_x, uint32_t lower_y, uint32_t lower_z, bool &is_empty) {
+    uint32_t power_of_two = 9;
     uint32_t bounded_edge_length = 1 << power_of_two;
     std::vector<std::vector<std::array<uint32_t, 2>>> queues(power_of_two + 1);
     const uint64_t num_voxels = bounded_edge_length * bounded_edge_length * bounded_edge_length;
@@ -82,7 +82,7 @@ static std::array<uint32_t, 2> svo_10_construct_node(Voxelizer &voxelizer, std::
                 bool child_is_valid = !is_node_empty(queues.at(d).at(i));
                 bool child_is_leaf = is_node_leaf(queues.at(d).at(i));
                 node[1] |= child_is_valid << (7 - i);
-                node[1] |= (child_is_valid && child_is_leaf) << (7 - i + 8);
+                node[1] |= (child_is_valid && child_is_leaf) << (15 - i);
                 identical = identical && nodes_equal(queues.at(d).at(i), queues.at(d).at(0));
             }
 

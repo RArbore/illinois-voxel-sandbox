@@ -36,17 +36,17 @@ bool intersect_format_0(uint volume_id, uint node_id, vec3 obj_ray_pos, vec3 obj
     int direction_kind = int(obj_ray_dir.x < 0.0) + 2 * int(obj_ray_dir.y < 0.0) + 4 * int(obj_ray_dir.z < 0.0);
     vec3 first_low = lower;
     vec3 first_high = lower + vec3(inc_w, inc_h, inc_d);
-    vec4 stack[10];
-    stack[0] = vec4(first_low, uintBitsToFloat(node_id & 0x1FFFFFFF));
+    vec4 stack[11];
+    stack[0] = vec4(first_low, uintBitsToFloat(node_id & 0x0FFFFFFF));
     int level = 0;
     while (level >= 0 && level < 10) {
         vec4 stack_frame = stack[level];
         vec3 low = stack_frame.xyz;
-        uint curr_node_id = floatBitsToUint(stack_frame.w) & 0x1FFFFFFF;
+        uint curr_node_id = floatBitsToUint(stack_frame.w) & 0x0FFFFFFF;
         uint curr_node_child = voxel_buffers[volume_id].voxels[curr_node_id];
         uint curr_node_masks = voxel_buffers[volume_id].voxels[curr_node_id + 1];
-        uint left_off = floatBitsToUint(stack_frame.w) >> 29;
-        float diff = float(1 << 10) * pow(0.5, level + 1);
+        uint left_off = floatBitsToUint(stack_frame.w) >> 28;
+        float diff = float(1 << 9) * pow(0.5, level + 1);
         for (uint idx = left_off; idx < 8; ++idx) {
             uint child = direction_kind ^ idx;
             uint valid = (curr_node_masks >> (7 - child)) & 1;
@@ -57,24 +57,18 @@ bool intersect_format_0(uint volume_id, uint node_id, vec3 obj_ray_pos, vec3 obj
                 if (hit.front_t != -FAR_AWAY) {
                     uint leaf = (curr_node_masks >> (15 - child)) & 1;
                     uint num_valid = bitCount((curr_node_masks & 0xFF) >> (8 - child));
-                    uint child_node_id = curr_node_child + num_valid;
+                    uint child_node_id = curr_node_child + num_valid * 2;
                     if (bool(leaf)) {
                         if (intersect_format_1(volume_id, voxel_buffers[volume_id].voxels[child_node_id], obj_ray_pos, obj_ray_dir, sub_low, hit.front_t, hit.k)) {
                             return true;
-                        } else if (idx != 7) {
-                            stack[level] = vec4(low, uintBitsToFloat(curr_node_id | ((idx + 1) << 29)));
-                            ++level;
                         }
-                    } else if (idx == 7) {
-                        stack[level] = vec4(low, uintBitsToFloat(child_node_id));
-                        ++level;
                     } else {
-                        stack[level] = vec4(low, uintBitsToFloat(curr_node_id | ((idx + 1) << 29)));
+                        stack[level] = vec4(low, uintBitsToFloat(curr_node_id | ((idx + 1) << 28)));
                         ++level;
-                        stack[level] = vec4(low, uintBitsToFloat(child_node_id));
+                        stack[level] = vec4(sub_low, uintBitsToFloat(child_node_id));
                         ++level;
+                        break;
                     }
-                    break;
                 }
             }
         }

@@ -21,7 +21,7 @@ set(GLSL_SHADER_FILES
   Generic_rchit.glsl
   raw_24_24_24_raw_16_16_16_intersect.glsl
   df_24_24_24_8_raw_16_16_16_intersect.glsl
-  svo_4_intersect.glsl
+  svo_9_intersect.glsl
 )
 
 foreach(FILE ${GLSL_SHADER_FILES})

@@ -10,9 +10,15 @@ layout(location = 0) rayPayloadInEXT RayPayload payload;
 
 hitAttributeEXT uint leaf_id;
 
+uint pcg_hash(uint seed) {
+  uint state = seed * 747796405u + 2891336453u;
+  uint word = ((state >> ((state >> 28u) + 4u)) ^ state) * 277803737u;
+  return (word >> 22u) ^ word;
+}
+
 void main() {
     uint volume_id = gl_InstanceCustomIndexEXT;
-    uint32_t color = 0xFF0000FF;//voxel_buffers[volume_id].voxels[leaf_id];
+    uint32_t color = voxel_buffers[volume_id].voxels[leaf_id];
     payload.hit = true;
     payload.world_position = gl_WorldRayOriginEXT + gl_WorldRayDirectionEXT * gl_HitTEXT;
     payload.world_normal = normalize(gl_ObjectToWorldEXT * vec4(voxel_normals[gl_HitKindEXT], 0.0));
