@@ -15,7 +15,9 @@ Fence::Fence(std::shared_ptr<Device> device, bool create_signaled) {
 }
 
 void Fence::wait() {
-    ASSERT(vkWaitForFences(device_->get_device(), 1, &fence_, VK_TRUE, 1000000000), "Fence was waited on for too long.");
+    ASSERT(
+        vkWaitForFences(device_->get_device(), 1, &fence_, VK_TRUE, 1000000000),
+        "Fence was waited on for too long.");
 }
 
 void Fence::reset() { vkResetFences(device_->get_device(), 1, &fence_); }
@@ -63,7 +65,6 @@ VkSemaphore Semaphore::get_semaphore() { return semaphore_; }
 
 bool Semaphore::is_timeline() { return timeline_; }
 
-
 void Semaphore::wait() {
     VkSemaphoreWaitInfo wait_info{};
     wait_info.sType = VK_STRUCTURE_TYPE_SEMAPHORE_WAIT_INFO;
@@ -72,7 +73,8 @@ void Semaphore::wait() {
     wait_info.semaphoreCount = 1;
     wait_info.pSemaphores = &semaphore_;
     wait_info.pValues = &wait_value_;
-    VkResult result = vkWaitSemaphores(device_->get_device(), &wait_info, UINT64_MAX);
+    VkResult result =
+        vkWaitSemaphores(device_->get_device(), &wait_info, UINT64_MAX);
     ASSERT(result, "Failed to wait on semaphore.");
 }
 bool Semaphore::has_reached_wait() {

@@ -1,51 +1,66 @@
-#include <cstdint>
-#include <vector>
 #include <array>
+#include <cstdint>
 #include <map>
+#include <vector>
 
 #include <external/libmorton/include/libmorton/morton.h>
 
 #include "Voxelize.h"
 
-static uint32_t push_node_to_buffer(std::vector<uint32_t> &buffer, uint32_t node) {
+static uint32_t push_node_to_buffer(std::vector<uint32_t> &buffer,
+                                    uint32_t node) {
     uint32_t offset = buffer.size();
     buffer.push_back(node);
     return offset;
 }
 
-static uint32_t push_node_to_buffer(std::vector<uint32_t> &buffer, const std::vector<uint32_t> &node) {
+static uint32_t push_node_to_buffer(std::vector<uint32_t> &buffer,
+                                    const std::vector<uint32_t> &node) {
     uint32_t offset = buffer.size();
     buffer.insert(buffer.end(), node.cbegin(), node.cend());
     return offset;
 }
 
-static uint32_t push_node_to_buffer(std::vector<uint32_t> &buffer, const std::array<uint32_t, 2> &node) {
+static uint32_t push_node_to_buffer(std::vector<uint32_t> &buffer,
+                                    const std::array<uint32_t, 2> &node) {
     uint32_t offset = buffer.size();
     buffer.insert(buffer.end(), node.cbegin(), node.cend());
     return offset;
 }
 
-static uint32_t push_node_to_buffer(std::vector<uint32_t> &buffer, const std::array<uint32_t, 8> &node) {
+static uint32_t push_node_to_buffer(std::vector<uint32_t> &buffer,
+                                    const std::array<uint32_t, 8> &node) {
     uint32_t offset = buffer.size();
     buffer.insert(buffer.end(), node.cbegin(), node.cend());
     return offset;
 }
 
-static std::vector<uint32_t> df_12_12_12_12_svo_5_construct_node(Voxelizer &voxelizer, std::vector<uint32_t> &buffer, uint32_t lower_x, uint32_t lower_y, uint32_t lower_z, bool &is_empty);
+static std::vector<uint32_t> df_12_12_12_12_svo_5_construct_node(
+    Voxelizer &voxelizer, std::vector<uint32_t> &buffer, uint32_t lower_x,
+    uint32_t lower_y, uint32_t lower_z, bool &is_empty);
 
-static std::array<uint32_t, 2> svo_5_construct_node(Voxelizer &voxelizer, std::vector<uint32_t> &buffer, uint32_t lower_x, uint32_t lower_y, uint32_t lower_z, bool &is_empty);
+static std::array<uint32_t, 2>
+svo_5_construct_node(Voxelizer &voxelizer, std::vector<uint32_t> &buffer,
+                     uint32_t lower_x, uint32_t lower_y, uint32_t lower_z,
+                     bool &is_empty);
 
-static uint32_t _construct_node(Voxelizer &voxelizer, std::vector<uint32_t> &buffer, uint32_t lower_x, uint32_t lower_y, uint32_t lower_z, bool &is_empty);
+static uint32_t _construct_node(Voxelizer &voxelizer,
+                                std::vector<uint32_t> &buffer, uint32_t lower_x,
+                                uint32_t lower_y, uint32_t lower_z,
+                                bool &is_empty);
 
 std::vector<uint32_t> df_12_12_12_12_svo_5_construct(Voxelizer &voxelizer) {
-    std::vector<uint32_t> buffer {0};
+    std::vector<uint32_t> buffer{0};
     bool is_empty;
-    auto root_node = df_12_12_12_12_svo_5_construct_node(voxelizer, buffer, 0, 0, 0, is_empty);
+    auto root_node = df_12_12_12_12_svo_5_construct_node(voxelizer, buffer, 0,
+                                                         0, 0, is_empty);
     buffer.at(0) = push_node_to_buffer(buffer, root_node);
     return buffer;
 }
 
-static std::vector<uint32_t> df_12_12_12_12_svo_5_construct_node(Voxelizer &voxelizer, std::vector<uint32_t> &buffer, uint32_t lower_x, uint32_t lower_y, uint32_t lower_z, bool &is_empty) {
+static std::vector<uint32_t> df_12_12_12_12_svo_5_construct_node(
+    Voxelizer &voxelizer, std::vector<uint32_t> &buffer, uint32_t lower_x,
+    uint32_t lower_y, uint32_t lower_z, bool &is_empty) {
     std::vector<uint32_t> df_chunk;
     is_empty = true;
     uint32_t k = 12;
@@ -56,7 +71,9 @@ static std::vector<uint32_t> df_12_12_12_12_svo_5_construct_node(Voxelizer &voxe
                 uint32_t sub_lower_y = lower_y + g_y * 32;
                 uint32_t sub_lower_z = lower_z + g_z * 32;
                 bool sub_is_empty;
-                auto sub_chunk = svo_5_construct_node(voxelizer, buffer, sub_lower_x, sub_lower_y, sub_lower_z, sub_is_empty);
+                auto sub_chunk = svo_5_construct_node(
+                    voxelizer, buffer, sub_lower_x, sub_lower_y, sub_lower_z,
+                    sub_is_empty);
                 if (sub_is_empty) {
                     df_chunk.push_back(0);
                 } else {
@@ -71,23 +88,26 @@ static std::vector<uint32_t> df_12_12_12_12_svo_5_construct_node(Voxelizer &voxe
         for (uint32_t g_y = 0; g_y < 12; ++g_y) {
             for (uint32_t g_x = 0; g_x < 12; ++g_x) {
                 uint32_t g_voxel_offset = (g_x + g_y * 12 + g_z * 12 * 12);
-            uint32_t min_dist = k;
-            for (uint32_t kz = g_z > k ? g_z - k : 0; kz <= g_z + k && kz < 12; ++kz) {
-                for (uint32_t ky = g_y > k ? g_y - k : 0; ky <= g_y + k && ky < 12; ++ky) {
-                    for (uint32_t kx = g_x > k ? g_x - k : 0; kx <= g_x + k && kx < 12; ++kx) {
-                        size_t k_voxel_offset = kx + ky * 12 + kz * 12 * 12;
-                        if (df_chunk[k_voxel_offset * 2] != 0) {
-                            uint32_t dist =
-                            (g_z > kz ? g_z - kz : kz - g_z) +
-                            (g_y > ky ? g_y - ky : ky - g_y) +
-                            (g_x > kx ? g_x - kx : kx - g_x);
-                            if (dist < min_dist && dist) {
-                                min_dist = dist;
+                uint32_t min_dist = k;
+                for (uint32_t kz = g_z > k ? g_z - k : 0;
+                     kz <= g_z + k && kz < 12; ++kz) {
+                    for (uint32_t ky = g_y > k ? g_y - k : 0;
+                         ky <= g_y + k && ky < 12; ++ky) {
+                        for (uint32_t kx = g_x > k ? g_x - k : 0;
+                             kx <= g_x + k && kx < 12; ++kx) {
+                            size_t k_voxel_offset = kx + ky * 12 + kz * 12 * 12;
+                            if (df_chunk[k_voxel_offset * 2] != 0) {
+                                uint32_t dist =
+                                    (g_z > kz ? g_z - kz : kz - g_z) +
+                                    (g_y > ky ? g_y - ky : ky - g_y) +
+                                    (g_x > kx ? g_x - kx : kx - g_x);
+                                if (dist < min_dist && dist) {
+                                    min_dist = dist;
+                                }
                             }
                         }
                     }
                 }
-            }
                 df_chunk[g_voxel_offset * 2 + 1] = min_dist;
             }
         }
@@ -95,13 +115,18 @@ static std::vector<uint32_t> df_12_12_12_12_svo_5_construct_node(Voxelizer &voxe
     return df_chunk;
 }
 
-static std::array<uint32_t, 2> svo_5_construct_node(Voxelizer &voxelizer, std::vector<uint32_t> &buffer, uint32_t lower_x, uint32_t lower_y, uint32_t lower_z, bool &is_empty) {
+static std::array<uint32_t, 2>
+svo_5_construct_node(Voxelizer &voxelizer, std::vector<uint32_t> &buffer,
+                     uint32_t lower_x, uint32_t lower_y, uint32_t lower_z,
+                     bool &is_empty) {
     uint32_t power_of_two = 5;
     uint32_t bounded_edge_length = 1 << power_of_two;
     std::vector<std::vector<std::array<uint32_t, 2>>> queues(power_of_two + 1);
-    const uint64_t num_voxels = bounded_edge_length * bounded_edge_length * bounded_edge_length;
+    const uint64_t num_voxels =
+        bounded_edge_length * bounded_edge_length * bounded_edge_length;
 
-    auto nodes_equal = [](const std::array<uint32_t, 2> &a, const std::array<uint32_t, 2> &b) {
+    auto nodes_equal = [](const std::array<uint32_t, 2> &a,
+                          const std::array<uint32_t, 2> &b) {
         return a[0] == b[0] && a[1] == b[1];
     };
 
@@ -120,9 +145,12 @@ static std::array<uint32_t, 2> svo_5_construct_node(Voxelizer &voxelizer, std::v
         libmorton::morton3D_64_decode(morton, x, y, z);
 
         std::array<uint32_t, 2> node = {0, 0};
-        uint32_t sub_lower_x = x + lower_x, sub_lower_y = y + lower_y, sub_lower_z = z + lower_z;
+        uint32_t sub_lower_x = x + lower_x, sub_lower_y = y + lower_y,
+                 sub_lower_z = z + lower_z;
         bool sub_is_empty;
-        auto sub_chunk = _construct_node(voxelizer, buffer, sub_lower_x, sub_lower_y, sub_lower_z, sub_is_empty);
+        auto sub_chunk =
+            _construct_node(voxelizer, buffer, sub_lower_x, sub_lower_y,
+                            sub_lower_z, sub_is_empty);
         if (!sub_is_empty) {
             node[0] = push_node_to_buffer(buffer, sub_chunk);
             is_empty = false;
@@ -139,7 +167,8 @@ static std::array<uint32_t, 2> svo_5_construct_node(Voxelizer &voxelizer, std::v
                 bool child_is_leaf = is_node_leaf(queues.at(d).at(i));
                 node[1] |= child_is_valid << (7 - i);
                 node[1] |= (child_is_valid && child_is_leaf) << (15 - i);
-                identical = identical && nodes_equal(queues.at(d).at(i), queues.at(d).at(0));
+                identical = identical &&
+                            nodes_equal(queues.at(d).at(i), queues.at(d).at(0));
             }
 
             if (identical) {
@@ -150,7 +179,8 @@ static std::array<uint32_t, 2> svo_5_construct_node(Voxelizer &voxelizer, std::v
                     auto child = queues.at(d).at(i);
                     if (!is_node_empty(child)) {
                         uint32_t child_idx = push_node_to_buffer(buffer, child);
-                        first_child_idx = first_child_idx ? first_child_idx : child_idx;
+                        first_child_idx =
+                            first_child_idx ? first_child_idx : child_idx;
                     }
                 }
                 node[0] = first_child_idx;
@@ -165,7 +195,10 @@ static std::array<uint32_t, 2> svo_5_construct_node(Voxelizer &voxelizer, std::v
     return queues.at(0).at(0);
 }
 
-static uint32_t _construct_node(Voxelizer &voxelizer, std::vector<uint32_t> &buffer, uint32_t lower_x, uint32_t lower_y, uint32_t lower_z, bool &is_empty) {
+static uint32_t _construct_node(Voxelizer &voxelizer,
+                                std::vector<uint32_t> &buffer, uint32_t lower_x,
+                                uint32_t lower_y, uint32_t lower_z,
+                                bool &is_empty) {
     uint32_t voxel = voxelizer.at(lower_x, lower_y, lower_z);
     is_empty = voxel == 0;
     return voxel;

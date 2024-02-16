@@ -13,7 +13,7 @@ int main(int argc, char *argv[]) {
 
     const std::string models_directory = MODELS_DIRECTORY;
     std::string model_path = models_directory + "/sponza";
- 
+
     std::ifstream stream(model_path, std::ios::in | std::ios::binary);
     const auto file_size = std::filesystem::file_size(model_path);
     std::vector<std::byte> svdag = std::vector<std::byte>(file_size);
@@ -21,8 +21,7 @@ int main(int argc, char *argv[]) {
     std::cout << "Sponza SVDAG Size: " << svdag.size() << "\n";
 
     uint32_t *svdag_ptr = reinterpret_cast<uint32_t *>(svdag.data());
-    uint32_t chunk_width = svdag_ptr[0], 
-             chunk_height = svdag_ptr[1],
+    uint32_t chunk_width = svdag_ptr[0], chunk_height = svdag_ptr[1],
              chunk_depth = svdag_ptr[2];
     VoxelChunkPtr chunk = chunk_manager.add_chunk(
         std::move(svdag), chunk_width, chunk_height, chunk_depth,
@@ -44,24 +43,25 @@ int main(int argc, char *argv[]) {
     objects.emplace_back(std::move(sponza_object));
 
     // Add emissive voxels
-    auto emissive_block = append_metadata_to_raw(generate_basic_filled_chunk(8, 8, 8), 8, 8, 8);
+    auto emissive_block =
+        append_metadata_to_raw(generate_basic_filled_chunk(8, 8, 8), 8, 8, 8);
     VoxelChunkPtr test_light = chunk_manager.add_chunk(
         std::move(emissive_block), 8, 8, 8, VoxelChunk::Format::Raw,
         VoxelChunk::AttributeSet::Emissive);
     auto light = build_model(context, test_light);
 
-    glm::mat3x4 light_transform_1 = {1.0F, 0.0F, 0.0F, 40.0F, 0.0F, 1.0F,
-                              0.0F, 50.0F, 0.0F, 0.0F, 1.0F, 45.0F};
+    glm::mat3x4 light_transform_1 = {1.0F, 0.0F,  0.0F, 40.0F, 0.0F, 1.0F,
+                                     0.0F, 50.0F, 0.0F, 0.0F,  1.0F, 45.0F};
     auto light_object_1 = build_object(context, light, light_transform_1);
     objects.emplace_back(std::move(light_object_1));
-   
+
     glm::mat3x4 light_transform_2 = {1.0F, 0.0F,  0.0F, 40.0F, 0.0F, 1.0F,
                                      0.0F, 50.0F, 0.0F, 0.0F,  1.0F, 95.0F};
     auto light_object_2 = build_object(context, light, light_transform_2);
     objects.emplace_back(std::move(light_object_2));
 
     glm::mat3x4 light_transform_3 = {1.0F, 0.0F,  0.0F, 125.0F, 0.0F, 1.0F,
-                                     0.0F, 75.0F, 0.0F, 0.0F,  1.0F, 70.0F};
+                                     0.0F, 75.0F, 0.0F, 0.0F,   1.0F, 70.0F};
     auto light_object_3 = build_object(context, light, light_transform_3);
     objects.emplace_back(std::move(light_object_3));
 
