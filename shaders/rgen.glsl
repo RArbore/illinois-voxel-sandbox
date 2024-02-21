@@ -27,11 +27,12 @@ vec2 slice_2_from_4(vec4 random, uint num) {
 
 void main() {
     // Setup and shoot the camera ray first
-    const vec2 pixel_center = vec2(gl_LaunchIDEXT.xy) + 0.5;
+    const float aspect_ratio = float(gl_LaunchSizeEXT.x) / float(gl_LaunchSizeEXT.y);
+    const vec2 pixel_center = vec2(gl_LaunchIDEXT.xy) + vec2(0.5);
     const vec2 pixel_uv = pixel_center / vec2(gl_LaunchSizeEXT.xy);
     const vec2 pixel_ndc = 2.0f * pixel_uv - 1.0f;
     vec3 ray_origin = (camera.view_inv * vec4(0.0f, 0.0f, 0.0f, 1.0f)).xyz;
-    vec3 ray_direction = normalize((camera.view_inv * vec4(pixel_ndc.xy, 1.0f, 0.0)).xyz);
+    vec3 ray_direction = normalize((camera.view_inv * vec4(pixel_ndc.x * aspect_ratio, pixel_ndc.y, 1.0f, 0.0)).xyz);
 
     uint t = camera.frames_since_update + uint(elapsed_ms);
 

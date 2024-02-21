@@ -5,7 +5,7 @@ Window::Window() {
     glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
     // glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
     window_ =
-        glfwCreateWindow(800, 800, "Illinois Voxel Sandbox", nullptr, nullptr);
+        glfwCreateWindow(1600, 900, "Illinois Voxel Sandbox", nullptr, nullptr);
 }
 
 Window::~Window() {
