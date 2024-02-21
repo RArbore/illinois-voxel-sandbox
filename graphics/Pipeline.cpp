@@ -77,8 +77,8 @@ std::vector<std::string> gather_custom_intersection_shader_names() {
         if (std::filesystem::exists(prefix)) {
             for (const auto &dir_entry :
                  std::filesystem::directory_iterator(prefix)) {
-                if (std::string(dir_entry.path()).ends_with("_intersect.spv")) {
-                    std::string name = dir_entry.path().filename();
+                if (dir_entry.path().string().ends_with("_intersect.spv")) {
+                    std::string name = dir_entry.path().filename().string();
                     shader_names.emplace(name.substr(0, name.size() - 4));
                 }
             }
