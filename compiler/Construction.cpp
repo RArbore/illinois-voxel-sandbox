@@ -8,26 +8,35 @@ std::string generate_construction_cpp(const std::vector<InstantiatedFormat> &for
     std::stringstream ss;
 
     auto print_format_identifier = [&](uint32_t starting_level = 0) {
-    ss << format_identifier(format, starting_level);
+	ss << format_identifier(format, starting_level);
+    };
+    
+    auto print_level_node_type = [&](uint32_t level) {
+	if (level >= format.size()) {
+	    ss << "uint32_t";
+	} else {
+	    switch(format[level].format_) {
+	    case Format::Raw:
+	    case Format::DF:
+		ss << "std::vector<uint32_t>";
+		break;
+	    case Format::SVO:
+		ss << "std::array<uint32_t, 2>";
+		break;
+	    case Format::SVDAG:
+		ss << "std::array<uint32_t, 8>";
+		break;
+	    }
+	}
     };
 
-    auto print_level_node_type = [&](uint32_t level) {
-    if (level >= format.size()) {
-        ss << "uint32_t";
-    } else {
-        switch(format[level].format_) {
-        case Format::Raw:
-        case Format::DF:
-        ss << "std::vector<uint32_t>";
-        break;
-        case Format::SVO:
-        ss << "std::array<uint32_t, 2>";
-        break;
-        case Format::SVDAG:
-        ss << "std::array<uint32_t, 8>";
-        break;
-        }
-    }
+    auto print_construct_lower = [&](uint32_t level) {
+	print_format_identifier(level + 1);
+	if (opt.whole_level_dedup_ && level + 1 < format.size() && format.at(level + 1).format_ == Format::SVDAG) {
+	    ss << R"(_construct_node(voxelizer, buffer, sub_lower_x, sub_lower_y, sub_lower_z, sub_is_empty, deduplication_map))";
+	} else {
+	    ss << R"(_construct_node(voxelizer, buffer, sub_lower_x, sub_lower_y, sub_lower_z, sub_is_empty))";
+	}
     };
     
     ss << R"(#include <cstdint>
@@ -40,7 +49,9 @@ std::string generate_construction_cpp(const std::vector<InstantiatedFormat> &for
 #include "Voxelize.h"
 
 static uint32_t push_node_to_buffer(std::vector<uint32_t> &buffer, uint32_t node) {
-    return node;
+    uint32_t offset = buffer.size();
+    buffer.push_back(node);
+    return offset;
 }
 
 static uint32_t push_node_to_buffer(std::vector<uint32_t> &buffer, const std::vector<uint32_t> &node) {
@@ -64,27 +75,39 @@ static uint32_t push_node_to_buffer(std::vector<uint32_t> &buffer, const std::ar
 )";
 
     for (uint32_t i = 0; i < format.size() + 1; ++i) {
-    ss << R"(static )";
-    print_level_node_type(i);
-    ss << R"( )";
-    print_format_identifier(i);
-    ss << R"(_construct_node(Voxelizer &voxelizer, std::vector<uint32_t> &buffer, uint32_t lower_x, uint32_t lower_y, uint32_t lower_z, bool &is_empty);
+	ss << R"(static )";
+	print_level_node_type(i);
+	ss << R"( )";
+	print_format_identifier(i);
+	if (opt.whole_level_dedup_ && i < format.size() && format.at(i).format_ == Format::SVDAG) {
+	    ss << R"(_construct_node(Voxelizer &voxelizer, std::vector<uint32_t> &buffer, uint32_t lower_x, uint32_t lower_y, uint32_t lower_z, bool &is_empty, std::map<std::array<uint32_t, 8>, uint32_t> &deduplication_map);
 
 )";
+	} else {
+	    ss << R"(_construct_node(Voxelizer &voxelizer, std::vector<uint32_t> &buffer, uint32_t lower_x, uint32_t lower_y, uint32_t lower_z, bool &is_empty);
+
+)";
+	}
     }
-
+    
     ss << R"(std::vector<uint32_t> )";
-
+    
     print_format_identifier();
 
     ss << R"(_construct(Voxelizer &voxelizer) {
     std::vector<uint32_t> buffer {0};
     bool is_empty;
+)";
+    if (opt.whole_level_dedup_ && format.at(0).format_ == Format::SVDAG) {
+	ss << R"(    std::map<std::array<uint32_t, 8>, uint32_t> deduplication_map;
     auto root_node = )";
-
-    print_format_identifier();
-    ss << R"(_construct_node(voxelizer, buffer, 0, 0, 0, is_empty))";
-    ss << R"(;)";
+	print_format_identifier();
+	ss << R"(_construct_node(voxelizer, buffer, 0, 0, 0, is_empty, deduplication_map);)";
+    } else {
+	ss << R"(    auto root_node = )";
+	print_format_identifier();
+	ss << R"(_construct_node(voxelizer, buffer, 0, 0, 0, is_empty);)";
+    }
 
     ss << R"(
     buffer.at(0) = push_node_to_buffer(buffer, root_node);
@@ -98,12 +121,23 @@ static )";
     print_level_node_type(i);
     ss << R"( )";
     print_format_identifier(i);
-    ss << R"(_construct_node(Voxelizer &voxelizer, std::vector<uint32_t> &buffer, uint32_t lower_x, uint32_t lower_y, uint32_t lower_z, bool &is_empty) {
+    if (opt.whole_level_dedup_ && format.at(i).format_ == Format::SVDAG) {
+	ss << R"(_construct_node(Voxelizer &voxelizer, std::vector<uint32_t> &buffer, uint32_t lower_x, uint32_t lower_y, uint32_t lower_z, bool &is_empty, std::map<std::array<uint32_t, 8>, uint32_t> &deduplication_map) {
 )";
+    } else {
+	ss << R"(_construct_node(Voxelizer &voxelizer, std::vector<uint32_t> &buffer, uint32_t lower_x, uint32_t lower_y, uint32_t lower_z, bool &is_empty) {
+)";
+    }
     auto [sub_w, sub_h, sub_d] = calculate_bounds(format, i + 1);
     auto [inc_w, inc_h, inc_d] = calculate_bounds(format, i);
     auto this_w = inc_w / sub_w, this_h = inc_h / sub_h, this_d = inc_d / sub_d;
 
+    if (opt.whole_level_dedup_ && i + 1 < format.size() && format.at(i + 1).format_ == Format::SVDAG) {
+	ss << R"(    std::map<std::array<uint32_t, 8>, uint32_t> deduplication_map;
+
+)";
+    }
+    
     switch (format[i].format_) {
     case Format::Raw:
         ss << R"(    std::vector<uint32_t> raw_chunk;
@@ -116,8 +150,8 @@ static )";
                 uint32_t sub_lower_z = lower_z + g_z * )" << sub_d << R"(;
                 bool sub_is_empty;
                 auto sub_chunk = )";
-        print_format_identifier(i + 1);
-        ss << R"(_construct_node(voxelizer, buffer, sub_lower_x, sub_lower_y, sub_lower_z, sub_is_empty);
+        print_construct_lower(i);
+        ss << R"(;
                 if (sub_is_empty) {
                     raw_chunk.push_back(0);
                 } else {
@@ -142,8 +176,8 @@ static )";
                 uint32_t sub_lower_z = lower_z + g_z * )" << sub_d << R"(;
                 bool sub_is_empty;
                 auto sub_chunk = )";
-        print_format_identifier(i + 1);
-        ss << R"(_construct_node(voxelizer, buffer, sub_lower_x, sub_lower_y, sub_lower_z, sub_is_empty);
+        print_construct_lower(i);
+        ss << R"(;
                 if (sub_is_empty) {
                     df_chunk.push_back(0);
                 } else {
@@ -210,8 +244,8 @@ static )";
         uint32_t sub_lower_x = x + lower_x, sub_lower_y = y + lower_y, sub_lower_z = z + lower_z;
         bool sub_is_empty;
         auto sub_chunk = )";
-	print_format_identifier(i + 1);
-	ss << R"(_construct_node(voxelizer, buffer, sub_lower_x, sub_lower_y, sub_lower_z, sub_is_empty);
+        print_construct_lower(i);
+        ss << R"(;
         if (!sub_is_empty) {
             node[0] = push_node_to_buffer(buffer, sub_chunk);
             is_empty = false;
@@ -267,9 +301,14 @@ static )";
     auto is_node_empty = [](const std::array<uint32_t, 8> &node) {
         return !node[0] && !node[1] && !node[2] && !node[3] && !node[4] && !node[5] && !node[6] && !node[7];
     };
-
-    std::map<std::array<uint32_t, 8>, uint32_t> deduplication_map;
-
+)";
+	if (!opt.whole_level_dedup_) {
+	    ss << R"(
+	    std::map<std::array<uint32_t, 8>, uint32_t> deduplication_map;
+)";
+	}
+	
+	ss << R"(
     is_empty = true;
 
     for (uint64_t morton = 0; morton < num_voxels; ++morton) {
@@ -280,8 +319,8 @@ static )";
         uint32_t sub_lower_x = x + lower_x, sub_lower_y = y + lower_y, sub_lower_z = z + lower_z;
         bool sub_is_empty;
         auto sub_chunk = )";
-	print_format_identifier(i + 1);
-	ss << R"(_construct_node(voxelizer, buffer, sub_lower_x, sub_lower_y, sub_lower_z, sub_is_empty);
+        print_construct_lower(i);
+        ss << R"(;
         if (!sub_is_empty) {
             node[0] = push_node_to_buffer(buffer, sub_chunk);
             node[1] = 0xFFFFFFFF;

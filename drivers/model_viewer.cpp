@@ -46,11 +46,13 @@ int main(int argc, char *argv[]) {
             VoxelChunk::Format::DF, VoxelChunk::AttributeSet::Color);
     } else {
         std::cout << "Interpreting " << argv[2] << " as a custom format.\n";
+	ASSERT(argv[3], "For custom formats, a chunk width must be specified.\n");
+	ASSERT(argv[4], "For custom formats, a chunk height must be specified.\n");
+	ASSERT(argv[5], "For custom formats, a chunk depth must be specified.\n");
 	auto format = parse_format(argv[2]);
-	auto bounds = calculate_bounds(format);
-        chunk_width = std::get<0>(bounds);
-        chunk_height = std::get<1>(bounds);
-        chunk_depth = std::get<2>(bounds);
+        chunk_width = atoi(argv[3]);
+        chunk_height = atoi(argv[4]);
+        chunk_depth = atoi(argv[5]);
         chunk = chunk_manager.add_chunk(std::move(model_bytes), chunk_width,
                                         chunk_height, chunk_depth, format_identifier(format));
     }

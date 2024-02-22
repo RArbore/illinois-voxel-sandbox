@@ -80,6 +80,7 @@ bool intersect_format_)" << i << R"((uint volume_id, uint node_id, vec3 obj_ray_
         chunk_side_dist += vec3(mask) * chunk_ray_delta;
         chunk_ray_voxel += ivec3(mask) * chunk_ray_step;
     }
+    return false;
 )";
 	    break;
 	case Format::DF:
@@ -111,6 +112,7 @@ bool intersect_format_)" << i << R"((uint volume_id, uint node_id, vec3 obj_ray_
         chunk_ray_voxel += ivec3(mask) * chunk_ray_step;
         --budget;
     }
+    return false;
 )";
 	    break;
 	case Format::SVO:
@@ -155,6 +157,7 @@ bool intersect_format_)" << i << R"((uint volume_id, uint node_id, vec3 obj_ray_
         }
         --level;
     }
+    return false;
 )";
 	    break;
 	case Format::SVDAG:
@@ -194,6 +197,7 @@ bool intersect_format_)" << i << R"((uint volume_id, uint node_id, vec3 obj_ray_
         }
         --level;
     }
+    return false;
 )";
 	    break;
 	default:
