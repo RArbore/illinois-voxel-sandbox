@@ -35,24 +35,23 @@ bool intersect_format_1(uint volume_id, uint node_id, vec3 obj_ray_pos, vec3 obj
 
     int direction_kind = int(obj_ray_dir.x < 0.0) + 2 * int(obj_ray_dir.y < 0.0) + 4 * int(obj_ray_dir.z < 0.0);
     vec3 first_low = lower;
-    vec3 first_high = lower + vec3(inc_w, inc_h, inc_d);
-    vec4 stack[7];
+    vec4 stack[6];
     stack[0] = vec4(first_low, uintBitsToFloat(node_id & 0x0FFFFFFF));
     int level = 0;
-    while (level >= 0 && level < 6) {
+    while (level >= 0 && level < 5) {
         vec4 stack_frame = stack[level];
         vec3 low = stack_frame.xyz;
         uint curr_node_id = floatBitsToUint(stack_frame.w) & 0x0FFFFFFF;
         uint curr_node_child = voxel_buffers[volume_id].voxels[curr_node_id];
         uint curr_node_masks = voxel_buffers[volume_id].voxels[curr_node_id + 1];
         uint left_off = floatBitsToUint(stack_frame.w) >> 28;
-        float diff = float(1 << 5) * pow(0.5, level + 1);
+        float diff = float(1 << (5 - level));
         for (uint idx = left_off; idx < 8; ++idx) {
             uint child = direction_kind ^ idx;
             uint valid = (curr_node_masks >> (7 - child)) & 1;
             if (bool(valid)) {
-                vec3 sub_low = low + subpositions(child) * diff;
-                vec3 sub_high = sub_low + diff;
+                vec3 sub_low = low + subpositions(child) * diff * 0.5;
+                vec3 sub_high = sub_low + diff * 0.5;
                 aabb_intersect_result hit = hit_aabb(sub_low, sub_high, obj_ray_pos, obj_ray_dir);
                 if (hit.front_t != -FAR_AWAY) {
                     uint leaf = (curr_node_masks >> (15 - child)) & 1;
@@ -74,6 +73,7 @@ bool intersect_format_1(uint volume_id, uint node_id, vec3 obj_ray_pos, vec3 obj
         }
         --level;
     }
+    return false;
 }
 
 bool intersect_format_0(uint volume_id, uint node_id, vec3 obj_ray_pos, vec3 obj_ray_dir, vec3 lower, float o_t, uint hit_kind) {
@@ -115,6 +115,7 @@ bool intersect_format_0(uint volume_id, uint node_id, vec3 obj_ray_pos, vec3 obj
         chunk_ray_voxel += ivec3(mask) * chunk_ray_step;
         --budget;
     }
+    return false;
 }
 
 void main() {

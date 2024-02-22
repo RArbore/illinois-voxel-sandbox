@@ -34,40 +34,112 @@ bool intersect_format_1(uint volume_id, uint node_id, vec3 obj_ray_pos, vec3 obj
     float this_d = 32.0;
 
     int direction_kind = int(obj_ray_dir.x < 0.0) + 2 * int(obj_ray_dir.y < 0.0) + 4 * int(obj_ray_dir.z < 0.0);
-    vec3 first_low = lower;
-    vec3 first_high = lower + vec3(inc_w, inc_h, inc_d);
-    vec4 stack[7];
-    stack[0] = vec4(first_low, uintBitsToFloat(node_id & 0x0FFFFFFF));
-    int level = 0;
-    while (level >= 0 && level < 6) {
-        vec4 stack_frame = stack[level];
-        vec3 low = stack_frame.xyz;
-        uint curr_node_id = floatBitsToUint(stack_frame.w) & 0x0FFFFFFF;
-        uint left_off = floatBitsToUint(stack_frame.w) >> 28;
-        float diff = float(1 << 5) * pow(0.5, level + 1);
-        for (uint idx = left_off; idx < 8; ++idx) {
-            uint child = direction_kind ^ idx;
-            uint child_node_id = voxel_buffers[volume_id].voxels[curr_node_id + child];
-            if (child_node_id != 0) {
-                vec3 sub_low = low + subpositions(child) * diff;
-                vec3 sub_high = sub_low + diff;
-                aabb_intersect_result hit = hit_aabb(sub_low, sub_high, obj_ray_pos, obj_ray_dir);
-                if (hit.front_t != -FAR_AWAY) {
-                    if (voxel_buffers[volume_id].voxels[child_node_id + 1] == 0xFFFFFFFF) {
-                        if (intersect_format_2(volume_id, voxel_buffers[volume_id].voxels[child_node_id], obj_ray_pos, obj_ray_dir, sub_low, hit.front_t, hit.k)) {
-                            return true;
-                        }
-                    } else {
-                        stack[level] = vec4(low, uintBitsToFloat(curr_node_id | ((idx + 1) << 28)));
-                        ++level;
-                        stack[level] = vec4(sub_low, uintBitsToFloat(child_node_id));
-                        ++level;
-                        break;
+    vec3 low_0 = lower;
+    uint curr_node_id_0 = node_id;
+    float diff_0 = float(1 << (5 - 0));
+    for (uint idx = 0; idx < 8; ++idx) {
+        uint child = direction_kind ^ idx;
+        uint child_node_id = voxel_buffers[volume_id].voxels[curr_node_id_0 + child];
+        if (child_node_id != 0) {
+            vec3 sub_low = low_0 + subpositions(child) * diff_0 * 0.5;
+            vec3 sub_high = sub_low + diff_0 * 0.5;
+            aabb_intersect_result hit = hit_aabb(sub_low, sub_high, obj_ray_pos, obj_ray_dir);
+            if (hit.front_t != -FAR_AWAY) {
+                if (voxel_buffers[volume_id].voxels[child_node_id + 1] == 0xFFFFFFFF) {
+                    if (intersect_format_2(volume_id, voxel_buffers[volume_id].voxels[child_node_id], obj_ray_pos, obj_ray_dir, sub_low, hit.front_t, hit.k)) {
+                        return true;
                     }
+                } else {
+                    uint curr_node_id_1 = child_node_id;
+                    vec3 low_1 = sub_low;
+
+    float diff_1 = float(1 << (5 - 1));
+    for (uint idx = 0; idx < 8; ++idx) {
+        uint child = direction_kind ^ idx;
+        uint child_node_id = voxel_buffers[volume_id].voxels[curr_node_id_1 + child];
+        if (child_node_id != 0) {
+            vec3 sub_low = low_1 + subpositions(child) * diff_1 * 0.5;
+            vec3 sub_high = sub_low + diff_1 * 0.5;
+            aabb_intersect_result hit = hit_aabb(sub_low, sub_high, obj_ray_pos, obj_ray_dir);
+            if (hit.front_t != -FAR_AWAY) {
+                if (voxel_buffers[volume_id].voxels[child_node_id + 1] == 0xFFFFFFFF) {
+                    if (intersect_format_2(volume_id, voxel_buffers[volume_id].voxels[child_node_id], obj_ray_pos, obj_ray_dir, sub_low, hit.front_t, hit.k)) {
+                        return true;
+                    }
+                } else {
+                    uint curr_node_id_2 = child_node_id;
+                    vec3 low_2 = sub_low;
+
+    float diff_2 = float(1 << (5 - 2));
+    for (uint idx = 0; idx < 8; ++idx) {
+        uint child = direction_kind ^ idx;
+        uint child_node_id = voxel_buffers[volume_id].voxels[curr_node_id_2 + child];
+        if (child_node_id != 0) {
+            vec3 sub_low = low_2 + subpositions(child) * diff_2 * 0.5;
+            vec3 sub_high = sub_low + diff_2 * 0.5;
+            aabb_intersect_result hit = hit_aabb(sub_low, sub_high, obj_ray_pos, obj_ray_dir);
+            if (hit.front_t != -FAR_AWAY) {
+                if (voxel_buffers[volume_id].voxels[child_node_id + 1] == 0xFFFFFFFF) {
+                    if (intersect_format_2(volume_id, voxel_buffers[volume_id].voxels[child_node_id], obj_ray_pos, obj_ray_dir, sub_low, hit.front_t, hit.k)) {
+                        return true;
+                    }
+                } else {
+                    uint curr_node_id_3 = child_node_id;
+                    vec3 low_3 = sub_low;
+
+    float diff_3 = float(1 << (5 - 3));
+    for (uint idx = 0; idx < 8; ++idx) {
+        uint child = direction_kind ^ idx;
+        uint child_node_id = voxel_buffers[volume_id].voxels[curr_node_id_3 + child];
+        if (child_node_id != 0) {
+            vec3 sub_low = low_3 + subpositions(child) * diff_3 * 0.5;
+            vec3 sub_high = sub_low + diff_3 * 0.5;
+            aabb_intersect_result hit = hit_aabb(sub_low, sub_high, obj_ray_pos, obj_ray_dir);
+            if (hit.front_t != -FAR_AWAY) {
+                if (voxel_buffers[volume_id].voxels[child_node_id + 1] == 0xFFFFFFFF) {
+                    if (intersect_format_2(volume_id, voxel_buffers[volume_id].voxels[child_node_id], obj_ray_pos, obj_ray_dir, sub_low, hit.front_t, hit.k)) {
+                        return true;
+                    }
+                } else {
+                    uint curr_node_id_4 = child_node_id;
+                    vec3 low_4 = sub_low;
+
+    float diff_4 = float(1 << (5 - 4));
+    for (uint idx = 0; idx < 8; ++idx) {
+        uint child = direction_kind ^ idx;
+        uint child_node_id = voxel_buffers[volume_id].voxels[curr_node_id_4 + child];
+        if (child_node_id != 0) {
+            vec3 sub_low = low_4 + subpositions(child) * diff_4 * 0.5;
+            vec3 sub_high = sub_low + diff_4 * 0.5;
+            aabb_intersect_result hit = hit_aabb(sub_low, sub_high, obj_ray_pos, obj_ray_dir);
+            if (hit.front_t != -FAR_AWAY) {
+                if (voxel_buffers[volume_id].voxels[child_node_id + 1] == 0xFFFFFFFF) {
+                    if (intersect_format_2(volume_id, voxel_buffers[volume_id].voxels[child_node_id], obj_ray_pos, obj_ray_dir, sub_low, hit.front_t, hit.k)) {
+                        return true;
+                    }
+                } else {
+                    uint curr_node_id_5 = child_node_id;
+                    vec3 low_5 = sub_low;
+
                 }
             }
         }
-        --level;
+    }
+                }
+            }
+        }
+    }
+                }
+            }
+        }
+    }
+                }
+            }
+        }
+    }
+                }
+            }
+        }
     }
     return false;
 }

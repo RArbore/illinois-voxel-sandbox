@@ -116,26 +116,26 @@ bool intersect_format_)" << i << R"((uint volume_id, uint node_id, vec3 obj_ray_
 )";
 	    break;
 	case Format::SVO:
-	    ss << R"(    int direction_kind = int(obj_ray_dir.x < 0.0) + 2 * int(obj_ray_dir.y < 0.0) + 4 * int(obj_ray_dir.z < 0.0);
+	    if (!opt.unroll_sv_) {
+		ss << R"(    int direction_kind = int(obj_ray_dir.x < 0.0) + 2 * int(obj_ray_dir.y < 0.0) + 4 * int(obj_ray_dir.z < 0.0);
     vec3 first_low = lower;
-    vec3 first_high = lower + vec3(inc_w, inc_h, inc_d);
-    vec4 stack[)" << (format[i].parameters_[0] + 2) << R"(];
+    vec4 stack[)" << (format[i].parameters_[0] + 1) << R"(];
     stack[0] = vec4(first_low, uintBitsToFloat(node_id & 0x0FFFFFFF));
     int level = 0;
-    while (level >= 0 && level < )" << (format[i].parameters_[0] + 1) << R"() {
+    while (level >= 0 && level < )" << format[i].parameters_[0] << R"() {
         vec4 stack_frame = stack[level];
         vec3 low = stack_frame.xyz;
         uint curr_node_id = floatBitsToUint(stack_frame.w) & 0x0FFFFFFF;
         uint curr_node_child = voxel_buffers[volume_id].voxels[curr_node_id];
         uint curr_node_masks = voxel_buffers[volume_id].voxels[curr_node_id + 1];
         uint left_off = floatBitsToUint(stack_frame.w) >> 28;
-        float diff = float(1 << )" << format[i].parameters_[0] << R"() * pow(0.5, level + 1);
+        float diff = float(1 << ()" << format[i].parameters_[0] << R"( - level));
         for (uint idx = left_off; idx < 8; ++idx) {
             uint child = direction_kind ^ idx;
             uint valid = (curr_node_masks >> (7 - child)) & 1;
             if (bool(valid)) {
-                vec3 sub_low = low + subpositions(child) * diff;
-                vec3 sub_high = sub_low + diff;
+                vec3 sub_low = low + subpositions(child) * diff * 0.5;
+                vec3 sub_high = sub_low + diff * 0.5;
                 aabb_intersect_result hit = hit_aabb(sub_low, sub_high, obj_ray_pos, obj_ray_dir);
                 if (hit.front_t != -FAR_AWAY) {
                     uint leaf = (curr_node_masks >> (15 - child)) & 1;
@@ -159,26 +159,67 @@ bool intersect_format_)" << i << R"((uint volume_id, uint node_id, vec3 obj_ray_
     }
     return false;
 )";
+	    } else {
+		ss << R"(    int direction_kind = int(obj_ray_dir.x < 0.0) + 2 * int(obj_ray_dir.y < 0.0) + 4 * int(obj_ray_dir.z < 0.0);
+    vec3 low_0 = lower;
+    uint curr_node_id_0 = node_id;
+)";
+		for (uint32_t j = 0; j < format[i].parameters_[0]; ++j) {
+		    ss << R"(    float diff_)" << j << R"( = float(1 << ()" << format[i].parameters_[0] << R"( - )" << j << R"());
+    uint children_node_id = voxel_buffers[volume_id].voxels[curr_node_id_)" << j << R"(];
+    uint children_masks = voxel_buffers[volume_id].voxels[curr_node_id_)" << j << R"( + 1];
+    for (uint idx = 0; idx < 8; ++idx) {
+        uint child = direction_kind ^ idx;
+        uint valid = (children_masks >> (7 - child)) & 1;
+        if (bool(valid)) {
+            vec3 sub_low = low_)" << j << R"( + subpositions(child) * diff_)" << j << R"( * 0.5;
+            vec3 sub_high = sub_low + diff_)" << j << R"( * 0.5;
+            aabb_intersect_result hit = hit_aabb(sub_low, sub_high, obj_ray_pos, obj_ray_dir);
+            if (hit.front_t != -FAR_AWAY) {
+                uint leaf = (children_masks >> (15 - child)) & 1;
+                uint num_valid = bitCount((children_masks & 0xFF) >> (8 - child));
+                uint child_node_id = children_node_id + num_valid * 2;
+                if (bool(leaf)) {
+                    if (intersect_format_)" << i + 1 << R"((volume_id, voxel_buffers[volume_id].voxels[child_node_id], obj_ray_pos, obj_ray_dir, sub_low, hit.front_t, hit.k)) {
+                        return true;
+                    }
+                } else {
+                    uint curr_node_id_)" << (j + 1) << R"( = child_node_id;
+                    vec3 low_)" << (j + 1) << R"( = sub_low;
+
+)";
+		}
+		
+		for (uint32_t j = 0; j < format[i].parameters_[0]; ++j) {
+		    ss << R"(                }
+            }
+        }
+    }
+)";
+		}
+		ss << R"(    return false;
+)";
+	    }
 	    break;
 	case Format::SVDAG:
-	    ss << R"(    int direction_kind = int(obj_ray_dir.x < 0.0) + 2 * int(obj_ray_dir.y < 0.0) + 4 * int(obj_ray_dir.z < 0.0);
+	    if (!opt.unroll_sv_) {
+		ss << R"(    int direction_kind = int(obj_ray_dir.x < 0.0) + 2 * int(obj_ray_dir.y < 0.0) + 4 * int(obj_ray_dir.z < 0.0);
     vec3 first_low = lower;
-    vec3 first_high = lower + vec3(inc_w, inc_h, inc_d);
-    vec4 stack[)" << (format[i].parameters_[0] + 2) << R"(];
+    vec4 stack[)" << (format[i].parameters_[0] + 1) << R"(];
     stack[0] = vec4(first_low, uintBitsToFloat(node_id & 0x0FFFFFFF));
     int level = 0;
-    while (level >= 0 && level < )" << (format[i].parameters_[0] + 1) << R"() {
+    while (level >= 0 && level < )" << format[i].parameters_[0] << R"() {
         vec4 stack_frame = stack[level];
         vec3 low = stack_frame.xyz;
         uint curr_node_id = floatBitsToUint(stack_frame.w) & 0x0FFFFFFF;
         uint left_off = floatBitsToUint(stack_frame.w) >> 28;
-        float diff = float(1 << )" << format[i].parameters_[0] << R"() * pow(0.5, level + 1);
+        float diff = float(1 << ()" << format[i].parameters_[0] << R"( - level));
         for (uint idx = left_off; idx < 8; ++idx) {
             uint child = direction_kind ^ idx;
             uint child_node_id = voxel_buffers[volume_id].voxels[curr_node_id + child];
             if (child_node_id != 0) {
-                vec3 sub_low = low + subpositions(child) * diff;
-                vec3 sub_high = sub_low + diff;
+                vec3 sub_low = low + subpositions(child) * diff * 0.5;
+                vec3 sub_high = sub_low + diff * 0.5;
                 aabb_intersect_result hit = hit_aabb(sub_low, sub_high, obj_ray_pos, obj_ray_dir);
                 if (hit.front_t != -FAR_AWAY) {
                     if (voxel_buffers[volume_id].voxels[child_node_id + 1] == 0xFFFFFFFF) {
@@ -199,6 +240,42 @@ bool intersect_format_)" << i << R"((uint volume_id, uint node_id, vec3 obj_ray_
     }
     return false;
 )";
+	    } else {
+		ss << R"(    int direction_kind = int(obj_ray_dir.x < 0.0) + 2 * int(obj_ray_dir.y < 0.0) + 4 * int(obj_ray_dir.z < 0.0);
+    vec3 low_0 = lower;
+    uint curr_node_id_0 = node_id;
+)";
+		for (uint32_t j = 0; j < format[i].parameters_[0]; ++j) {
+		    ss << R"(    float diff_)" << j << R"( = float(1 << ()" << format[i].parameters_[0] << R"( - )" << j << R"());
+    for (uint idx = 0; idx < 8; ++idx) {
+        uint child = direction_kind ^ idx;
+        uint child_node_id = voxel_buffers[volume_id].voxels[curr_node_id_)" << j << R"( + child];
+        if (child_node_id != 0) {
+            vec3 sub_low = low_)" << j << R"( + subpositions(child) * diff_)" << j << R"( * 0.5;
+            vec3 sub_high = sub_low + diff_)" << j << R"( * 0.5;
+            aabb_intersect_result hit = hit_aabb(sub_low, sub_high, obj_ray_pos, obj_ray_dir);
+            if (hit.front_t != -FAR_AWAY) {
+                if (voxel_buffers[volume_id].voxels[child_node_id + 1] == 0xFFFFFFFF) {
+                    if (intersect_format_)" << i + 1 << R"((volume_id, voxel_buffers[volume_id].voxels[child_node_id], obj_ray_pos, obj_ray_dir, sub_low, hit.front_t, hit.k)) {
+                        return true;
+                    }
+                } else {
+                    uint curr_node_id_)" << (j + 1) << R"( = child_node_id;
+                    vec3 low_)" << (j + 1) << R"( = sub_low;
+
+)";
+		}
+		
+		for (uint32_t j = 0; j < format[i].parameters_[0]; ++j) {
+		    ss << R"(                }
+            }
+        }
+    }
+)";
+		}
+		ss << R"(    return false;
+)";
+	    }
 	    break;
 	default:
 	    ASSERT(false, "Unhandled format.");
