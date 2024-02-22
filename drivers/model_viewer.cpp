@@ -68,7 +68,7 @@ int main(int argc, char *argv[]) {
     objects.emplace_back(std::move(object));
     auto scene = build_scene(context, objects);
 
-    glm::vec3 camera_pos = glm::vec3(0.0f, 0.0f, 250.0f);
+    glm::vec3 camera_pos = glm::vec3(50.0f, 50.0f, 100.0f);
     auto camera = create_camera(window, camera_pos, 0.0f, 180.0f, 0.1f, 0.25f);
 
     while (!window->should_close()) {
