@@ -8,9 +8,7 @@
 #include "Voxelize.h"
 
 static uint32_t push_node_to_buffer(std::vector<uint32_t> &buffer, uint32_t node) {
-    uint32_t offset = buffer.size();
-    buffer.push_back(node);
-    return offset;
+    return node;
 }
 
 static uint32_t push_node_to_buffer(std::vector<uint32_t> &buffer, const std::vector<uint32_t> &node) {

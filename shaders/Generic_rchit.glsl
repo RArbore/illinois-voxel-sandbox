@@ -18,7 +18,7 @@ uint pcg_hash(uint seed) {
 
 void main() {
     uint volume_id = gl_InstanceCustomIndexEXT;
-    uint32_t color = voxel_buffers[volume_id].voxels[leaf_id];
+    uint32_t color = leaf_id;
     payload.hit = true;
     payload.world_position = gl_WorldRayOriginEXT + gl_WorldRayDirectionEXT * gl_HitTEXT;
     payload.world_normal = normalize(gl_ObjectToWorldEXT * vec4(voxel_normals[gl_HitKindEXT], 0.0));
