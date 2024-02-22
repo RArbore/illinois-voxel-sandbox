@@ -4,7 +4,7 @@
 
 #include "Compiler.h"
 
-std::string generate_construction_cpp(const std::vector<InstantiatedFormat> &format) {
+std::string generate_construction_cpp(const std::vector<InstantiatedFormat> &format, const Optimizations &opt) {
     std::stringstream ss;
 
     auto print_format_identifier = [&](uint32_t starting_level = 0) {

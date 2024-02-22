@@ -4,7 +4,7 @@
 
 #include "Compiler.h"
 
-std::string generate_intersection_glsl(const std::vector<InstantiatedFormat> &format) {
+std::string generate_intersection_glsl(const std::vector<InstantiatedFormat> &format, const Optimizations &opt) {
     std::stringstream ss;
     
     auto [total_w, total_h, total_d] = calculate_bounds(format);
