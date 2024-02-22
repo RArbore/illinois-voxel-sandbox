@@ -1,6 +1,7 @@
 #include <cstring>
 #include <fstream>
 
+#include <compiler/Compiler.h>
 #include <graphics/GraphicsContext.h>
 #include <voxels/Conversion.h>
 #include <voxels/Voxel.h>
@@ -45,11 +46,13 @@ int main(int argc, char *argv[]) {
             VoxelChunk::Format::DF, VoxelChunk::AttributeSet::Color);
     } else {
         std::cout << "Interpreting " << argv[2] << " as a custom format.\n";
-        chunk_width = 384;
-        chunk_height = 384;
-        chunk_depth = 384;
+	auto format = parse_format(argv[2]);
+	auto bounds = calculate_bounds(format);
+        chunk_width = std::get<0>(bounds);
+        chunk_height = std::get<1>(bounds);
+        chunk_depth = std::get<2>(bounds);
         chunk = chunk_manager.add_chunk(std::move(model_bytes), chunk_width,
-                                        chunk_height, chunk_depth, argv[2]);
+                                        chunk_height, chunk_depth, format_identifier(format));
     }
 
     auto window = create_window();
