@@ -1,4 +1,5 @@
 #include <iostream>
+#include <filesystem>
 #include <fstream>
 
 #include <nlohmann_json.hpp>
@@ -71,9 +72,17 @@ void parse_scene(const std::string& scene_path) {
         } else if (type == "basic_filled") {
             raw_data = generate_basic_filled_chunk(width, height, depth);
         } else {
-            // If it's not a basic type, assume that it's a voxelized model
+            // If it's not a basic procedural type, assume that it's a voxelized model
             procedural = false;
-            ASSERT(false, "Voxel models not handled yet!");
+
+            // Assume that the model path is referring to a relative path from the JSON itself
+            std::filesystem::path parent = std::filesystem::path(scene_path).parent_path();
+            std::filesystem::path model_path = parent / type;
+
+            std::ifstream stream(model_path, std::ios::in | std::ios::binary);
+            const auto file_size = std::filesystem::file_size(model_path);
+            raw_data = std::vector<std::byte>(file_size);
+            stream.read(reinterpret_cast<char *>(raw_data.data()), file_size);
         }
 
         VoxelChunk::Format voxel_format;
@@ -133,6 +142,7 @@ void parse_scene(const std::string& scene_path) {
 
 int main(int argc, char *argv[]) {
     ASSERT(argv[1], "Must provide a scene to render.");
+    ASSERT(std::filesystem::exists(argv[1]), "JSON file must exist.");
     std::string scene_path(argv[1]);
 
     std::ifstream scene_description_file(scene_path);
