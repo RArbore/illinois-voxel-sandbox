@@ -1,5 +1,24 @@
 {
     "camera": {
-        "position": [0, 0, 0]
-    }
+        "position": [0, 0, -250],
+        "pitch": 0,
+        "yaw": 0,
+        "speed": 0.1,
+        "sensitivity": 0.25
+    },
+    "scene": [
+        {
+            "procedural": true,
+            "dimensions": [8, 8, 8],
+            "attributes": "Color",
+            "format": {
+                
+            },
+            "transform": [
+                1.0, 0.0, 0.0, -64.0, 
+                0.0, 1.0, 0.0, -64.0, 
+                0.0, 0.0, 1.0, -64.0
+            ]
+        }
+    ]
 }
