@@ -13,6 +13,7 @@ std::shared_ptr<Window> window = nullptr;
 std::shared_ptr<GraphicsContext> context = nullptr;
 std::shared_ptr<Camera> camera = nullptr;
 std::shared_ptr<GraphicsScene> scene = nullptr;
+ChunkManager chunk_manager;
 
 void parse_scene(const std::string& scene_path) {
     std::ifstream scene_description_file(scene_path);
@@ -21,25 +22,113 @@ void parse_scene(const std::string& scene_path) {
     json &camera_description = scene_layout_description["camera"];
     ASSERT(!camera_description.is_null(), "Camera description must be provided!");
  
-    json& position = camera_description["position"];
-    json &pitch = camera_description["pitch"];
-    json &yaw = camera_description["yaw"];
-    json &speed = camera_description["speed"];
-    json &sensitivity = camera_description["sensitivity"];
+    json& json_position = camera_description["position"];
+    json& json_pitch = camera_description["pitch"];
+    json& json_yaw = camera_description["yaw"];
+    json& json_speed = camera_description["speed"];
+    json& json_sensitivity = camera_description["sensitivity"];
 
-    ASSERT(!position.is_null(), "Camera position must be provided!");
-    ASSERT(!pitch.is_null(), "Camera pitch must be provided!");
-    ASSERT(!yaw.is_null(), "Camera yaw must be provided!");
-    ASSERT(!speed.is_null(), "Camera speed must be provided!");
-    ASSERT(!sensitivity.is_null(), "Camera sensitivity must be provided!");
+    ASSERT(!json_position.is_null(), "Camera position must be provided!");
+    ASSERT(!json_pitch.is_null(), "Camera pitch must be provided!");
+    ASSERT(!json_yaw.is_null(), "Camera yaw must be provided!");
+    ASSERT(!json_speed.is_null(), "Camera speed must be provided!");
+    ASSERT(!json_sensitivity.is_null(), "Camera sensitivity must be provided!");
     
-    glm::vec3 camera_pos = glm::vec3(position[0], position[1], position[2]);
+    glm::vec3 camera_pos = glm::vec3(json_position[0], json_position[1], json_position[2]);
     camera = create_camera(window, camera_pos, 
-                                   pitch.get<float>(), yaw.get<float>(), 
-                                   speed.get<float>(), sensitivity.get<float>());
+                                   json_pitch.get<float>(), json_yaw.get<float>(), 
+                                   json_speed.get<float>(), json_sensitivity.get<float>());
 
     json &scene_description = scene_layout_description["scene"];
     ASSERT(!scene_description.is_null(), "Scene description must be provided!");
+
+    std::vector<std::shared_ptr<GraphicsObject>> objects;
+    for (json &scene_model : scene_description) {
+        json& json_type = scene_model["type"];
+        json& json_dimensions = scene_model["dimensions"];
+        json& json_attributes = scene_model["attributes"];
+        json& json_format = scene_model["format"];
+        json& json_transform = scene_model["transform"];
+
+        ASSERT(!json_type.is_null(), "Model type must be provided!");
+        ASSERT(!json_dimensions.is_null(), "Model dimensions must be provided!");
+        ASSERT(!json_attributes.is_null(), "Model attributes must be provided!");
+        ASSERT(!json_format.is_null(), "Model format must be provided!");
+        ASSERT(!json_transform.is_null(), "Model transform must be provided!");
+
+        std::string type = json_type.get<std::string>();
+        std::string attributes = json_attributes.get<std::string>();
+        std::string format = json_format.get<std::string>();
+
+        int width = json_dimensions[0];
+        int height = json_dimensions[1];
+        int depth = json_dimensions[2];
+
+        std::vector<std::byte> raw_data;
+        bool procedural = true;
+        if (type == "basic_procedural") {
+            raw_data = generate_basic_procedural_chunk(width, height, depth);
+        } else if (type == "basic_filled") {
+            raw_data = generate_basic_filled_chunk(width, height, depth);
+        } else {
+            // If it's not a basic type, assume that it's a voxelized model
+            procedural = false;
+            ASSERT(false, "Voxel models not handled yet!");
+        }
+
+        VoxelChunk::Format voxel_format;
+        if (format == "raw") {
+            voxel_format = VoxelChunk::Format::Raw;
+            if (procedural) {
+                raw_data = append_metadata_to_raw(raw_data, width, height, depth);
+            }
+        } else if (format == "svo") {
+            voxel_format = VoxelChunk::Format::SVO;
+            if (procedural) {
+                raw_data = convert_raw_to_svo(std::move(raw_data), width, height, depth, 4);
+            }
+        } else if (format == "svdag") {
+            voxel_format = VoxelChunk::Format::SVDAG;
+            if (procedural) {
+                raw_data = convert_raw_to_svdag(std::move(raw_data), width, height, depth, 4);
+            }
+        } else if (format == "df") {
+            voxel_format = VoxelChunk::Format::DF; 
+            if (procedural) {
+                raw_data = convert_raw_color_to_df(raw_data, width, height, depth, 4);
+                raw_data = append_metadata_to_raw(raw_data, width, height, depth);
+            }
+        } else {
+            ASSERT(false, "Unrecognized voxel format provided: " + format);
+        }
+
+        VoxelChunk::AttributeSet voxel_attributes;
+        if (attributes == "color") {
+            voxel_attributes = VoxelChunk::AttributeSet::Color;
+        } else if (attributes == "color_normal") {
+            voxel_attributes = VoxelChunk::AttributeSet::ColorNormal;
+        } else if (attributes == "emissive") {
+            voxel_attributes = VoxelChunk::AttributeSet::Emissive;
+        } else {
+            ASSERT(false, "Unrecognized voxel attributes provided: " + attributes);
+        }
+
+        glm::mat3x4 object_transform = glm::mat3x4{
+            json_transform[0], json_transform[1], json_transform[2], json_transform[3],
+            json_transform[4], json_transform[5], json_transform[6], json_transform[7], 
+            json_transform[8], json_transform[9], json_transform[10], json_transform[11]
+        };
+
+        VoxelChunkPtr chunk = chunk_manager.add_chunk(
+            std::move(raw_data), 
+            width, height, depth, 
+            voxel_format, voxel_attributes);
+        auto model = build_model(context, chunk);
+        auto object = build_object(context, model, object_transform);
+        objects.push_back(object);
+    }
+
+    scene = build_scene(context, objects);
 }
 
 int main(int argc, char *argv[]) {
@@ -52,31 +141,6 @@ int main(int argc, char *argv[]) {
     window = create_window();
     context = create_graphics_context(window);
     parse_scene(argv[1]);
-
-    // Temporarily building the scene manually
-    ChunkManager chunk_manager;
-    auto test_proc_data1 = generate_basic_procedural_chunk(128, 128, 128);
-    auto test_svdag_data1 =
-        convert_raw_to_svdag(std::move(test_proc_data1), 128, 128, 128, 4);
-    VoxelChunkPtr test_proc1 = chunk_manager.add_chunk(
-        std::move(test_svdag_data1), 128, 128, 128, VoxelChunk::Format::SVDAG,
-        VoxelChunk::AttributeSet::Color);
-    auto model1 = build_model(context, test_proc1);
-    glm::mat3x4 transform1 = {1.0F, 0.0F,   0.0F, -64.0F, 0.0F, 1.0F,
-                              0.0F, -64.0F, 0.0F, 0.0F,   1.0F, -64.0F};
-    auto object1 = build_object(context, model1, transform1);
-
-    auto emissive_block =
-        append_metadata_to_raw(generate_basic_filled_chunk(8, 8, 8), 8, 8, 8);
-    VoxelChunkPtr test_light = chunk_manager.add_chunk(
-        std::move(emissive_block), 8, 8, 8, VoxelChunk::Format::Raw,
-        VoxelChunk::AttributeSet::Emissive);
-    auto light = build_model(context, test_light);
-    glm::mat3x4 transform2 = {2.0F, 0.0F, 0.0F, 0.0F, 0.0F, 2.0F,
-                              0.0F, 0.0F, 0.0F, 0.0F, 2.0F, 0.0F};
-    auto object2 = build_object(context, light, transform2);
-
-    auto scene = build_scene(context, {object1, object2});
 
     while (!window->should_close()) {
         window->poll_events();
