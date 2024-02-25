@@ -83,6 +83,7 @@ int main(int argc, char *argv[]) {
     std::string model_path(argv[1]);
     ASSERT(model_path.ends_with(".obj"),
            "Must provide a .obj model to convert.");
+    std::cout << argv[2] << std::endl;
     ASSERT(argv[2], "Must provide a resolution to voxelize at.");
     ASSERT(argv[3], "Must provide a format to output.");
 

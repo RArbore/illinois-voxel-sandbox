@@ -534,9 +534,9 @@ inline uint32_t Voxelizer::linearize_chunk_index(uint32_t x, uint32_t y, uint32_
 
 inline std::tuple<uint32_t, uint32_t, uint32_t> Voxelizer::get_voxel_chunk_index(
     uint32_t x, uint32_t y, uint32_t z) const {
-    uint32_t chunk_x = static_cast<uint32_t>(ceil((float)x / voxel_chunk_size_)); 
-    uint32_t chunk_y = static_cast<uint32_t>(ceil((float)y / voxel_chunk_size_));
-    uint32_t chunk_z = static_cast<uint32_t>(ceil((float)z / voxel_chunk_size_));
+    uint32_t chunk_x = static_cast<uint32_t>(floor((float)x / voxel_chunk_size_)); 
+    uint32_t chunk_y = static_cast<uint32_t>(floor((float)y / voxel_chunk_size_));
+    uint32_t chunk_z = static_cast<uint32_t>(floor((float)z / voxel_chunk_size_));
 
     return {chunk_x, chunk_y, chunk_z};
 }
