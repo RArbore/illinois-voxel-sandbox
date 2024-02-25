@@ -1,11 +1,12 @@
 #include <cstring>
 #include <fstream>
 
+#include <compiler/Compiler.h>
 #include <graphics/GraphicsContext.h>
 #include <voxels/Conversion.h>
 #include <voxels/Voxel.h>
-#include <voxels/Voxelize.h>
 #include <voxels/VoxelChunkGeneration.h>
+#include <voxels/Voxelize.h>
 
 int main(int argc, char *argv[]) {
     ASSERT(argv[1], "Must provide a model to render.");
@@ -13,55 +14,67 @@ int main(int argc, char *argv[]) {
     std::string model_path(argv[1]);
 
     ChunkManager chunk_manager;
-    std::ifstream stream(model_path,
-			 std::ios::in | std::ios::binary);
+    std::ifstream stream(model_path, std::ios::in | std::ios::binary);
     const auto file_size = std::filesystem::file_size(model_path);
     std::vector<std::byte> model_bytes = std::vector<std::byte>(file_size);
-    stream.read(reinterpret_cast<char*>(model_bytes.data()), file_size);
+    stream.read(reinterpret_cast<char *>(model_bytes.data()), file_size);
     std::cout << "Model size: " << model_bytes.size() << " bytes\n";
 
     uint32_t *model_ptr = reinterpret_cast<uint32_t *>(model_bytes.data());
     VoxelChunkPtr chunk;
     uint32_t chunk_width, chunk_height, chunk_depth;
     if (!strcmp(argv[2], "svdag")) {
-	chunk_width = model_ptr[0];
-	chunk_height = model_ptr[1];
-	chunk_depth = model_ptr[2];
-	chunk = chunk_manager.add_chunk(
-					std::move(model_bytes), chunk_width, chunk_height, chunk_depth, VoxelChunk::Format::SVDAG,
-					VoxelChunk::AttributeSet::Color);
+        chunk_width = model_ptr[0];
+        chunk_height = model_ptr[1];
+        chunk_depth = model_ptr[2];
+        chunk = chunk_manager.add_chunk(
+            std::move(model_bytes), chunk_width, chunk_height, chunk_depth,
+            VoxelChunk::Format::SVDAG, VoxelChunk::AttributeSet::Color);
     } else if (!strcmp(argv[2], "raw")) {
-	chunk_width = model_ptr[0];
-	chunk_height = model_ptr[1];
-	chunk_depth = model_ptr[2];
-	chunk = chunk_manager.add_chunk(
-					std::move(model_bytes), chunk_width, chunk_height, chunk_depth, VoxelChunk::Format::Raw,
-					VoxelChunk::AttributeSet::Color);
+        chunk_width = model_ptr[0];
+        chunk_height = model_ptr[1];
+        chunk_depth = model_ptr[2];
+        chunk = chunk_manager.add_chunk(
+            std::move(model_bytes), chunk_width, chunk_height, chunk_depth,
+            VoxelChunk::Format::Raw, VoxelChunk::AttributeSet::Color);
     } else if (!strcmp(argv[2], "df")) {
-	chunk_width = model_ptr[0];
-	chunk_height = model_ptr[1];
-	chunk_depth = model_ptr[2];
-	chunk = chunk_manager.add_chunk(
-					std::move(model_bytes), chunk_width, chunk_height, chunk_depth, VoxelChunk::Format::DF,
-					VoxelChunk::AttributeSet::Color);
+        chunk_width = model_ptr[0];
+        chunk_height = model_ptr[1];
+        chunk_depth = model_ptr[2];
+        chunk = chunk_manager.add_chunk(
+            std::move(model_bytes), chunk_width, chunk_height, chunk_depth,
+            VoxelChunk::Format::DF, VoxelChunk::AttributeSet::Color);
     } else {
-	ASSERT(false, "Unrecognized model format.");
+        std::cout << "Interpreting " << argv[2] << " as a custom format.\n";
+	ASSERT(argv[3], "For custom formats, a chunk width must be specified.\n");
+	ASSERT(argv[4], "For custom formats, a chunk height must be specified.\n");
+	ASSERT(argv[5], "For custom formats, a chunk depth must be specified.\n");
+	auto format = parse_format(argv[2]);
+        chunk_width = atoi(argv[3]);
+        chunk_height = atoi(argv[4]);
+        chunk_depth = atoi(argv[5]);
+        chunk = chunk_manager.add_chunk(std::move(model_bytes), chunk_width,
+                                        chunk_height, chunk_depth, format_identifier(format));
     }
-    
+
     auto window = create_window();
     auto context = create_graphics_context(window);
     auto model = build_model(context, chunk);
-    const uint32_t min_dim = chunk_width < chunk_height ? chunk_width < chunk_depth ? chunk_width : chunk_depth : chunk_height < chunk_depth ? chunk_height : chunk_depth;
+    const uint32_t min_dim =
+        chunk_width < chunk_height
+            ? chunk_width < chunk_depth ? chunk_width : chunk_depth
+        : chunk_height < chunk_depth ? chunk_height
+                                     : chunk_depth;
     const float size = 100.0 / static_cast<float>(min_dim);
     glm::mat3x4 transform = {size, 0.0F, 0.0F, 0.0F, 0.0F, size,
-			     0.0F, 0.0F, 0.0F, 0.0F, size, 0.0F};
+                             0.0F, 0.0F, 0.0F, 0.0F, size, 0.0F};
     std::vector<std::shared_ptr<GraphicsObject>> objects;
     auto object = build_object(context, model, transform);
     objects.emplace_back(std::move(object));
     auto scene = build_scene(context, objects);
-    
-    glm::vec3 camera_pos = glm::vec3(0.0f, 0.0f, -250.0f);
-    auto camera = create_camera(window, camera_pos, 0.0f, 0.0f, 0.1f, 0.25f);
+
+    glm::vec3 camera_pos = glm::vec3(50.0f, 50.0f, 100.0f);
+    auto camera = create_camera(window, camera_pos, 0.0f, 180.0f, 0.1f, 0.25f);
 
     while (!window->should_close()) {
         window->poll_events();

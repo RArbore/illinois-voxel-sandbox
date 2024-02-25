@@ -18,6 +18,13 @@ set(GLSL_SHADER_FILES
   Download_rchit.glsl
   DF_Color_rchit.glsl
   DF_Color_rint.glsl
+  Generic_rchit.glsl
+  raw_24_24_24_raw_16_16_16_intersect.glsl
+  df_24_24_24_8_raw_16_16_16_intersect.glsl
+  svo_9_intersect.glsl
+  svdag_9_intersect.glsl
+  df_12_12_12_12_svo_5_intersect.glsl
+  df_12_12_12_12_svdag_5_intersect.glsl
 )
 
 foreach(FILE ${GLSL_SHADER_FILES})

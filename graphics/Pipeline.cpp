@@ -8,12 +8,8 @@
 
 Shader::Shader(std::shared_ptr<Device> device, std::string_view shader_name) {
     std::vector<std::string_view> possible_prefixes = {
-        "",
-        "build/",
-        "illinois-voxel-sandbox/build/",
-        "../",
-        "../../",
-        "../../../",
+        "./",          "build/", "illinois-voxel-sandbox/build/",
+        "../",         "../../", "../../../",
         "../../../../"};
     for (auto prefix : possible_prefixes) {
         std::string relative_path =
@@ -47,7 +43,8 @@ Shader::Shader(std::shared_ptr<Device> device, std::string_view shader_name) {
         stage_ = VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR;
     } else if (shader_name.find("rmiss") != std::string_view::npos) {
         stage_ = VK_SHADER_STAGE_MISS_BIT_KHR;
-    } else if (shader_name.find("rint") != std::string_view::npos) {
+    } else if (shader_name.find("rint") != std::string_view::npos ||
+               shader_name.find("intersect") != std::string_view::npos) {
         stage_ = VK_SHADER_STAGE_INTERSECTION_BIT_KHR;
     } else if (shader_name.find("call") != std::string_view::npos) {
         stage_ = VK_SHADER_STAGE_CALLABLE_BIT_KHR;
@@ -61,12 +58,34 @@ Shader::Shader(std::shared_ptr<Device> device, std::string_view shader_name) {
     shader_name_ = shader_name;
 }
 
+Shader::~Shader() {
+    vkDestroyShaderModule(device_->get_device(), module_, nullptr);
+}
+
 VkShaderModule Shader::get_module() { return module_; }
 
 VkShaderStageFlagBits Shader::get_stage() { return stage_; }
 
-Shader::~Shader() {
-    vkDestroyShaderModule(device_->get_device(), module_, nullptr);
+std::vector<std::string> gather_custom_intersection_shader_names() {
+    std::vector<std::string_view> possible_prefixes = {
+        "./",          "build/", "illinois-voxel-sandbox/build/",
+        "../",         "../../", "../../../",
+        "../../../../"};
+
+    std::unordered_set<std::string> shader_names;
+    for (const auto &prefix : possible_prefixes) {
+        if (std::filesystem::exists(prefix)) {
+            for (const auto &dir_entry :
+                 std::filesystem::directory_iterator(prefix)) {
+                if (dir_entry.path().string().ends_with("_intersect.spv")) {
+                    std::string name = dir_entry.path().filename().string();
+                    shader_names.emplace(name.substr(0, name.size() - 4));
+                }
+            }
+        }
+    }
+
+    return std::vector<std::string>(shader_names.begin(), shader_names.end());
 }
 
 RayTracePipeline::RayTracePipeline(

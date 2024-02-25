@@ -109,7 +109,7 @@ Swapchain::~Swapchain() {
     vkDestroySwapchainKHR(device_->get_device(), swapchain_, nullptr);
 }
 
-const std::vector<VkImageView>& Swapchain::get_image_views() const {
+const std::vector<VkImageView> &Swapchain::get_image_views() const {
     return swapchain_image_views_;
 }
 
