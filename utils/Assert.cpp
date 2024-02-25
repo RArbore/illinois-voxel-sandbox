@@ -2,10 +2,8 @@
 
 #include <vulkan/vulkan.h>
 
-static inline const char* string_VkResult(VkResult input_value)
-{
-    switch ((VkResult)input_value)
-    {
+static inline const char *string_VkResult(VkResult input_value) {
+    switch ((VkResult)input_value) {
     case VK_ERROR_DEVICE_LOST:
         return "VK_ERROR_DEVICE_LOST";
     case VK_ERROR_EXTENSION_NOT_PRESENT:

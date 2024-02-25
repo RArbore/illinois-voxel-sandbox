@@ -24,6 +24,8 @@ class Shader {
     std::string_view shader_name_;
 };
 
+std::vector<std::string> gather_custom_intersection_shader_names();
+
 class RayTracePipeline {
   public:
     RayTracePipeline(
@@ -53,13 +55,13 @@ class RayTracePipeline {
 
 class ComputePipeline {
   public:
-    ComputePipeline(
-        std::shared_ptr<GPUAllocator> allocator,
-        std::shared_ptr<Shader> compute_shader,
-        std::vector<VkDescriptorSetLayout> descriptor_layouts);
+    ComputePipeline(std::shared_ptr<GPUAllocator> allocator,
+                    std::shared_ptr<Shader> compute_shader,
+                    std::vector<VkDescriptorSetLayout> descriptor_layouts);
     ~ComputePipeline();
 
-    // Assuming that the compute pipeline doesn't use push constants at the moment
+    // Assuming that the compute pipeline doesn't use push constants at the
+    // moment
     void record(VkCommandBuffer command,
                 std::vector<std::shared_ptr<DescriptorSet>> descriptor_sets,
                 uint32_t width, uint32_t height, uint32_t depth);
@@ -67,6 +69,6 @@ class ComputePipeline {
   private:
     VkPipeline pipeline_ = VK_NULL_HANDLE;
     VkPipelineLayout layout_ = VK_NULL_HANDLE;
-    
+
     std::shared_ptr<Device> device_ = nullptr;
 };

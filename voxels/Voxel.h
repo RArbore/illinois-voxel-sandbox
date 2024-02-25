@@ -1,12 +1,12 @@
 #pragma once
 
-#include <unordered_set>
-#include <filesystem>
 #include <atomic>
-#include <vector>
+#include <filesystem>
 #include <list>
-#include <span>
 #include <set>
+#include <span>
+#include <unordered_set>
+#include <vector>
 
 #include <external/CTPL/ctpl_stl.h>
 
@@ -28,8 +28,8 @@ class VoxelChunk {
     enum class Format {
         Raw,
         SVO,
-	SVDAG,
-	DF,
+        SVDAG,
+        DF,
     };
 
     enum class AttributeSet {
@@ -42,6 +42,10 @@ class VoxelChunk {
                uint32_t depth, State state, Format format,
                AttributeSet attribute_set, ChunkManager *manager);
 
+    VoxelChunk(std::vector<std::byte> &&data, uint32_t width, uint32_t height,
+               uint32_t depth, State state, std::string custom_format,
+               ChunkManager *manager);
+
     std::span<const std::byte> get_cpu_data() const;
     std::shared_ptr<GPUBuffer> get_gpu_buffer() const;
     std::shared_ptr<Semaphore> get_timeline() const;
@@ -51,9 +55,10 @@ class VoxelChunk {
     State get_state() const;
     Format get_format() const;
     AttributeSet get_attribute_set() const;
+    const std::string &get_custom_format() const;
     void tick_gpu_upload(std::shared_ptr<Device> device,
-                          std::shared_ptr<GPUAllocator> allocator,
-                          std::shared_ptr<RingBuffer> ring_buffer);
+                         std::shared_ptr<GPUAllocator> allocator,
+                         std::shared_ptr<RingBuffer> ring_buffer);
     void tick_disk_download(std::shared_ptr<Device> device,
                             std::shared_ptr<RingBuffer> ring_buffer);
     bool uploading();
@@ -72,6 +77,7 @@ class VoxelChunk {
     std::atomic<State> state_;
     Format format_;
     AttributeSet attribute_set_;
+    std::string custom_format_;
     std::atomic_bool uploading_ = false;
     std::atomic_bool downloading_ = false;
     ChunkManager *manager_;
@@ -99,6 +105,10 @@ class ChunkManager {
                             VoxelChunk::Format format,
                             VoxelChunk::AttributeSet attribute_set);
 
+    VoxelChunkPtr add_chunk(std::vector<std::byte> &&data, uint32_t width,
+                            uint32_t height, uint32_t depth,
+                            std::string custom_format);
+
     void debug_print();
 
   private:
@@ -110,20 +120,21 @@ class ChunkManager {
     friend class VoxelChunkPtr;
 };
 
-const static std::unordered_map<VoxelChunk::State, std::string_view> state_names {
-    {VoxelChunk::State::CPU, "CPU"},
-    {VoxelChunk::State::GPU, "GPU"},
-    {VoxelChunk::State::Disk, "Disk"},
-};
+const static std::unordered_map<VoxelChunk::State, std::string_view>
+    state_names{
+        {VoxelChunk::State::CPU, "CPU"},
+        {VoxelChunk::State::GPU, "GPU"},
+        {VoxelChunk::State::Disk, "Disk"},
+    };
 
-const static std::unordered_map<VoxelChunk::Format, std::string_view> format_names {
-    {VoxelChunk::Format::Raw, "Raw"},
-    {VoxelChunk::Format::SVO, "SVO"},
-    {VoxelChunk::Format::SVDAG, "SVDAG"},
-};
+const static std::unordered_map<VoxelChunk::Format, std::string_view>
+    format_names{
+        {VoxelChunk::Format::Raw, "Raw"},
+        {VoxelChunk::Format::SVO, "SVO"},
+        {VoxelChunk::Format::SVDAG, "SVDAG"},
+    };
 
-const static std::unordered_map<VoxelChunk::AttributeSet, std::string_view> attribute_set_names {
-    {VoxelChunk::AttributeSet::Color, "Color"},
-    {VoxelChunk::AttributeSet::ColorNormal, "ColorNormal"},
-    {VoxelChunk::AttributeSet::Emissive, "Emissive"}
-};
+const static std::unordered_map<VoxelChunk::AttributeSet, std::string_view>
+    attribute_set_names{{VoxelChunk::AttributeSet::Color, "Color"},
+                        {VoxelChunk::AttributeSet::ColorNormal, "ColorNormal"},
+                        {VoxelChunk::AttributeSet::Emissive, "Emissive"}};
