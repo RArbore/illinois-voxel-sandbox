@@ -1,0 +1,33 @@
+{
+    "camera": {
+        "position": [0, 0, -250],
+        "pitch": 0,
+        "yaw": 0,
+        "speed": 0.1,
+        "sensitivity": 0.25
+    },
+    "scene": [
+        {
+            "type": "../models/sponza",
+            "dimensions": [1489, 623, 916],
+            "attributes": "color",
+            "format": "svdag",
+            "transform": [
+                1.0, 0.0, 0.0, 0.0, 
+                0.0, 1.0, 0.0, 0.0, 
+                0.0, 0.0, 1.0, 0.0
+            ]
+        },
+        {
+            "type": "basic_filled",
+            "dimensions": [8, 8, 8],
+            "attributes": "emissive",
+            "format": "raw",
+            "transform": [
+                2.0, 0.0, 0.0, 0.0, 
+                0.0, 2.0, 0.0, 0.0, 
+                0.0, 0.0, 2.0, 0.0
+            ]
+        }
+    ]
+}
