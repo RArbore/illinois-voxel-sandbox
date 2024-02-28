@@ -546,7 +546,7 @@ void Voxelizer::voxelize_chunk(uint32_t chunk_x, uint32_t chunk_y, uint32_t chun
     // We first check if the chunk instead exists on the disk.
     uint32_t voxel_chunk_index =
         linearize_chunk_index(chunk_x, chunk_y, chunk_z);
-    VoxelizedChunk &voxel_chunk = voxel_chunks_[voxel_chunk_index];
+    VoxelizedChunk &voxel_chunk = voxel_chunks_.at(voxel_chunk_index);
     ASSERT(voxel_chunk.empty(), "Only voxelize the chunk if it's empty!");
     std::filesystem::path chunk_path = get_chunk_path(chunk_x, chunk_y, chunk_z);
 
@@ -570,7 +570,7 @@ void Voxelizer::voxelize_chunk(uint32_t chunk_x, uint32_t chunk_y, uint32_t chun
             for (uint32_t y = 0; y < chunks_height_; y++) {
                 for (uint32_t z = 0; z < chunks_width_; z++) {
                     uint32_t chunk_index = linearize_chunk_index(x, y, z);
-                    if (!voxel_chunks_[chunk_index].empty()) {
+                    if (!voxel_chunks_.at(chunk_index).empty()) {
                         write_voxels_to_disk(x, y, z);
                         break;
                     }
@@ -740,11 +740,10 @@ uint32_t Voxelizer::at(uint32_t x, uint32_t y, uint32_t z) {
     
     auto [chunk_x, chunk_y, chunk_z] = get_voxel_chunk_index(x, y, z);
     uint32_t chunk_index = linearize_chunk_index(chunk_x, chunk_y, chunk_z);
-    if (voxel_chunks_[chunk_index].empty()) {
+    VoxelizedChunk &voxel_chunk = voxel_chunks_.at(chunk_index);
+    if (voxel_chunk.empty()) {
         voxelize_chunk(chunk_x, chunk_y, chunk_z);
     }
-
-    VoxelizedChunk &voxel_chunk = voxel_chunks_[chunk_index];
 
     uint32_t in_chunk_x = x - chunk_x * voxel_chunk_size_;
     uint32_t in_chunk_y = y - chunk_y * voxel_chunk_size_;
@@ -764,20 +763,20 @@ std::filesystem::path Voxelizer::get_chunk_path(uint32_t x, uint32_t y, uint32_t
 
 void Voxelizer::write_voxels_to_disk(uint32_t x, uint32_t y, uint32_t z) {
     uint32_t chunk_index = linearize_chunk_index(x, y, z);
-    VoxelizedChunk &voxel_chunk = voxel_chunks_[chunk_index];
+    VoxelizedChunk &voxel_chunk = voxel_chunks_.at(chunk_index);
 
     std::filesystem::path chunk_path = get_chunk_path(x, y, z);
     std::ofstream stream(chunk_path, std::ios::out | std::ios::binary);
     stream.write(reinterpret_cast<char *>(voxel_chunk.data()), voxel_chunk.size());
     
     current_memory_usage_ -= voxel_chunk.size();
-    voxel_chunks_[chunk_index].clear();
-    ASSERT(voxel_chunks_[chunk_index].size() == 0, "Voxel chunk should be empty after being written to disk!");
+    voxel_chunks_.at(chunk_index).clear();
+    ASSERT(voxel_chunks_.at(chunk_index).size() == 0, "Voxel chunk should be empty after being written to disk!");
 }
 
 void Voxelizer::read_voxels_from_disk(uint32_t x, uint32_t y, uint32_t z) {
     uint32_t chunk_index = linearize_chunk_index(x, y, z);
-    VoxelizedChunk &voxel_chunk = voxel_chunks_[chunk_index];
+    VoxelizedChunk &voxel_chunk = voxel_chunks_.at(chunk_index);
 
     std::filesystem::path chunk_path = get_chunk_path(x, y, z);
     std::ifstream stream(chunk_path, std::ios::in | std::ios::binary);
