@@ -1,6 +1,7 @@
 #pragma once
 
 #include <filesystem>
+#include <optional>
 
 #include <external/glm/glm/glm.hpp>
 #include <external/stb_image.h>
@@ -72,7 +73,7 @@ class Voxelizer {
     const uint32_t voxel_chunk_size_ = (uint32_t) 1 << 16;
 
     // This only keeps track of the memory used by the voxel data itself,
-    // and not the rest of the 
+    // and not the rest of the program.
     uint64_t current_memory_usage_;
 
     typedef std::vector<std::byte> VoxelizedChunk;
@@ -85,9 +86,9 @@ class Voxelizer {
     inline std::tuple<uint32_t, uint32_t, uint32_t> get_voxel_chunk_index(uint32_t x, uint32_t y, uint32_t z) const;
     void voxelize_chunk(uint32_t chunk_x, uint32_t chunk_y, uint32_t chunk_z);
 
-    std::filesystem::path get_chunk_path(uint32_t x, uint32_t y, uint32_t z) const;
-    void write_voxels_to_disk(uint32_t x, uint32_t y, uint32_t z);
-    void read_voxels_from_disk(uint32_t x, uint32_t y, uint32_t z);
+    std::optional<uint32_t> find_old_voxel_chunk() const;
+    void write_voxels_to_disk(uint32_t chunk_index);
+    void read_voxels_from_disk(uint32_t chunk_index);
     std::filesystem::path voxels_directory_;
 
   public:
@@ -98,6 +99,4 @@ class Voxelizer {
     ~Voxelizer();
 
     uint32_t at(uint32_t x, uint32_t y, uint32_t z);
-
-
 };
