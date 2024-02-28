@@ -99,8 +99,8 @@ bool intersect_format_0(uint volume_id, uint node_id, vec3 obj_ray_pos, vec3 obj
     while (all(greaterThanEqual(chunk_ray_voxel, ivec3(0))) && all(lessThan(chunk_ray_voxel, ivec3(12, 12, 12)))) {
         if (budget == 0) {
             uint32_t voxel_index = linearize_index(chunk_ray_voxel, 12, 12, 12);
-            uint32_t child_id = voxel_buffers[volume_id].voxels[node_id + 2 * voxel_index];
-            budget = voxel_buffers[volume_id].voxels[node_id + 2 * voxel_index + 1];
+            uint32_t child_id = voxel_buffers[volume_id].voxels[node_id + voxel_index] & 67108863;
+            budget = (voxel_buffers[volume_id].voxels[node_id + voxel_index] >> 26) + 1;
             
             if (child_id != 0) {
                 aabb_intersect_result r = hit_aabb(chunk_ray_voxel * vec3(sub_w, sub_h, sub_d) + lower, (chunk_ray_voxel + 1) * vec3(sub_w, sub_h, sub_d) + lower, obj_ray_pos, obj_ray_dir);

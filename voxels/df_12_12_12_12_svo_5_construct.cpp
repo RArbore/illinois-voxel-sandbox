@@ -60,7 +60,6 @@ static std::vector<uint32_t> df_12_12_12_12_svo_5_construct_node(Voxelizer &voxe
                 } else {
                     df_chunk.push_back(push_node_to_buffer(buffer, sub_chunk));
                 }
-                df_chunk.push_back(1);
                 is_empty = is_empty && sub_is_empty;
             }
         }
@@ -69,24 +68,24 @@ static std::vector<uint32_t> df_12_12_12_12_svo_5_construct_node(Voxelizer &voxe
         for (uint32_t g_y = 0; g_y < 12; ++g_y) {
             for (uint32_t g_x = 0; g_x < 12; ++g_x) {
                 uint32_t g_voxel_offset = (g_x + g_y * 12 + g_z * 12 * 12);
-            uint32_t min_dist = k;
-            for (uint32_t kz = g_z > k ? g_z - k : 0; kz <= g_z + k && kz < 12; ++kz) {
-                for (uint32_t ky = g_y > k ? g_y - k : 0; ky <= g_y + k && ky < 12; ++ky) {
-                    for (uint32_t kx = g_x > k ? g_x - k : 0; kx <= g_x + k && kx < 12; ++kx) {
-                        size_t k_voxel_offset = kx + ky * 12 + kz * 12 * 12;
-                        if (df_chunk[k_voxel_offset * 2] != 0) {
-                            uint32_t dist =
-                            (g_z > kz ? g_z - kz : kz - g_z) +
-                            (g_y > ky ? g_y - ky : ky - g_y) +
-                            (g_x > kx ? g_x - kx : kx - g_x);
-                            if (dist < min_dist && dist) {
-                                min_dist = dist;
+                uint32_t min_dist = k;
+                for (uint32_t kz = g_z > k ? g_z - k : 0; kz <= g_z + k && kz < 12; ++kz) {
+                    for (uint32_t ky = g_y > k ? g_y - k : 0; ky <= g_y + k && ky < 12; ++ky) {
+                        for (uint32_t kx = g_x > k ? g_x - k : 0; kx <= g_x + k && kx < 12; ++kx) {
+                            size_t k_voxel_offset = kx + ky * 12 + kz * 12 * 12;
+                            if (df_chunk[k_voxel_offset] & 67108863) {
+                                uint32_t dist =
+                                (g_z > kz ? g_z - kz : kz - g_z) +
+                                (g_y > ky ? g_y - ky : ky - g_y) +
+                                (g_x > kx ? g_x - kx : kx - g_x);
+                                if (dist < min_dist && dist) {
+                                    min_dist = dist;
+                                }
                             }
                         }
                     }
                 }
-            }
-                df_chunk[g_voxel_offset * 2 + 1] = min_dist;
+                df_chunk[g_voxel_offset] |= (min_dist - 1) << (32 - 6);
             }
         }
     }
