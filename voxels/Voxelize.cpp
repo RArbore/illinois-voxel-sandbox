@@ -408,7 +408,7 @@ Model::Model(std::string_view filepath) {
             has_materials_ =
                 (tex_index_a >= 0 && tex_index_b >= 0 && tex_index_c >= 0);
 
-            const Triangle tri(
+            triangles_.emplace_back(
                 glm::vec3(attrib.vertices.at(3 * index_a),
                           attrib.vertices.at(3 * index_a + 1),
                           attrib.vertices.at(3 * index_a + 2)),
@@ -431,22 +431,6 @@ Model::Model(std::string_view filepath) {
                                 attrib.texcoords.at(2 * tex_index_c + 1))
                     : glm::vec2(0.0f),
                 has_materials_ ? shape.mesh.material_ids[i / 3] : -1);
-
-            glm::mat3 tri_matrix(tri.a, tri.b, tri.c);
-            glm::mat3 inverse_tri_matrix = glm::inverse(tri_matrix);
-            glm::vec3 unit_plane =
-                glm::normalize(glm::cross(tri.a - tri.c, tri.b - tri.c));
-            if (!std::isfinite(inverse_tri_matrix[0][0]) ||
-                !std::isfinite(inverse_tri_matrix[0][1]) ||
-                !std::isfinite(inverse_tri_matrix[0][2]) ||
-                !std::isfinite(inverse_tri_matrix[1][0]) ||
-                !std::isfinite(inverse_tri_matrix[1][1]) ||
-                !std::isfinite(inverse_tri_matrix[1][2]) ||
-                !std::isfinite(inverse_tri_matrix[2][0]) ||
-                !std::isfinite(inverse_tri_matrix[2][1]) ||
-                !std::isfinite(inverse_tri_matrix[2][2])) {
-                continue;
-            }
 
             int texture_width, texture_height;
             stbi_uc *texture_pixels;
@@ -516,14 +500,6 @@ Voxelizer::Voxelizer(std::string_view filepath, float voxel_size) :
     std::filesystem::create_directory(voxels_directory_);
 }
 
-Voxelizer::Voxelizer(std::vector<std::byte> &&voxels, uint32_t width, uint32_t height, uint32_t depth) : 
-    width_{width},
-    height_{height},
-    depth_{depth}
-{
-    voxel_chunks_.push_back(voxels);
-}
-
 Voxelizer::~Voxelizer() {
     std::filesystem::remove_all(voxels_directory_);
 }
@@ -563,7 +539,7 @@ void Voxelizer::voxelize_chunk(uint32_t chunk_x, uint32_t chunk_y, uint32_t chun
     // todo: right now, this is just going to write the lowest voxel index out to disk.
     // A better solution would be to maintain some LRU of some sort.
     uint64_t added_memory =
-        sizeof(std::byte) * voxel_chunk_size_ * voxel_chunk_size_ * voxel_chunk_size_;
+        voxel_chunk_size_ * voxel_chunk_size_ * voxel_chunk_size_;
     while (current_memory_usage_ + added_memory > max_memory_usage_) {
         // Note: each voxel chunk should take the same amount of memory,
         // so a while loop here shouldn't be necessary (need to double check)
