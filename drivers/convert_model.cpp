@@ -21,6 +21,8 @@ std::vector<uint32_t> df_12_12_12_12_svo_5_construct(Voxelizer &voxelizer);
 
 std::vector<uint32_t> df_12_12_12_12_svdag_5_construct(Voxelizer &voxelizer);
 
+std::vector<uint32_t> df_15_7_9_8_svdag_7_construct(Voxelizer &voxelizer);
+
 void print_svo(const std::vector<uint32_t> &svo, uint32_t node,
                std::string spacing) {
     std::cout << spacing << "Internal Node @ " << node << "\n";
@@ -149,6 +151,13 @@ int main(int argc, char *argv[]) {
         Voxelizer voxelizer(std::move(raw_vox), chunk_width, chunk_height,
                             chunk_depth);
         auto model = df_12_12_12_12_svdag_5_construct(voxelizer);
+        write(reinterpret_cast<const char *>(model.data()),
+              model.size() * sizeof(uint32_t));
+        return 0;
+    } else if (!strcmp(argv[3], "df_15_7_9_8_svdag_7")) {
+        Voxelizer voxelizer(std::move(raw_vox), chunk_width, chunk_height,
+                            chunk_depth);
+        auto model = df_15_7_9_8_svdag_7_construct(voxelizer);
         write(reinterpret_cast<const char *>(model.data()),
               model.size() * sizeof(uint32_t));
         return 0;
