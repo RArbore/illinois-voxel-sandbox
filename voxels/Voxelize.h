@@ -18,6 +18,7 @@ struct Triangle {
     glm::vec3 a, b, c;
     glm::vec2 t_a, t_b, t_c;
     int face_mat_id;
+    bool has_texture;
 
     float min_x() const { return fmin(a.x, fmin(b.x, c.x)); }
 
@@ -67,7 +68,7 @@ class Voxelizer {
 
     // The max size (in bytes) that the voxelizer should store
     // before it should start storing older chunks on the disk.
-    const uint64_t max_memory_usage_ = (uint64_t) 1 << 32;
+    const uint64_t max_memory_usage_ = (uint64_t) 1 << 40;
 
     // The dimension size of each voxel chunk (e.g. N x N x N)
     const uint32_t voxel_chunk_size_ = (uint32_t) 1 << 10;

@@ -408,6 +408,41 @@ Model::Model(std::string_view filepath) {
             has_materials_ =
                 (tex_index_a >= 0 && tex_index_b >= 0 && tex_index_c >= 0);
 
+            bool has_texture = has_materials_;
+            int texture_width, texture_height;
+            stbi_uc *texture_pixels;
+            if (has_materials_) {
+                int face_mat_id = shape.mesh.material_ids[i / 3];
+                if (loaded_textures_.contains(face_mat_id)) {
+                    auto texture = loaded_textures_[face_mat_id];
+                    texture_pixels = std::get<0>(texture);
+                    texture_width = std::get<1>(texture);
+                    texture_height = std::get<2>(texture);
+                } else {
+                    const tinyobj::material_t &mat = materials[face_mat_id];
+                    const std::string &diffuse_texname = mat.diffuse_texname;
+                    if (diffuse_texname.empty()) {
+                        has_texture = false;
+                    } else {
+                        int channels;
+                        texture_pixels =
+                            stbi_load((directory + diffuse_texname).c_str(),
+                                      &texture_width, &texture_height,
+                                      &channels, STBI_rgb_alpha);
+                        if (!texture_pixels) {
+                            std::stringstream ss;
+                            ss << "Couldn't load texture from the following "
+                                  "path: ";
+                            ss << (directory + diffuse_texname);
+                            ss << "\n";
+                            ASSERT(false, ss.str());
+                        }
+                        loaded_textures_[face_mat_id] = {
+                            texture_pixels, texture_width, texture_height};
+                    }
+                }
+            }
+
             triangles_.emplace_back(
                 glm::vec3(attrib.vertices.at(3 * index_a),
                           attrib.vertices.at(3 * index_a + 1),
@@ -430,41 +465,8 @@ Model::Model(std::string_view filepath) {
                     ? glm::vec2(attrib.texcoords.at(2 * tex_index_c),
                                 attrib.texcoords.at(2 * tex_index_c + 1))
                     : glm::vec2(0.0f),
-                has_materials_ ? shape.mesh.material_ids[i / 3] : -1);
-
-            int texture_width, texture_height;
-            stbi_uc *texture_pixels;
-            if (has_materials_) {
-                int face_mat_id = shape.mesh.material_ids[i / 3];
-                if (loaded_textures_.contains(face_mat_id)) {
-                    auto texture = loaded_textures_[face_mat_id];
-                    texture_pixels = std::get<0>(texture);
-                    texture_width = std::get<1>(texture);
-                    texture_height = std::get<2>(texture);
-                } else {
-                    const tinyobj::material_t &mat = materials[face_mat_id];
-                    const std::string &diffuse_texname = mat.diffuse_texname;
-                    if (diffuse_texname.empty()) {
-                        has_materials_ = false;
-                    } else {
-                        int channels;
-                        texture_pixels =
-                            stbi_load((directory + diffuse_texname).c_str(),
-                                      &texture_width, &texture_height,
-                                      &channels, STBI_rgb_alpha);
-                        if (!texture_pixels) {
-                            std::stringstream ss;
-                            ss << "Couldn't load texture from the following "
-                                  "path: ";
-                            ss << (directory + diffuse_texname);
-                            ss << "\n";
-                            ASSERT(false, ss.str());
-                        }
-                        loaded_textures_[face_mat_id] = {
-                            texture_pixels, texture_width, texture_height};
-                    }
-                }
-            }
+                has_materials_ ? shape.mesh.material_ids[i / 3] : -1,
+                has_texture = has_texture);
         }
     }
 }
@@ -488,6 +490,16 @@ Voxelizer::Voxelizer(std::string_view filepath,
     std::cout << "Chunk Size: (" 
               << width_ << ", " << height_ << ", " << depth_ 
               << ")\n";
+
+    if (chunks_width_ >= chunks_height_ && chunks_width_ >= chunks_depth_) {
+        voxel_size_ = float(max.x - min.x) / width_;
+    } else if (chunks_height_ >= chunks_depth_) {
+        voxel_size_ = float(max.y - min.y) / height_;
+    } else {
+        voxel_size_ = float(max.z - min.z) / depth_;
+    }
+
+    std::cout << "Voxel Size: " << voxel_size_ << std::endl;
 
     // Allocate the number of voxel chunks that we'll need.
     chunks_width_ = static_cast<uint32_t>(ceil((float)width_ / voxel_chunk_size_));
@@ -558,10 +570,6 @@ void Voxelizer::voxelize_chunk(uint32_t chunk_x, uint32_t chunk_y, uint32_t chun
     }
 
     // At this point we have enough available memory to voxelize the chunk
-    uint32_t width = chunks_width_ * voxel_chunk_size_;
-    uint32_t height = chunks_height_ * voxel_chunk_size_;
-    uint32_t depth = chunks_depth_ * voxel_chunk_size_;
-
     uint32_t min_chunk_x = voxel_chunk_size_ * chunk_x;
     uint32_t min_chunk_y = voxel_chunk_size_ * chunk_y;
     uint32_t min_chunk_z = voxel_chunk_size_ * chunk_z;
@@ -583,22 +591,22 @@ void Voxelizer::voxelize_chunk(uint32_t chunk_x, uint32_t chunk_y, uint32_t chun
     for (const auto &tri : triangles) {
         uint32_t min_voxel_x = static_cast<uint32_t>(
             floor(((tri.min_x() - min.x) / (max.x - min.x)) *
-                  static_cast<float>(width)));
+                  static_cast<float>(width_)));
         uint32_t min_voxel_y = static_cast<uint32_t>(
             floor(((tri.min_y() - min.y) / (max.y - min.y)) *
-                  static_cast<float>(height)));
+                  static_cast<float>(height_)));
         uint32_t min_voxel_z = static_cast<uint32_t>(
             floor(((tri.min_z() - min.z) / (max.z - min.z)) *
-                  static_cast<float>(depth)));
+                  static_cast<float>(depth_)));
         uint32_t max_voxel_x = static_cast<uint32_t>(
             ceil(((tri.max_x() - min.x) / (max.x - min.x)) *
-                 static_cast<float>(width)));
+                 static_cast<float>(width_)));
         uint32_t max_voxel_y = static_cast<uint32_t>(
             ceil(((tri.max_y() - min.y) / (max.y - min.y)) *
-                 static_cast<float>(height)));
+                 static_cast<float>(height_)));
         uint32_t max_voxel_z = static_cast<uint32_t>(
             ceil(((tri.max_z() - min.z) / (max.z - min.z)) *
-                 static_cast<float>(depth)));
+                 static_cast<float>(depth_)));
 
         // If the voxel lies outside of the chunk, we can skip trying to voxelize it
         if (min_voxel_x > max_chunk_x || min_voxel_y > max_chunk_y || min_voxel_z > max_chunk_z || 
@@ -637,13 +645,13 @@ void Voxelizer::voxelize_chunk(uint32_t chunk_x, uint32_t chunk_y, uint32_t chun
             for (uint32_t y = min_voxel_y; y <= max_voxel_y; ++y) {
                 for (uint32_t z = min_voxel_z; z <= max_voxel_z; ++z) {
                     float tri_voxel_x =
-                        static_cast<float>(x) / width * (max.x - min.x) +
+                        static_cast<float>(x) / width_ * (max.x - min.x) +
                         min.x;
                     float tri_voxel_y =
-                        static_cast<float>(y) / height * (max.y - min.y) +
+                        static_cast<float>(y) / height_ * (max.y - min.y) +
                         min.y;
                     float tri_voxel_z =
-                        static_cast<float>(z) / depth * (max.z - min.z) +
+                        static_cast<float>(z) / depth_ * (max.z - min.z) +
                         min.z;
                     if (tri.tri_aabb(
                             glm::vec3(tri_voxel_x, tri_voxel_y, tri_voxel_z),
@@ -660,7 +668,7 @@ void Voxelizer::voxelize_chunk(uint32_t chunk_x, uint32_t chunk_y, uint32_t chun
                         glm::vec3 barycentric_coords =
                             inverse_tri_matrix * plane_point;
 
-                        if (has_materials) {
+                        if (tri.has_texture) {
                             glm::vec2 uv = tri.t_a * barycentric_coords.x +
                                            tri.t_b * barycentric_coords.y +
                                            tri.t_c * barycentric_coords.z;
@@ -697,7 +705,7 @@ void Voxelizer::voxelize_chunk(uint32_t chunk_x, uint32_t chunk_y, uint32_t chun
                         }
 
                         size_t voxel_idx =
-                            (x - min_chunk_x) + ((height - y - 1) - min_chunk_y) * voxel_chunk_size_ +
+                            (x - min_chunk_x) + ((height_ - y - 1) - min_chunk_y) * voxel_chunk_size_ +
                             (z - min_chunk_z) * voxel_chunk_size_ * voxel_chunk_size_;
                         voxel_chunk.at(voxel_idx * 4) = r;
                         voxel_chunk.at(voxel_idx * 4 + 1) = g;
