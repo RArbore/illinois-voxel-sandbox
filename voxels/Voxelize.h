@@ -70,7 +70,7 @@ class Voxelizer {
     const uint64_t max_memory_usage_ = (uint64_t) 1 << 32;
 
     // The dimension size of each voxel chunk (e.g. N x N x N)
-    const uint32_t voxel_chunk_size_ = (uint32_t) 1 << 8;
+    const uint32_t voxel_chunk_size_ = (uint32_t) 1 << 10;
 
     // This only keeps track of the memory used by the voxel data itself,
     // and not the rest of the program.
@@ -93,7 +93,8 @@ class Voxelizer {
 
   public:
 
-    Voxelizer(std::string_view filepath, float voxel_size);
+    Voxelizer(std::string_view filepath,
+              std::tuple<uint32_t, uint32_t, uint32_t> size);
     ~Voxelizer();
 
     uint32_t at(uint32_t x, uint32_t y, uint32_t z);

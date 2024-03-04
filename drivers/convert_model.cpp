@@ -1,6 +1,7 @@
 #include <cstring>
 #include <fstream>
 
+#include <compiler/Compiler.h>
 #include <graphics/GraphicsContext.h>
 #include <utils/Assert.h>
 #include <voxels/Conversion.h>
@@ -95,8 +96,10 @@ int main(int argc, char *argv[]) {
     };
 
     float res = std::stof(std::string(argv[2]));
-    Voxelizer voxelizer(model_path, res);
+
     std::vector<std::byte> model;
+    std::cout << "Converting model to "
+              << argv[3] << std::endl;
     if (!strcmp(argv[3], "svdag")) {
         uint32_t chunk_width, chunk_height, chunk_depth;
         auto raw_vox = raw_voxelize_obj(model_path, res, chunk_width,
@@ -117,32 +120,44 @@ int main(int argc, char *argv[]) {
                                         chunk_depth, 4);
         model = append_metadata_to_raw(model, chunk_width, chunk_height,
                                        chunk_depth);
-    } else if (!strcmp(argv[3], "raw_24_24_24_raw_16_16_16")) {
+    } else if (!strcmp(argv[3], "Raw(24,24,24) Raw(16,16,16)")) {
+        auto bounds = calculate_bounds(parse_format(argv[3]));
+        Voxelizer voxelizer(model_path, bounds);
         auto model = raw_24_24_24_raw_16_16_16_construct(voxelizer);
         write(reinterpret_cast<const char *>(model.data()),
               model.size() * sizeof(uint32_t));
         return 0;
     } else if (!strcmp(argv[3], "df_24_24_24_8_raw_16_16_16")) {
+        auto bounds = calculate_bounds(parse_format(argv[3]));
+        Voxelizer voxelizer(model_path, bounds);
         auto model = df_24_24_24_8_raw_16_16_16_construct(voxelizer);
         write(reinterpret_cast<const char *>(model.data()),
               model.size() * sizeof(uint32_t));
         return 0;
     } else if (!strcmp(argv[3], "svo_9")) {
+        auto bounds = calculate_bounds(parse_format(argv[3]));
+        Voxelizer voxelizer(model_path, bounds);
         auto model = svo_9_construct(voxelizer);
         write(reinterpret_cast<const char *>(model.data()),
               model.size() * sizeof(uint32_t));
         return 0;
     } else if (!strcmp(argv[3], "svdag_9")) {
+        auto bounds = calculate_bounds(parse_format(argv[3]));
+        Voxelizer voxelizer(model_path, bounds);
         auto model = svdag_9_construct(voxelizer);
         write(reinterpret_cast<const char *>(model.data()),
               model.size() * sizeof(uint32_t));
         return 0;
     } else if (!strcmp(argv[3], "df_12_12_12_12_svo_5")) {
+        auto bounds = calculate_bounds(parse_format(argv[3]));
+        Voxelizer voxelizer(model_path, bounds);
         auto model = df_12_12_12_12_svo_5_construct(voxelizer);
         write(reinterpret_cast<const char *>(model.data()),
               model.size() * sizeof(uint32_t));
         return 0;
     } else if (!strcmp(argv[3], "df_12_12_12_12_svdag_5")) {
+        auto bounds = calculate_bounds(parse_format(argv[3]));
+        Voxelizer voxelizer(model_path, bounds);
         auto model = df_12_12_12_12_svdag_5_construct(voxelizer);
         write(reinterpret_cast<const char *>(model.data()),
               model.size() * sizeof(uint32_t));

@@ -475,15 +475,17 @@ Model::~Model() {
     }
 }
 
-Voxelizer::Voxelizer(std::string_view filepath, float voxel_size) : 
+Voxelizer::Voxelizer(std::string_view filepath,
+                     std::tuple<uint32_t, uint32_t, uint32_t> total_size)
+    : 
     model_{filepath}, current_memory_usage_{0} 
 {
     glm::vec3 max = model_.get_max();
     glm::vec3 min = model_.get_min();
-    width_ = static_cast<uint32_t>(ceil((max.x - min.x) / voxel_size));
-    height_ = static_cast<uint32_t>(ceil((max.y - min.y) / voxel_size));
-    depth_ = static_cast<uint32_t>(ceil((max.z - min.z) / voxel_size));
-    std::cout << "Chunk size: (" 
+    width_ = std::get<0>(total_size);
+    height_ = std::get<1>(total_size);
+    depth_ = std::get<2>(total_size);
+    std::cout << "Chunk Size: (" 
               << width_ << ", " << height_ << ", " << depth_ 
               << ")\n";
 
@@ -493,6 +495,10 @@ Voxelizer::Voxelizer(std::string_view filepath, float voxel_size) :
     chunks_depth_ = static_cast<uint32_t>(ceil((float)depth_ / voxel_chunk_size_));
 
     voxel_chunks_.resize(chunks_width_ * chunks_height_ * chunks_depth_);
+
+    std::cout << "Voxelizer Size: (" 
+              << chunks_width_ << ", " << chunks_height_ << ", " << chunks_depth_ 
+              << ")\n";
 
     std::stringstream string_pointer;
     string_pointer << this;
@@ -735,7 +741,7 @@ uint32_t Voxelizer::at(uint32_t x, uint32_t y, uint32_t z) {
     uint32_t in_chunk_x = x - chunk_x * voxel_chunk_size_;
     uint32_t in_chunk_y = y - chunk_y * voxel_chunk_size_;
     uint32_t in_chunk_z = z - chunk_z * voxel_chunk_size_;
-    uint32_t in_chunk_index = x + voxel_chunk_size_ * y + voxel_chunk_size_ * voxel_chunk_size_ * z;
+    uint32_t in_chunk_index = in_chunk_x + voxel_chunk_size_ * in_chunk_y + voxel_chunk_size_ * voxel_chunk_size_ * in_chunk_z;
 
     uint32_t voxel;
     memcpy(&voxel, voxel_chunk.data() + 4 * in_chunk_index, sizeof(uint32_t));
