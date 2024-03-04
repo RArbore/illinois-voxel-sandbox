@@ -7,6 +7,14 @@
 
 hitAttributeEXT uint leaf_id;
 
+vec3 subpositions(uint child) {
+    return vec3(
+		bool(child % 2) ? 1.0 : 0.0,
+		bool((child / 2) % 2) ? 1.0 : 0.0,
+		bool((child / 4) % 2) ? 1.0 : 0.0
+		);
+}
+
 bool intersect_format_2(uint volume_id, uint node_id, vec3 obj_ray_pos, vec3 obj_ray_dir, vec3 lower, float o_t, uint hit_kind) {
     leaf_id = node_id;
     float intersect_time = length(gl_ObjectToWorldEXT * vec4(obj_ray_pos + obj_ray_dir * o_t, 1.0) - gl_ObjectToWorldEXT * vec4(obj_ray_pos, 1.0));
@@ -48,6 +56,7 @@ bool intersect_format_1(uint volume_id, uint node_id, vec3 obj_ray_pos, vec3 obj
         chunk_side_dist += vec3(mask) * chunk_ray_delta;
         chunk_ray_voxel += ivec3(mask) * chunk_ray_step;
     }
+    return false;
 }
 
 bool intersect_format_0(uint volume_id, uint node_id, vec3 obj_ray_pos, vec3 obj_ray_dir, vec3 lower, float o_t, uint hit_kind) {
@@ -84,6 +93,7 @@ bool intersect_format_0(uint volume_id, uint node_id, vec3 obj_ray_pos, vec3 obj
         chunk_side_dist += vec3(mask) * chunk_ray_delta;
         chunk_ray_voxel += ivec3(mask) * chunk_ray_step;
     }
+    return false;
 }
 
 void main() {
