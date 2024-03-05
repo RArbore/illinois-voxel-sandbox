@@ -11,12 +11,14 @@ int main(int argc, char *argv[]) {
     auto format = parse_format(argv[1]);
     ASSERT(format.size() > 0, "Failed to parse format.");
 
-    Optimizations opts { false, false };
+    Optimizations opts { false, false, false };
     for (int i = 2; i < argc; ++i) {
 	if (!strcmp(argv[i], "-unroll-sv") || !strcmp(argv[i], "--unroll-sv")) {
 	    opts.unroll_sv_ = true;
 	} else if (!strcmp(argv[i], "-whole-level-dedup") || !strcmp(argv[i], "--whole-level-dedup")) {
 	    opts.whole_level_dedup_ = true;
+	} else if (!strcmp(argv[i], "-df-packing") || !strcmp(argv[i], "--df-packing")) {
+	    opts.df_packing_ = true;
 	} else {
 	    ASSERT(false, "Failed to parse optimization flag.");
 	}

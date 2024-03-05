@@ -1,4 +1,5 @@
 #include <sstream>
+#include <bit>
 
 #include <utils/Assert.h>
 
@@ -38,6 +39,14 @@ std::string generate_construction_cpp(const std::vector<InstantiatedFormat> &for
 	    ss << R"(_construct_node(voxelizer, buffer, sub_lower_x, sub_lower_y, sub_lower_z, sub_is_empty))";
 	}
     };
+
+    uint32_t df_bits_available = 0;
+    if (opt.df_packing_) {
+	auto [total_w, total_h, total_d] = calculate_bounds(format);
+	uint64_t total_num_voxels = static_cast<uint64_t>(total_w) * static_cast<uint64_t>(total_h) * static_cast<uint64_t>(total_d);
+	uint32_t saturated_total = total_num_voxels > 0xFFFFFFFF ? 0xFFFFFFFF : total_num_voxels;
+	df_bits_available = std::countl_zero(saturated_total);
+    }
     
     ss << R"(#include <cstdint>
 #include <vector>
@@ -162,7 +171,8 @@ static )";
     return raw_chunk;
 )";
         break;
-    case Format::DF:
+    case Format::DF: {
+	bool do_df_compression = (1 << df_bits_available) >= format[i].parameters_[3] && i + 1 < format.size();
         ss << R"(    std::vector<uint32_t> df_chunk;
     is_empty = true;
     uint32_t k = )" << format[i].parameters_[3] << R"(;
@@ -175,14 +185,18 @@ static )";
                 bool sub_is_empty;
                 auto sub_chunk = )";
         print_construct_lower(i);
-        ss << R"(;
+	ss << R"(;
                 if (sub_is_empty) {
                     df_chunk.push_back(0);
                 } else {
                     df_chunk.push_back(push_node_to_buffer(buffer, sub_chunk));
                 }
-                df_chunk.push_back(1);
-                is_empty = is_empty && sub_is_empty;
+)";
+	if (!do_df_compression) {
+	    ss << R"(                df_chunk.push_back(1);
+)";
+	}
+	ss << R"(                is_empty = is_empty && sub_is_empty;
             }
         }
     }
@@ -190,30 +204,45 @@ static )";
         for (uint32_t g_y = 0; g_y < )" << this_h << R"(; ++g_y) {
             for (uint32_t g_x = 0; g_x < )" << this_w << R"(; ++g_x) {
                 uint32_t g_voxel_offset = (g_x + g_y * )" << this_w << R"( + g_z * )" << this_w << R"( * )" << this_h << R"();
-            uint32_t min_dist = k;
-            for (uint32_t kz = g_z > k ? g_z - k : 0; kz <= g_z + k && kz < )" << this_d << R"(; ++kz) {
-                for (uint32_t ky = g_y > k ? g_y - k : 0; ky <= g_y + k && ky < )" << this_h << R"(; ++ky) {
-                    for (uint32_t kx = g_x > k ? g_x - k : 0; kx <= g_x + k && kx < )" << this_w << R"(; ++kx) {
-                        size_t k_voxel_offset = kx + ky * )" << this_w << R"( + kz * )" << this_w << R"( * )" << this_h << R"(;
-                        if (df_chunk[k_voxel_offset * 2] != 0) {
-                            uint32_t dist =
-                            (g_z > kz ? g_z - kz : kz - g_z) +
-                            (g_y > ky ? g_y - ky : ky - g_y) +
-                            (g_x > kx ? g_x - kx : kx - g_x);
-                            if (dist < min_dist && dist) {
-                                min_dist = dist;
+                uint32_t min_dist = k;
+                for (uint32_t kz = g_z > k ? g_z - k : 0; kz <= g_z + k && kz < )" << this_d << R"(; ++kz) {
+                    for (uint32_t ky = g_y > k ? g_y - k : 0; ky <= g_y + k && ky < )" << this_h << R"(; ++ky) {
+                        for (uint32_t kx = g_x > k ? g_x - k : 0; kx <= g_x + k && kx < )" << this_w << R"(; ++kx) {
+                            size_t k_voxel_offset = kx + ky * )" << this_w << R"( + kz * )" << this_w << R"( * )" << this_h << R"(;
+)";
+	if (do_df_compression) {
+	    ss << R"(                            if (df_chunk[k_voxel_offset] & )" << (static_cast<uint32_t>(0xFFFFFFFF) >> df_bits_available) << R"() {
+)";
+	} else {
+	    ss << R"(                            if (df_chunk[k_voxel_offset * 2] != 0) {
+)";
+	}
+	ss << R"(                                uint32_t dist =
+                                (g_z > kz ? g_z - kz : kz - g_z) +
+                                (g_y > ky ? g_y - ky : ky - g_y) +
+                                (g_x > kx ? g_x - kx : kx - g_x);
+                                if (dist < min_dist && dist) {
+                                    min_dist = dist;
+                                }
                             }
                         }
                     }
                 }
-            }
-                df_chunk[g_voxel_offset * 2 + 1] = min_dist;
-            }
+)";
+	if (do_df_compression) {
+	    ss << R"(                df_chunk[g_voxel_offset] |= (min_dist - 1) << (32 - )" << df_bits_available << R"();
+)";
+	} else {
+	ss << R"(                df_chunk[g_voxel_offset * 2 + 1] = (min_dist - 1);
+)";
+	}
+	ss << R"(            }
         }
     }
     return df_chunk;
 )";
         break;
+    }
     case Format::SVO:
         ss << R"(    uint32_t power_of_two = )" << format[i].parameters_[0] << R"(;
     uint32_t bounded_edge_length = 1 << power_of_two;

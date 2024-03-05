@@ -8,6 +8,13 @@ std::string generate_intersection_glsl(const std::vector<InstantiatedFormat> &fo
     std::stringstream ss;
     
     auto [total_w, total_h, total_d] = calculate_bounds(format);
+
+    uint32_t df_bits_available = 0;
+    if (opt.df_packing_) {
+	uint64_t total_num_voxels = static_cast<uint64_t>(total_w) * static_cast<uint64_t>(total_h) * static_cast<uint64_t>(total_d);
+	uint32_t saturated_total = total_num_voxels > 0xFFFFFFFF ? 0xFFFFFFFF : total_num_voxels;
+	df_bits_available = std::countl_zero(saturated_total);
+    }
     
     ss << R"(#version 460
 #pragma shader_stage(intersect)
@@ -83,7 +90,8 @@ bool intersect_format_)" << i << R"((uint volume_id, uint node_id, vec3 obj_ray_
     return false;
 )";
 	    break;
-	case Format::DF:
+	case Format::DF: {
+	    bool do_df_compression = (1 << df_bits_available) >= format[i].parameters_[3] && static_cast<uint32_t>(i + 1) < format.size();
 	    ss << R"(    vec3 chunk_ray_pos = (obj_ray_pos - lower) / vec3(sub_w, sub_h, sub_d);
     vec3 chunk_ray_dir = obj_ray_dir;
     vec3 chunk_ray_intersect_point = chunk_ray_pos + chunk_ray_dir * max(o_t, 0.0) / vec3(sub_w, sub_h, sub_d);
@@ -96,9 +104,17 @@ bool intersect_format_)" << i << R"((uint volume_id, uint node_id, vec3 obj_ray_
     while (all(greaterThanEqual(chunk_ray_voxel, ivec3(0))) && all(lessThan(chunk_ray_voxel, ivec3()" << this_w << R"(, )" << this_h << R"(, )" << this_d << R"()))) {
         if (budget == 0) {
             uint32_t voxel_index = linearize_index(chunk_ray_voxel, )" << this_w << R"(, )" << this_h << R"(, )" << this_d << R"();
-            uint32_t child_id = voxel_buffers[volume_id].voxels[node_id + 2 * voxel_index];
-            budget = voxel_buffers[volume_id].voxels[node_id + 2 * voxel_index + 1];
-            
+)";
+	    if (do_df_compression) {
+		ss << R"(            uint32_t child_id = voxel_buffers[volume_id].voxels[node_id + voxel_index] & )" << (static_cast<uint32_t>(0xFFFFFFFF) >> df_bits_available) << R"(;
+            budget = (voxel_buffers[volume_id].voxels[node_id + voxel_index] >> )" << (32 - df_bits_available) << R"() + 1;
+)";
+	    } else {
+		ss << R"(            uint32_t child_id = voxel_buffers[volume_id].voxels[node_id + 2 * voxel_index];
+            budget = voxel_buffers[volume_id].voxels[node_id + 2 * voxel_index + 1] + 1;
+)";
+	    }
+	    ss << R"(            
             if (child_id != 0) {
                 aabb_intersect_result r = hit_aabb(chunk_ray_voxel * vec3(sub_w, sub_h, sub_d) + lower, (chunk_ray_voxel + 1) * vec3(sub_w, sub_h, sub_d) + lower, obj_ray_pos, obj_ray_dir);
                 if (intersect_format_)" << i + 1 << R"((volume_id, child_id, obj_ray_pos, obj_ray_dir, chunk_ray_voxel * vec3(sub_w, sub_h, sub_d) + lower, r.front_t, r.k)) {
@@ -115,6 +131,7 @@ bool intersect_format_)" << i << R"((uint volume_id, uint node_id, vec3 obj_ray_
     return false;
 )";
 	    break;
+	}
 	case Format::SVO:
 	    if (!opt.unroll_sv_) {
 		ss << R"(    int direction_kind = int(obj_ray_dir.x < 0.0) + 2 * int(obj_ray_dir.y < 0.0) + 4 * int(obj_ray_dir.z < 0.0);
