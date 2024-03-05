@@ -590,23 +590,17 @@ void Voxelizer::voxelize_chunk(uint32_t chunk_x, uint32_t chunk_y, uint32_t chun
     
     for (const auto &tri : triangles) {
         uint32_t min_voxel_x = static_cast<uint32_t>(
-            floor(((tri.min_x() - min.x) / (max.x - min.x)) *
-                  static_cast<float>(width_)));
+            floor((tri.min_x() - min.x) / voxel_size_));
         uint32_t min_voxel_y = static_cast<uint32_t>(
-            floor(((tri.min_y() - min.y) / (max.y - min.y)) *
-                  static_cast<float>(height_)));
+            floor((tri.min_y() - min.y) / voxel_size_));
         uint32_t min_voxel_z = static_cast<uint32_t>(
-            floor(((tri.min_z() - min.z) / (max.z - min.z)) *
-                  static_cast<float>(depth_)));
+            floor((tri.min_z() - min.z) / voxel_size_));
         uint32_t max_voxel_x = static_cast<uint32_t>(
-            ceil(((tri.max_x() - min.x) / (max.x - min.x)) *
-                 static_cast<float>(width_)));
+            ceil((tri.max_x() - min.x) / voxel_size_));
         uint32_t max_voxel_y = static_cast<uint32_t>(
-            ceil(((tri.max_y() - min.y) / (max.y - min.y)) *
-                 static_cast<float>(height_)));
+            ceil((tri.max_y() - min.y) / voxel_size_));
         uint32_t max_voxel_z = static_cast<uint32_t>(
-            ceil(((tri.max_z() - min.z) / (max.z - min.z)) *
-                 static_cast<float>(depth_)));
+            ceil((tri.max_z() - min.z) / voxel_size_));
 
         // If the voxel lies outside of the chunk, we can skip trying to voxelize it
         if (min_voxel_x > max_chunk_x || min_voxel_y > max_chunk_y || min_voxel_z > max_chunk_z || 
@@ -645,14 +639,11 @@ void Voxelizer::voxelize_chunk(uint32_t chunk_x, uint32_t chunk_y, uint32_t chun
             for (uint32_t y = min_voxel_y; y <= max_voxel_y; ++y) {
                 for (uint32_t z = min_voxel_z; z <= max_voxel_z; ++z) {
                     float tri_voxel_x =
-                        static_cast<float>(x) / width_ * (max.x - min.x) +
-                        min.x;
+                        static_cast<float>(x) * voxel_size_ + min.x;
                     float tri_voxel_y =
-                        static_cast<float>(y) / height_ * (max.y - min.y) +
-                        min.y;
+                        static_cast<float>(y) * voxel_size_ + min.y;
                     float tri_voxel_z =
-                        static_cast<float>(z) / depth_ * (max.z - min.z) +
-                        min.z;
+                        static_cast<float>(z) * voxel_size_ + min.z;
                     if (tri.tri_aabb(
                             glm::vec3(tri_voxel_x, tri_voxel_y, tri_voxel_z),
                             glm::vec3(voxel_size_))) {
