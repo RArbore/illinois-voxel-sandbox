@@ -1,3 +1,4 @@
+#include <algorithm>
 #include <cmath>
 #include <cstring>
 #include <filesystem>
@@ -608,6 +609,13 @@ void Voxelizer::voxelize_chunk(uint32_t chunk_x, uint32_t chunk_y, uint32_t chun
             continue;
         }
 
+        min_voxel_x = std::max(min_voxel_x, min_chunk_x);
+        min_voxel_y = std::max(min_voxel_y, min_chunk_y);
+        min_voxel_z = std::max(min_voxel_z, min_chunk_z);
+        max_voxel_x = std::min(max_voxel_x, max_chunk_x - 1);
+        max_voxel_y = std::min(max_voxel_y, max_chunk_y - 1);
+        max_voxel_z = std::min(max_voxel_z, max_chunk_z - 1);
+
         glm::mat3 tri_matrix(tri.a, tri.b, tri.c);
         glm::mat3 inverse_tri_matrix = glm::inverse(tri_matrix);
         glm::vec3 unit_plane =
@@ -696,7 +704,7 @@ void Voxelizer::voxelize_chunk(uint32_t chunk_x, uint32_t chunk_y, uint32_t chun
                         }
 
                         size_t voxel_idx =
-                            (x - min_chunk_x) + ((height_ - y - 1) - min_chunk_y) * voxel_chunk_size_ +
+                            (x - min_chunk_x) + (y - min_chunk_y) * voxel_chunk_size_ +
                             (z - min_chunk_z) * voxel_chunk_size_ * voxel_chunk_size_;
                         voxel_chunk.at(voxel_idx * 4) = r;
                         voxel_chunk.at(voxel_idx * 4 + 1) = g;
@@ -730,6 +738,8 @@ uint32_t Voxelizer::at(uint32_t x, uint32_t y, uint32_t z) {
         return 0;
     }
     
+    y = height_ - y - 1;
+    
     auto [chunk_x, chunk_y, chunk_z] = get_voxel_chunk_index(x, y, z);
     uint32_t chunk_index = linearize_chunk_index(chunk_x, chunk_y, chunk_z);
     VoxelizedChunk &voxel_chunk = voxel_chunks_.at(chunk_index);
@@ -737,9 +747,9 @@ uint32_t Voxelizer::at(uint32_t x, uint32_t y, uint32_t z) {
         voxelize_chunk(chunk_x, chunk_y, chunk_z);
     }
 
-    uint32_t in_chunk_x = x - chunk_x * voxel_chunk_size_;
-    uint32_t in_chunk_y = y - chunk_y * voxel_chunk_size_;
-    uint32_t in_chunk_z = z - chunk_z * voxel_chunk_size_;
+    uint32_t in_chunk_x = x % voxel_chunk_size_;
+    uint32_t in_chunk_y = y % voxel_chunk_size_;
+    uint32_t in_chunk_z = z % voxel_chunk_size_;
     uint32_t in_chunk_index = in_chunk_x + voxel_chunk_size_ * in_chunk_y + voxel_chunk_size_ * voxel_chunk_size_ * in_chunk_z;
 
     uint32_t voxel;
