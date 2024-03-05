@@ -87,7 +87,8 @@ class Voxelizer {
     inline std::tuple<uint32_t, uint32_t, uint32_t> get_voxel_chunk_index(uint32_t x, uint32_t y, uint32_t z) const;
     void voxelize_chunk(uint32_t chunk_x, uint32_t chunk_y, uint32_t chunk_z);
 
-    std::optional<uint32_t> find_old_voxel_chunk() const;
+    // The chunk to voxelize should not be written out to disk
+    std::optional<uint32_t> find_old_voxel_chunk(uint32_t chunk_to_voxelize) const;
     void write_voxels_to_disk(uint32_t chunk_index);
     void read_voxels_from_disk(uint32_t chunk_index);
     std::filesystem::path voxels_directory_;

@@ -520,7 +520,7 @@ Voxelizer::Voxelizer(std::string_view filepath,
 }
 
 Voxelizer::~Voxelizer() {
-    std::filesystem::remove_all(voxels_directory_);
+    // std::filesystem::remove_all(voxels_directory_);
 }
 
 inline uint32_t Voxelizer::linearize_chunk_index(uint32_t x, uint32_t y, uint32_t z) const {
@@ -546,28 +546,29 @@ void Voxelizer::voxelize_chunk(uint32_t chunk_x, uint32_t chunk_y, uint32_t chun
     std::filesystem::path chunk_path =
         voxels_directory_ / std::to_string(voxel_chunk_index);
 
-    if (std::filesystem::exists(chunk_path)) {
-        read_voxels_from_disk(voxel_chunk_index);
-        return;
-    }
+    uint64_t added_memory =
+        voxel_chunk_size_ * voxel_chunk_size_ * voxel_chunk_size_ * 4;
      
     // If the chunk doesn't exist on the disk, then we have to voxelize the chunk from scratch.
-    // We should also check that we aren't exceeding the maximum memory size,
+    // We should first check that we aren't exceeding the maximum memory size,
     // otherwise we should first write another less-used chunk to the disk.
     
     // todo: right now, this is just going to write the lowest voxel index out to disk.
     // A better solution would be to maintain some LRU of some sort.
-    uint64_t added_memory =
-        voxel_chunk_size_ * voxel_chunk_size_ * voxel_chunk_size_;
     while (current_memory_usage_ + added_memory > max_memory_usage_) {
         // Note: each voxel chunk should take the same amount of memory,
         // so a while loop here shouldn't be necessary (need to double check)
-        std::optional<uint32_t> old_chunk = find_old_voxel_chunk();
+        std::optional<uint32_t> old_chunk = find_old_voxel_chunk(voxel_chunk_index);
         if (old_chunk.has_value()) {
             write_voxels_to_disk(old_chunk.value());
         } else {
             ASSERT(false, "Out of available memory but there are no old chunks to write?!");
         }
+    }
+
+    if (std::filesystem::exists(chunk_path)) {
+        read_voxels_from_disk(voxel_chunk_index);
+        return;
     }
 
     // At this point we have enough available memory to voxelize the chunk
@@ -715,14 +716,16 @@ void Voxelizer::voxelize_chunk(uint32_t chunk_x, uint32_t chunk_y, uint32_t chun
             }
         }
     }
+
+    current_memory_usage_ += added_memory;
 }
 
-std::optional<uint32_t> Voxelizer::find_old_voxel_chunk() const {
+std::optional<uint32_t> Voxelizer::find_old_voxel_chunk(uint32_t chunk_to_voxelize) const {
     for (uint32_t x = 0; x < chunks_width_; x++) {
         for (uint32_t y = 0; y < chunks_height_; y++) {
             for (uint32_t z = 0; z < chunks_width_; z++) {
                 uint32_t chunk_index = linearize_chunk_index(x, y, z);
-                if (!voxel_chunks_.at(chunk_index).empty()) {
+                if (!voxel_chunks_.at(chunk_index).empty() && (chunk_index != chunk_to_voxelize)) {
                     return std::optional<uint32_t>(chunk_index);
                 }
             }
@@ -763,8 +766,12 @@ void Voxelizer::write_voxels_to_disk(uint32_t chunk_index) {
     std::filesystem::path chunk_path =
         voxels_directory_ /
         std::to_string(chunk_index);
-    std::ofstream stream(chunk_path, std::ios::out | std::ios::binary);
-    stream.write(reinterpret_cast<char *>(voxel_chunk.data()), voxel_chunk.size());
+
+    if (!std::filesystem::exists(chunk_path)) {
+        std::ofstream stream(chunk_path, std::ios::out | std::ios::binary);
+        stream.write(reinterpret_cast<char *>(voxel_chunk.data()),
+                     voxel_chunk.size());
+    }
     
     current_memory_usage_ -= voxel_chunk.size();
     voxel_chunks_.at(chunk_index).clear();
@@ -782,7 +789,4 @@ void Voxelizer::read_voxels_from_disk(uint32_t chunk_index) {
     stream.read(reinterpret_cast<char *>(voxel_chunk.data()), size);
 
     current_memory_usage_ += voxel_chunk.size();
- 
-    // todo: this may fail on Windows and may need to be deleted manually
-    std::filesystem::remove(chunk_path);
 }
