@@ -1,3 +1,4 @@
+#include <bit>
 #include <sstream>
 
 #include <utils/Assert.h>

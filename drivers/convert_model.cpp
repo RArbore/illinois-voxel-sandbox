@@ -1,6 +1,7 @@
 #include <cstring>
 #include <fstream>
 
+#include <compiler/Compiler.h>
 #include <graphics/GraphicsContext.h>
 #include <utils/Assert.h>
 #include <voxels/Conversion.h>
@@ -9,19 +10,22 @@
 #include <voxels/Voxelize.h>
 
 std::vector<uint32_t> raw_24_24_24_raw_16_16_16_construct(Voxelizer &voxelizer);
-
-std::vector<uint32_t>
-df_24_24_24_8_raw_16_16_16_construct(Voxelizer &voxelizer);
-
+std::vector<uint32_t> df_24_24_24_8_raw_16_16_16_construct(Voxelizer &voxelizer);
 std::vector<uint32_t> svo_9_construct(Voxelizer &voxelizer);
-
 std::vector<uint32_t> svdag_9_construct(Voxelizer &voxelizer);
-
 std::vector<uint32_t> df_12_12_12_12_svo_5_construct(Voxelizer &voxelizer);
-
 std::vector<uint32_t> df_12_12_12_12_svdag_5_construct(Voxelizer &voxelizer);
-
 std::vector<uint32_t> df_15_7_9_8_svdag_7_construct(Voxelizer &voxelizer);
+
+static const std::unordered_map<std::string, std::vector<uint32_t> (*)(Voxelizer &)> format_to_conversion_function = {
+    {"Raw(24, 24, 24) Raw(16, 16, 16)", raw_24_24_24_raw_16_16_16_construct},
+    {"DF(24, 24, 24) Raw(16, 16, 16)", df_24_24_24_8_raw_16_16_16_construct},
+    {"SVO(9)", svo_9_construct},
+    {"SVDAG(9)", svdag_9_construct},
+    {"DF(12, 12, 12, 12) SVO(5)", df_12_12_12_12_svo_5_construct},
+    {"DF(12, 12, 12, 12) SVDAG(5)", df_12_12_12_12_svdag_5_construct},
+    {"DF(15, 7, 9, 8) SVDAG(7)", df_15_7_9_8_svdag_7_construct}
+};
 
 void print_svo(const std::vector<uint32_t> &svo, uint32_t node,
                std::string spacing) {
@@ -97,72 +101,38 @@ int main(int argc, char *argv[]) {
     };
 
     float res = std::stof(std::string(argv[2]));
-    uint32_t chunk_width, chunk_height, chunk_depth;
-    auto raw_vox = raw_voxelize_obj(model_path, res, chunk_width, chunk_height,
-                                    chunk_depth);
+
     std::vector<std::byte> model;
+    std::cout << "Converting model to "
+              << argv[3] << std::endl;
     if (!strcmp(argv[3], "svdag")) {
+        uint32_t chunk_width, chunk_height, chunk_depth;
+        auto raw_vox = raw_voxelize_obj(model_path, res, chunk_width,
+                                        chunk_height, chunk_depth);
         model = convert_raw_to_svdag(raw_vox, chunk_width, chunk_height,
                                      chunk_depth, 4);
     } else if (!strcmp(argv[3], "raw")) {
+        uint32_t chunk_width, chunk_height, chunk_depth;
+        auto raw_vox = raw_voxelize_obj(model_path, res, chunk_width,
+                                        chunk_height, chunk_depth);
         model = append_metadata_to_raw(raw_vox, chunk_width, chunk_height,
                                        chunk_depth);
     } else if (!strcmp(argv[3], "df")) {
+        uint32_t chunk_width, chunk_height, chunk_depth;
+        auto raw_vox = raw_voxelize_obj(model_path, res, chunk_width,
+                                        chunk_height, chunk_depth);
         model = convert_raw_color_to_df(raw_vox, chunk_width, chunk_height,
                                         chunk_depth, 4);
         model = append_metadata_to_raw(model, chunk_width, chunk_height,
                                        chunk_depth);
-    } else if (!strcmp(argv[3], "raw_24_24_24_raw_16_16_16")) {
-        Voxelizer voxelizer(std::move(raw_vox), chunk_width, chunk_height,
-                            chunk_depth);
-        auto model = raw_24_24_24_raw_16_16_16_construct(voxelizer);
-        write(reinterpret_cast<const char *>(model.data()),
-              model.size() * sizeof(uint32_t));
-        return 0;
-    } else if (!strcmp(argv[3], "df_24_24_24_8_raw_16_16_16")) {
-        Voxelizer voxelizer(std::move(raw_vox), chunk_width, chunk_height,
-                            chunk_depth);
-        auto model = df_24_24_24_8_raw_16_16_16_construct(voxelizer);
-        write(reinterpret_cast<const char *>(model.data()),
-              model.size() * sizeof(uint32_t));
-        return 0;
-    } else if (!strcmp(argv[3], "svo_9")) {
-        Voxelizer voxelizer(std::move(raw_vox), chunk_width, chunk_height,
-                            chunk_depth);
-        auto model = svo_9_construct(voxelizer);
-        write(reinterpret_cast<const char *>(model.data()),
-              model.size() * sizeof(uint32_t));
-        return 0;
-    } else if (!strcmp(argv[3], "svdag_9")) {
-        Voxelizer voxelizer(std::move(raw_vox), chunk_width, chunk_height,
-                            chunk_depth);
-        auto model = svdag_9_construct(voxelizer);
-        write(reinterpret_cast<const char *>(model.data()),
-              model.size() * sizeof(uint32_t));
-        return 0;
-    } else if (!strcmp(argv[3], "df_12_12_12_12_svo_5")) {
-        Voxelizer voxelizer(std::move(raw_vox), chunk_width, chunk_height,
-                            chunk_depth);
-        auto model = df_12_12_12_12_svo_5_construct(voxelizer);
-        write(reinterpret_cast<const char *>(model.data()),
-              model.size() * sizeof(uint32_t));
-        return 0;
-    } else if (!strcmp(argv[3], "df_12_12_12_12_svdag_5")) {
-        Voxelizer voxelizer(std::move(raw_vox), chunk_width, chunk_height,
-                            chunk_depth);
-        auto model = df_12_12_12_12_svdag_5_construct(voxelizer);
-        write(reinterpret_cast<const char *>(model.data()),
-              model.size() * sizeof(uint32_t));
-        return 0;
-    } else if (!strcmp(argv[3], "df_15_7_9_8_svdag_7")) {
-        Voxelizer voxelizer(std::move(raw_vox), chunk_width, chunk_height,
-                            chunk_depth);
-        auto model = df_15_7_9_8_svdag_7_construct(voxelizer);
-        write(reinterpret_cast<const char *>(model.data()),
-              model.size() * sizeof(uint32_t));
-        return 0;
     } else {
-        ASSERT(false, "Unrecognized model format.");
+	std::string format(argv[3]);
+        auto bounds = calculate_bounds(parse_format(format));
+        Voxelizer voxelizer(model_path, bounds);
+        auto model = format_to_conversion_function.at(format)(voxelizer);
+        write(reinterpret_cast<const char *>(model.data()),
+              model.size() * sizeof(uint32_t));
+        return 0;
     }
     write(reinterpret_cast<const char *>(model.data()), model.size());
 }
