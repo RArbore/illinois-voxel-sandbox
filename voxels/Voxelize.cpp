@@ -748,6 +748,7 @@ uint32_t Voxelizer::at(uint32_t x, uint32_t y, uint32_t z) {
     VoxelizedChunk &voxel_chunk = voxel_chunks_.at(chunk_index);
     if (voxel_chunk.empty()) {
         voxelize_chunk(chunk_x, chunk_y, chunk_z);
+	std::cout << "INFO: Voxelizing Chunk (" << chunk_x << ", " << chunk_y << ", " << chunk_z << ")\n";
     }
 
     uint32_t in_chunk_x = x % voxel_chunk_size_;
