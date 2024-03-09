@@ -12,5 +12,5 @@ A high performance voxel engine.
 3. Step 2 will produce two files: [format]_construct.cpp and [format]_intersect.glsl, where [format] is the lower-case and underscored version of the format described in step 2 - add these files to voxels/CMakeLists.txt and shaders/CMakeLists.txt, respectively - copy these files into the voxels/ and shaders/ folders, respectively
 4. Build the entire project again (`make -j`)
 5. Edit drivers/convert_model.cpp - add a prototype for the constructing function at the top of the file, with the lower-case and underscored format name from step 3 - add that function as a value in the `format_to_conversion_function` unordered_map, with the format name from step 2 as the key
-6. Run drivers/convert_model [path to obj] 0.0 [format], where [path to obj] is a path to the obj model to voxelize, and [format] is the same format used in step 2
-7. Run drivers/model_viewer [path to voxelized model] [format], where [path to voxelized model. is the path to the voxelized model produced in step 6, and [format] is the same format used in step 2
+6. Run drivers/convert_model [path to obj] 0.0 "[format]", where [path to obj] is a path to the obj model to voxelize, and [format] is the same format used in step 2
+7. Run drivers/model_viewer [path to voxelized model] "[format]", where [path to voxelized model. is the path to the voxelized model produced in step 6, and [format] is the same format used in step 2
