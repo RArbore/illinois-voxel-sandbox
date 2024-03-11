@@ -513,14 +513,37 @@ Voxelizer::Voxelizer(std::string_view filepath,
               << chunks_width_ << ", " << chunks_height_ << ", " << chunks_depth_ 
               << ")\n";
 
+    std::filesystem::path filename = std::filesystem::path(filepath).filename();
     std::stringstream string_pointer;
-    string_pointer << this;
+    string_pointer << filename.string() << "_" << width_ << "_" << height_
+                   << "_" << depth_ << "_" << voxel_chunk_size_;
     voxels_directory_ = "disk_voxels_" + string_pointer.str();
     std::filesystem::create_directory(voxels_directory_);
 }
 
 Voxelizer::~Voxelizer() {
     // std::filesystem::remove_all(voxels_directory_);
+    for (uint32_t chunk_x = 0; chunk_x < chunks_width_; chunk_x++) {
+        for (uint32_t chunk_y = 0; chunk_y < chunks_height_; chunk_y++) {
+            for (uint32_t chunk_z = 0; chunk_z < chunks_width_; chunk_z++) {
+                uint32_t voxel_chunk_index =
+                    linearize_chunk_index(chunk_x, chunk_y, chunk_z);
+                VoxelizedChunk &voxel_chunk =
+                    voxel_chunks_.at(voxel_chunk_index);
+                
+                std::filesystem::path chunk_path =
+                    voxels_directory_ / std::to_string(voxel_chunk_index);
+
+                if (std::filesystem::exists(chunk_path)) {
+                    continue;
+                }
+
+                if (!voxel_chunk.empty()) {
+                    write_voxels_to_disk(voxel_chunk_index);
+                }
+            }
+        }
+    }
 }
 
 inline uint32_t Voxelizer::linearize_chunk_index(uint32_t x, uint32_t y, uint32_t z) const {
