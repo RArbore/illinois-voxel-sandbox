@@ -3,3 +3,11 @@ models
 .vscode
 .vs
 .dir-locals.el
+*.zip
+*.obj
+*.mtl
+*.txt
+*.png
+*.jpg
+*.JPG
+experiments/obj/
