@@ -262,6 +262,7 @@ static )";
     };
 
     is_empty = true;
+    uint64_t current_morton = 0;
 
     for (uint64_t morton = 0; morton < num_voxels; ++morton) {
         uint_fast32_t x = 0, y = 0, z = 0;
@@ -276,39 +277,82 @@ static )";
         if (!sub_is_empty) {
             node[0] = push_node_to_buffer(buffer, sub_chunk);
             is_empty = false;
-        }
 
-        queues.at(power_of_two).emplace_back(node);
-        uint32_t d = power_of_two;
-        while (d > 0 && queues.at(d).size() == 8) {
-            std::array<uint32_t, 2> node = {0, 0};
-
-            bool identical = true;
-            for (uint32_t i = 0; i < 8; ++i) {
-                bool child_is_valid = !is_node_empty(queues.at(d).at(i));
-                bool child_is_leaf = is_node_leaf(queues.at(d).at(i));
-                node[1] |= child_is_valid << (7 - i);
-                node[1] |= (child_is_valid && child_is_leaf) << (15 - i);
-                identical = identical && nodes_equal(queues.at(d).at(i), queues.at(d).at(0));
-            }
-
-            if (identical) {
-                node = queues.at(d).at(0);
-            } else {
-                uint32_t first_child_idx = 0;
-                for (uint32_t i = 0; i < 8; ++i) {
-                    auto child = queues.at(d).at(i);
-                    if (!is_node_empty(child)) {
-                        uint32_t child_idx = push_node_to_buffer(buffer, child);
-                        first_child_idx = first_child_idx ? first_child_idx : child_idx;
+            int64_t nb_empty_nodes = morton - current_morton;
+            while (nb_empty_nodes > 0) {
+                int64_t a = (63 - std::countl_zero((uint64_t) nb_empty_nodes)) / 3;
+                int64_t b;
+                for (b = power_of_two; b > 0 && queues.at(b).empty(); --b);
+                uint32_t d = power_of_two - a > b ? power_of_two - a : b;
+                queues.at(d).emplace_back();
+                while (d > 0 && queues.at(d).size() == 8) {
+                    std::array<uint32_t, 2> node = {0, 0};
+                    
+                    bool identical = true;
+                    for (uint32_t i = 0; i < 8; ++i) {
+                        bool child_is_valid = !is_node_empty(queues.at(d).at(i));
+                        bool child_is_leaf = is_node_leaf(queues.at(d).at(i));
+                        node[1] |= child_is_valid << (7 - i);
+                        node[1] |= (child_is_valid && child_is_leaf) << (15 - i);
+                        identical = identical && nodes_equal(queues.at(d).at(i), queues.at(d).at(0));
                     }
+                    
+                    if (identical) {
+                        node = queues.at(d).at(0);
+                    } else {
+                        uint32_t first_child_idx = 0;
+                        for (uint32_t i = 0; i < 8; ++i) {
+                            auto child = queues.at(d).at(i);
+                            if (!is_node_empty(child)) {
+                                uint32_t child_idx = push_node_to_buffer(buffer, child);
+                                first_child_idx = first_child_idx ? first_child_idx : child_idx;
+                            }
+                        }
+                        node[0] = first_child_idx;
+                    }
+                    
+                    queues.at(d - 1).emplace_back(node);
+                    queues.at(d).clear();
+                    --d;
                 }
-                node[0] = first_child_idx;
+
+                nb_empty_nodes -= 1 << ((power_of_two - d) * 3);
             }
 
-            queues.at(d - 1).emplace_back(node);
-            queues.at(d).clear();
-            --d;
+            queues.at(power_of_two).emplace_back(node);
+            uint32_t d = power_of_two;
+            while (d > 0 && queues.at(d).size() == 8) {
+                std::array<uint32_t, 2> node = {0, 0};
+            
+                bool identical = true;
+                for (uint32_t i = 0; i < 8; ++i) {
+                    bool child_is_valid = !is_node_empty(queues.at(d).at(i));
+                    bool child_is_leaf = is_node_leaf(queues.at(d).at(i));
+                    node[1] |= child_is_valid << (7 - i);
+                    node[1] |= (child_is_valid && child_is_leaf) << (15 - i);
+                    identical = identical && nodes_equal(queues.at(d).at(i), queues.at(d).at(0));
+                }
+            
+                if (identical) {
+                    node = queues.at(d).at(0);
+                } else {
+                    uint32_t first_child_idx = 0;
+                    for (uint32_t i = 0; i < 8; ++i) {
+                        auto child = queues.at(d).at(i);
+                        if (!is_node_empty(child)) {
+                            uint32_t child_idx = push_node_to_buffer(buffer, child);
+                            first_child_idx = first_child_idx ? first_child_idx : child_idx;
+                        }
+                    }
+                    node[0] = first_child_idx;
+                }
+            
+                queues.at(d - 1).emplace_back(node);
+                queues.at(d).clear();
+                --d;
+            }
+
+            current_morton = morton + 1;
         }
     }
 

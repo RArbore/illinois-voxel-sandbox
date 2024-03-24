@@ -76,7 +76,7 @@ static std::array<uint32_t, 2> svo_12_construct_node(Voxelizer &voxelizer, std::
 
             int64_t nb_empty_nodes = morton - current_morton;
             while (nb_empty_nodes > 0) {
-                uint64_t a = (63 - std::countl_zero((uint64_t) nb_empty_nodes)) / 3;
+                int64_t a = (63 - std::countl_zero((uint64_t) nb_empty_nodes)) / 3;
                 int64_t b;
                 for (b = power_of_two; b > 0 && queues.at(b).empty(); --b);
                 uint32_t d = power_of_two - a > b ? power_of_two - a : b;
@@ -148,7 +148,7 @@ static std::array<uint32_t, 2> svo_12_construct_node(Voxelizer &voxelizer, std::
                 --d;
             }
 
-            current_morton = morton;
+            current_morton = morton + 1;
         }
     }
 
