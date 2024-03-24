@@ -16,6 +16,8 @@ std::vector<uint32_t> svdag_9_construct(Voxelizer &voxelizer);
 std::vector<uint32_t> df_12_12_12_12_svo_5_construct(Voxelizer &voxelizer);
 std::vector<uint32_t> df_12_12_12_12_svdag_5_construct(Voxelizer &voxelizer);
 std::vector<uint32_t> df_15_7_9_8_svdag_7_construct(Voxelizer &voxelizer);
+std::vector<uint32_t> svdag_12_construct(Voxelizer &voxelizer);
+std::vector<uint32_t> svdag_11_construct(Voxelizer &voxelizer);
 
 static const std::unordered_map<std::string, std::vector<uint32_t> (*)(Voxelizer &)> format_to_conversion_function = {
     {"Raw(24, 24, 24) Raw(16, 16, 16)", raw_24_24_24_raw_16_16_16_construct},
@@ -24,7 +26,9 @@ static const std::unordered_map<std::string, std::vector<uint32_t> (*)(Voxelizer
     {"SVDAG(9)", svdag_9_construct},
     {"DF(12, 12, 12, 12) SVO(5)", df_12_12_12_12_svo_5_construct},
     {"DF(12, 12, 12, 12) SVDAG(5)", df_12_12_12_12_svdag_5_construct},
-    {"DF(15, 7, 9, 8) SVDAG(7)", df_15_7_9_8_svdag_7_construct}
+    {"DF(15, 7, 9, 8) SVDAG(7)", df_15_7_9_8_svdag_7_construct},
+    {"SVDAG(12)", svdag_12_construct},
+    {"SVDAG(11)", svdag_11_construct}
 };
 
 void print_svo(const std::vector<uint32_t> &svo, uint32_t node,

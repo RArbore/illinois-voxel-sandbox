@@ -13,6 +13,9 @@ add_library(
 	df_12_12_12_12_svo_5_construct.cpp
 	df_12_12_12_12_svdag_5_construct.cpp
 	df_15_7_9_8_svdag_7_construct.cpp
+
+	svdag_12_construct.cpp
+	svdag_11_construct.cpp
 	)
 
 target_include_directories(voxels PUBLIC ${CMAKE_SOURCE_DIR})

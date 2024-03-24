@@ -245,7 +245,7 @@ static )";
     }
     case Format::SVO:
         ss << R"(    uint32_t power_of_two = )" << format[i].parameters_[0] << R"(;
-    uint32_t bounded_edge_length = 1 << power_of_two;
+    const uint64_t bounded_edge_length = 1 << power_of_two;
     std::vector<std::vector<std::array<uint32_t, 2>>> queues(power_of_two + 1);
     const uint64_t num_voxels = bounded_edge_length * bounded_edge_length * bounded_edge_length;
 
@@ -317,7 +317,7 @@ static )";
         break;
     case Format::SVDAG:
         ss << R"(    uint32_t power_of_two = )" << format[i].parameters_[0] << R"(;
-    uint32_t bounded_edge_length = 1 << power_of_two;
+    const uint64_t bounded_edge_length = 1 << power_of_two;
     std::vector<std::vector<std::array<uint32_t, 8>>> queues(power_of_two + 1);
     const uint64_t num_voxels = bounded_edge_length * bounded_edge_length * bounded_edge_length;
 

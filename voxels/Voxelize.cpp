@@ -375,7 +375,7 @@ Model::Model(std::string_view filepath) {
     min_ = glm::vec3(max, max, max);
     max_ = glm::vec3(min, min, min);
 
-    for (int64_t i = 0; i < attrib.vertices.size(); i += 3) {
+    for (uint64_t i = 0; i < attrib.vertices.size(); i += 3) {
         min_.x = fmin(min_.x, attrib.vertices[i]);
         min_.y = fmin(min_.y, attrib.vertices[i + 1]);
         min_.z = fmin(min_.z, attrib.vertices[i + 2]);
@@ -392,8 +392,7 @@ Model::Model(std::string_view filepath) {
 
     for (const auto &shape : shapes) {
         std::cout << shape.mesh.indices.size() / 3 << " triangles\n";
-        uint32_t num_printed = 0;
-        for (int64_t i = 0; i < shape.mesh.indices.size(); i += 3) {
+        for (uint64_t i = 0; i < shape.mesh.indices.size(); i += 3) {
             const auto &vert_a = shape.mesh.indices[i];
             const auto &vert_b = shape.mesh.indices[i + 1];
             const auto &vert_c = shape.mesh.indices[i + 2];
@@ -467,7 +466,7 @@ Model::Model(std::string_view filepath) {
                                 attrib.texcoords.at(2 * tex_index_c + 1))
                     : glm::vec2(0.0f),
                 has_materials_ ? shape.mesh.material_ids[i / 3] : -1,
-                has_texture = has_texture);
+                has_texture);
         }
     }
 }
@@ -481,7 +480,7 @@ Model::~Model() {
 Voxelizer::Voxelizer(std::string_view filepath,
                      std::tuple<uint32_t, uint32_t, uint32_t> total_size)
     : 
-    model_{filepath}, current_memory_usage_{0} 
+    model_{filepath}
 {
     glm::vec3 max = model_.get_max();
     glm::vec3 min = model_.get_min();
@@ -550,16 +549,8 @@ inline uint32_t Voxelizer::linearize_chunk_index(uint32_t x, uint32_t y, uint32_
     return x + chunks_width_ * y + chunks_width_ * chunks_height_ * z;
 }
 
-inline std::tuple<uint32_t, uint32_t, uint32_t> Voxelizer::get_voxel_chunk_index(
-    uint32_t x, uint32_t y, uint32_t z) const {
-    uint32_t chunk_x = static_cast<uint32_t>(floor((float)x / voxel_chunk_size_)); 
-    uint32_t chunk_y = static_cast<uint32_t>(floor((float)y / voxel_chunk_size_));
-    uint32_t chunk_z = static_cast<uint32_t>(floor((float)z / voxel_chunk_size_));
-
-    return {chunk_x, chunk_y, chunk_z};
-}
-
 void Voxelizer::voxelize_chunk(uint32_t chunk_x, uint32_t chunk_y, uint32_t chunk_z) {
+    std::cout << "INFO: Voxelizing Chunk (" << chunk_x << ", " << chunk_y << ", " << chunk_z << ")\n";
     // If this function is being called, we can assume that the chunk isn't already in memory.
     // We first check if the chunk instead exists on the disk.
     uint32_t voxel_chunk_index =
@@ -741,6 +732,7 @@ void Voxelizer::voxelize_chunk(uint32_t chunk_x, uint32_t chunk_y, uint32_t chun
     }
 
     current_memory_usage_ += added_memory;
+    std::cout << "INFO: After voxelizing, " << added_memory << " bytes were allocated, so the total is now " << current_memory_usage_ << " bytes.\n";
 }
 
 std::optional<uint32_t> Voxelizer::find_old_voxel_chunk(uint32_t chunk_to_voxelize) const {
@@ -766,40 +758,57 @@ uint32_t Voxelizer::at(uint32_t x, uint32_t y, uint32_t z) {
     
     y = height_ - y - 1;
     
-    auto [chunk_x, chunk_y, chunk_z] = get_voxel_chunk_index(x, y, z);
-    uint32_t chunk_index = linearize_chunk_index(chunk_x, chunk_y, chunk_z);
-    VoxelizedChunk &voxel_chunk = voxel_chunks_.at(chunk_index);
-    if (voxel_chunk.empty()) {
-        voxelize_chunk(chunk_x, chunk_y, chunk_z);
-	std::cout << "INFO: Voxelizing Chunk (" << chunk_x << ", " << chunk_y << ", " << chunk_z << ")\n";
-    }
-
+    uint32_t chunk_x = x / voxel_chunk_size_;
+    uint32_t chunk_y = y / voxel_chunk_size_;
+    uint32_t chunk_z = z / voxel_chunk_size_;
     uint32_t in_chunk_x = x % voxel_chunk_size_;
     uint32_t in_chunk_y = y % voxel_chunk_size_;
     uint32_t in_chunk_z = z % voxel_chunk_size_;
     uint32_t in_chunk_index = in_chunk_x + voxel_chunk_size_ * in_chunk_y + voxel_chunk_size_ * voxel_chunk_size_ * in_chunk_z;
+    VoxelizedChunk *voxel_chunk = last_chunk_;
+    if (chunk_x != last_chunk_x_ || chunk_x != last_chunk_x_ || chunk_x != last_chunk_x_) {
+	uint32_t chunk_index = linearize_chunk_index(chunk_x, chunk_y, chunk_z);
+	voxel_chunk = &voxel_chunks_.at(chunk_index);
+	if (voxel_chunk->empty()) {
+	    voxelize_chunk(chunk_x, chunk_y, chunk_z);
+	}
+	last_chunk_x_ = chunk_x;
+	last_chunk_y_ = chunk_y;
+	last_chunk_z_ = chunk_z;
+	last_chunk_ = voxel_chunk;
+    }
 
     uint32_t voxel;
-    memcpy(&voxel, voxel_chunk.data() + 4 * in_chunk_index, sizeof(uint32_t));
+    memcpy(&voxel, voxel_chunk->data() + 4 * in_chunk_index, sizeof(uint32_t));
     return voxel;
 }
 
 void Voxelizer::write_voxels_to_disk(uint32_t chunk_index) {
     VoxelizedChunk &voxel_chunk = voxel_chunks_.at(chunk_index);
-
-    std::filesystem::path chunk_path =
-        voxels_directory_ /
-        std::to_string(chunk_index);
-
-    if (!std::filesystem::exists(chunk_path)) {
-        std::ofstream stream(chunk_path, std::ios::out | std::ios::binary);
-        stream.write(reinterpret_cast<char *>(voxel_chunk.data()),
-                     voxel_chunk.size());
+    std::cout << "INfO: Writing chunk at index " << chunk_index << " to disk.\n";
+    if (actually_write_to_disk_) {
+	
+	std::filesystem::path chunk_path =
+	    voxels_directory_ /
+	    std::to_string(chunk_index);
+	
+	if (!std::filesystem::exists(chunk_path)) {
+	    std::ofstream stream(chunk_path, std::ios::out | std::ios::binary);
+	    stream.write(reinterpret_cast<char *>(voxel_chunk.data()),
+			 voxel_chunk.size());
+	}
     }
     
     current_memory_usage_ -= voxel_chunk.size();
     voxel_chunks_.at(chunk_index).clear();
+    voxel_chunks_.at(chunk_index).shrink_to_fit();
     ASSERT(voxel_chunks_.at(chunk_index).size() == 0, "Voxel chunk should be empty after being written to disk!");
+
+    uint64_t actual_memory_usage = 0;
+    for (const auto &chunk : voxel_chunks_) {
+	actual_memory_usage += chunk.capacity();
+    }
+    std::cout << "INFO: After writing, the amount of memory used for raw voxel chunks is " << actual_memory_usage << " bytes.\n";
 }
 
 void Voxelizer::read_voxels_from_disk(uint32_t chunk_index) {

@@ -26,6 +26,9 @@ set(GLSL_SHADER_FILES
   df_12_12_12_12_svo_5_intersect.glsl
   df_12_12_12_12_svdag_5_intersect.glsl
   df_15_7_9_8_svdag_7_intersect.glsl
+
+  svdag_12_intersect.glsl
+  svdag_11_intersect.glsl
 )
 
 foreach(FILE ${GLSL_SHADER_FILES})

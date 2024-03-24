@@ -66,19 +66,26 @@ class Voxelizer {
     uint32_t chunks_width_, chunks_height_, chunks_depth_;
     float voxel_size_;
 
+    const bool actually_write_to_disk_ = false;
+
     // The max size (in bytes) that the voxelizer should store
     // before it should start storing older chunks on the disk.
-    const uint64_t max_memory_usage_ = (uint64_t) 1 << 40;
+    const uint64_t max_memory_usage_ = (uint64_t) 1 << 34;
 
     // The dimension size of each voxel chunk (e.g. N x N x N)
-    const uint32_t voxel_chunk_size_ = (uint32_t) 1 << 7;
+    const uint64_t voxel_chunk_size_ = (uint64_t) 1 << 10;
 
     // This only keeps track of the memory used by the voxel data itself,
     // and not the rest of the program.
-    uint64_t current_memory_usage_;
+    uint64_t current_memory_usage_ = 0;
 
     typedef std::vector<std::byte> VoxelizedChunk;
     std::vector<VoxelizedChunk> voxel_chunks_;
+
+    VoxelizedChunk *last_chunk_ = nullptr;
+    uint32_t last_chunk_x_ = ~0;
+    uint32_t last_chunk_y_ = ~0;
+    uint32_t last_chunk_z_ = ~0;
 
     Model model_;
 
