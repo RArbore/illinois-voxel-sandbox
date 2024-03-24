@@ -70,7 +70,7 @@ class Voxelizer {
 
     // The max size (in bytes) that the voxelizer should store
     // before it should start storing older chunks on the disk.
-    const uint64_t max_memory_usage_ = (uint64_t) 1 << 34;
+    const uint64_t max_memory_usage_ = (uint64_t) 1 << 33;
 
     // The dimension size of each voxel chunk (e.g. N x N x N)
     const uint64_t voxel_chunk_size_ = (uint64_t) 1 << 10;
