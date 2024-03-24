@@ -491,13 +491,10 @@ Voxelizer::Voxelizer(std::string_view filepath,
               << width_ << ", " << height_ << ", " << depth_ 
               << ")\n";
 
-    if (chunks_width_ >= chunks_height_ && chunks_width_ >= chunks_depth_) {
-        voxel_size_ = float(max.x - min.x) / width_;
-    } else if (chunks_height_ >= chunks_depth_) {
-        voxel_size_ = float(max.y - min.y) / height_;
-    } else {
-        voxel_size_ = float(max.z - min.z) / depth_;
-    }
+    voxel_size_ = std::numeric_limits<float>::min();
+    voxel_size_ = fmax(float(max.x - min.x) / width_, voxel_size_);
+    voxel_size_ = fmax(float(max.y - min.y) / height_, voxel_size_);
+    voxel_size_ = fmax(float(max.z - min.z) / depth_, voxel_size_);
 
     std::cout << "Voxel Size: " << voxel_size_ << std::endl;
 
