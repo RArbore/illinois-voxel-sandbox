@@ -19,26 +19,14 @@ set(GLSL_SHADER_FILES
   DF_Color_rchit.glsl
   DF_Color_rint.glsl
   Generic_rchit.glsl
-  raw_24_24_24_raw_16_16_16_intersect.glsl
-  df_24_24_24_8_raw_16_16_16_intersect.glsl
-  svo_9_intersect.glsl
-  svdag_9_intersect.glsl
-  df_12_12_12_12_svo_5_intersect.glsl
-  df_12_12_12_12_svdag_5_intersect.glsl
-  df_15_7_9_8_svdag_7_intersect.glsl
-  svdag_11_intersect.glsl
 
-  df_16_16_16_12_df_16_16_16_12_df_16_16_16_12_intersect.glsl
-  df_16_16_16_12_df_16_16_16_12_raw_16_16_16_intersect.glsl
-  df_16_16_16_12_raw_16_16_16_df_16_16_16_12_intersect.glsl
-  df_256_256_256_12_df_16_16_16_12_intersect.glsl
-  df_256_256_256_12_svdag_4_intersect.glsl
-  df_256_256_256_12_svo_4_intersect.glsl
-  raw_16_16_16_df_16_16_16_12_df_16_16_16_12_intersect.glsl
+  df_64_64_64_6_raw_64_64_64_intersect.glsl
+  df_64_64_64_6_svdag_6_intersect.glsl
+  df_64_64_64_6_svo_6_intersect.glsl
   raw_16_16_16_raw_16_16_16_raw_16_16_16_intersect.glsl
-  svdag_8_df_16_16_16_12_intersect.glsl
+  svdag_6_df_64_64_64_6_intersect.glsl
   svdag_12_intersect.glsl
-  svo_8_df_16_16_16_12_intersect.glsl
+  svo_6_df_64_64_64_6_intersect.glsl
   svo_12_intersect.glsl
 )
 
