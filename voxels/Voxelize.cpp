@@ -356,7 +356,8 @@ Model::Model(std::string_view filepath) {
     tinyobj::ObjReaderConfig reader_config;
     tinyobj::ObjReader reader;
 
-    ASSERT(reader.ParseFromFile(inputfile, reader_config), reader.Error());
+    auto parse_obj_res = reader.ParseFromFile(inputfile, reader_config);
+    ASSERT(parse_obj_res, reader.Error() + "   " + reader.Warning());
 
     auto &attrib = reader.GetAttrib();
     auto &shapes = reader.GetShapes();

@@ -26,68 +26,26 @@ bool intersect_format_1(uint volume_id, uint node_id, vec3 obj_ray_pos, vec3 obj
     float sub_w = 1.0;
     float sub_h = 1.0;
     float sub_d = 1.0;
-    float inc_w = 64.0;
-    float inc_h = 64.0;
-    float inc_d = 64.0;
-    float this_w = 64.0;
-    float this_h = 64.0;
-    float this_d = 64.0;
-
-    vec3 chunk_ray_pos = (obj_ray_pos - lower) / vec3(sub_w, sub_h, sub_d);
-    vec3 chunk_ray_dir = obj_ray_dir;
-    vec3 chunk_ray_intersect_point = chunk_ray_pos + chunk_ray_dir * max(o_t, 0.0) / vec3(sub_w, sub_h, sub_d);
-    ivec3 chunk_ray_voxel = ivec3(min(chunk_ray_intersect_point, ivec3(63, 63, 63)));
-    ivec3 chunk_ray_step = ivec3(sign(chunk_ray_dir));
-    vec3 chunk_ray_delta = abs(vec3(length(chunk_ray_dir)) / chunk_ray_dir);
-    vec3 chunk_side_dist = (sign(chunk_ray_dir) * (vec3(chunk_ray_voxel) - chunk_ray_intersect_point) + (sign(chunk_ray_dir) * 0.5) + 0.5) * chunk_ray_delta;
-
-    uint budget = 0;
-    while (all(greaterThanEqual(chunk_ray_voxel, ivec3(0))) && all(lessThan(chunk_ray_voxel, ivec3(64, 64, 64)))) {
-        if (budget == 0) {
-            uint32_t voxel_index = linearize_index(chunk_ray_voxel, 64, 64, 64);
-            uint32_t child_id = voxel_buffers[volume_id].voxels[node_id + 2 * voxel_index];
-            budget = voxel_buffers[volume_id].voxels[node_id + 2 * voxel_index + 1] + 1;
-            
-            if (child_id != 0) {
-                aabb_intersect_result r = hit_aabb(chunk_ray_voxel * vec3(sub_w, sub_h, sub_d) + lower, (chunk_ray_voxel + 1) * vec3(sub_w, sub_h, sub_d) + lower, obj_ray_pos, obj_ray_dir);
-                if (intersect_format_2(volume_id, child_id, obj_ray_pos, obj_ray_dir, chunk_ray_voxel * vec3(sub_w, sub_h, sub_d) + lower, r.front_t, r.k)) {
-                    return true;
-                }
-            }
-        }
-
-        bvec3 mask = lessThanEqual(chunk_side_dist.xyz, min(chunk_side_dist.yzx, chunk_side_dist.zxy));
-        chunk_side_dist += vec3(mask) * chunk_ray_delta;
-        chunk_ray_voxel += ivec3(mask) * chunk_ray_step;
-        --budget;
-    }
-    return false;
-}
-
-bool intersect_format_0(uint volume_id, uint node_id, vec3 obj_ray_pos, vec3 obj_ray_dir, vec3 lower, float o_t, uint hit_kind) {
-    float sub_w = 64.0;
-    float sub_h = 64.0;
-    float sub_d = 64.0;
-    float inc_w = 4096.0;
-    float inc_h = 4096.0;
-    float inc_d = 4096.0;
-    float this_w = 64.0;
-    float this_h = 64.0;
-    float this_d = 64.0;
+    float inc_w = 256.0;
+    float inc_h = 256.0;
+    float inc_d = 256.0;
+    float this_w = 256.0;
+    float this_h = 256.0;
+    float this_d = 256.0;
 
     int direction_kind = int(obj_ray_dir.x < 0.0) + 2 * int(obj_ray_dir.y < 0.0) + 4 * int(obj_ray_dir.z < 0.0);
     vec3 first_low = lower;
-    vec4 stack[7];
+    vec4 stack[9];
     stack[0] = vec4(first_low, uintBitsToFloat(node_id & 0x0FFFFFFF));
     int level = 0;
-    while (level >= 0 && level < 6) {
+    while (level >= 0 && level < 8) {
         vec4 stack_frame = stack[level];
         vec3 low = stack_frame.xyz;
         uint curr_node_id = floatBitsToUint(stack_frame.w) & 0x0FFFFFFF;
         uint curr_node_child = voxel_buffers[volume_id].voxels[curr_node_id];
         uint curr_node_masks = voxel_buffers[volume_id].voxels[curr_node_id + 1];
         uint left_off = floatBitsToUint(stack_frame.w) >> 28;
-        float diff = float(1 << (6 - level));
+        float diff = float(1 << (8 - level));
         for (uint idx = left_off; idx < 8; ++idx) {
             uint child = direction_kind ^ idx;
             uint valid = (curr_node_masks >> (7 - child)) & 1;
@@ -100,7 +58,7 @@ bool intersect_format_0(uint volume_id, uint node_id, vec3 obj_ray_pos, vec3 obj
                     uint num_valid = bitCount((curr_node_masks & 0xFF) >> (8 - child));
                     uint child_node_id = curr_node_child + num_valid * 2;
                     if (bool(leaf)) {
-                        if (intersect_format_1(volume_id, voxel_buffers[volume_id].voxels[child_node_id], obj_ray_pos, obj_ray_dir, sub_low, hit.front_t, hit.k)) {
+                        if (intersect_format_2(volume_id, voxel_buffers[volume_id].voxels[child_node_id], obj_ray_pos, obj_ray_dir, sub_low, hit.front_t, hit.k)) {
                             return true;
                         }
                     } else {
@@ -114,6 +72,48 @@ bool intersect_format_0(uint volume_id, uint node_id, vec3 obj_ray_pos, vec3 obj
             }
         }
         --level;
+    }
+    return false;
+}
+
+bool intersect_format_0(uint volume_id, uint node_id, vec3 obj_ray_pos, vec3 obj_ray_dir, vec3 lower, float o_t, uint hit_kind) {
+    float sub_w = 256.0;
+    float sub_h = 256.0;
+    float sub_d = 256.0;
+    float inc_w = 4096.0;
+    float inc_h = 4096.0;
+    float inc_d = 4096.0;
+    float this_w = 16.0;
+    float this_h = 16.0;
+    float this_d = 16.0;
+
+    vec3 chunk_ray_pos = (obj_ray_pos - lower) / vec3(sub_w, sub_h, sub_d);
+    vec3 chunk_ray_dir = obj_ray_dir;
+    vec3 chunk_ray_intersect_point = chunk_ray_pos + chunk_ray_dir * max(o_t, 0.0) / vec3(sub_w, sub_h, sub_d);
+    ivec3 chunk_ray_voxel = ivec3(min(chunk_ray_intersect_point, ivec3(15, 15, 15)));
+    ivec3 chunk_ray_step = ivec3(sign(chunk_ray_dir));
+    vec3 chunk_ray_delta = abs(vec3(length(chunk_ray_dir)) / chunk_ray_dir);
+    vec3 chunk_side_dist = (sign(chunk_ray_dir) * (vec3(chunk_ray_voxel) - chunk_ray_intersect_point) + (sign(chunk_ray_dir) * 0.5) + 0.5) * chunk_ray_delta;
+
+    uint budget = 0;
+    while (all(greaterThanEqual(chunk_ray_voxel, ivec3(0))) && all(lessThan(chunk_ray_voxel, ivec3(16, 16, 16)))) {
+        if (budget == 0) {
+            uint32_t voxel_index = linearize_index(chunk_ray_voxel, 16, 16, 16);
+            uint32_t child_id = voxel_buffers[volume_id].voxels[node_id + 2 * voxel_index];
+            budget = voxel_buffers[volume_id].voxels[node_id + 2 * voxel_index + 1] + 1;
+            
+            if (child_id != 0) {
+                aabb_intersect_result r = hit_aabb(chunk_ray_voxel * vec3(sub_w, sub_h, sub_d) + lower, (chunk_ray_voxel + 1) * vec3(sub_w, sub_h, sub_d) + lower, obj_ray_pos, obj_ray_dir);
+                if (intersect_format_1(volume_id, child_id, obj_ray_pos, obj_ray_dir, chunk_ray_voxel * vec3(sub_w, sub_h, sub_d) + lower, r.front_t, r.k)) {
+                    return true;
+                }
+            }
+        }
+
+        bvec3 mask = lessThanEqual(chunk_side_dist.xyz, min(chunk_side_dist.yzx, chunk_side_dist.zxy));
+        chunk_side_dist += vec3(mask) * chunk_ray_delta;
+        chunk_ray_voxel += ivec3(mask) * chunk_ray_step;
+        --budget;
     }
     return false;
 }

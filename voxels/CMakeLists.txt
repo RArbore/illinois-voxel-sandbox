@@ -7,14 +7,20 @@ add_library(
 	Conversion.cpp 
 	Voxelize.cpp 
 
-	df_64_64_64_6_raw_64_64_64_construct.cpp
-	df_64_64_64_6_svdag_6_construct.cpp
+	df_16_16_16_6_svo_8_construct.cpp
+	df_16_16_16_6_svdag_8_construct.cpp
 	df_64_64_64_6_svo_6_construct.cpp
-	raw_16_16_16_raw_16_16_16_raw_16_16_16_construct.cpp
-	svdag_6_df_64_64_64_6_construct.cpp
-	svdag_12_construct.cpp
-	svo_6_df_64_64_64_6_construct.cpp
+	df_64_64_64_6_svdag_6_construct.cpp
 	svo_12_construct.cpp
+	svdag_12_construct.cpp
+	df_16_16_16_6_svo_5_construct.cpp
+	df_16_16_16_6_svdag_5_construct.cpp
+	raw_512_512_512_construct.cpp
+	raw_32_32_32_raw_16_16_16_construct.cpp
+	df_512_512_512_6_construct.cpp
+	df_32_32_32_6_df_16_16_16_6_construct.cpp
+	svo_9_construct.cpp
+	svdag_9_construct.cpp
 	)
 
 target_include_directories(voxels PUBLIC ${CMAKE_SOURCE_DIR})
