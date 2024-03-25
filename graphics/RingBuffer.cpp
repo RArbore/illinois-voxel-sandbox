@@ -251,6 +251,10 @@ void RingBuffer::copy_to_device(
     virtual_counter_ += src.size();
 }
 
+VkDeviceSize RingBuffer::get_size() {
+    return buffer_->get_size();
+}
+
 void RingBuffer::reap_in_flight_copies() {
     for (auto &copy : in_flight_copies_) {
         if (copy.fence_->has_finished()) {

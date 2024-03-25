@@ -41,6 +41,8 @@ class Device {
     VkQueue get_queue();
     uint32_t get_queue_family();
 
+    void wait_idle();
+
     void submit_command(
         std::shared_ptr<Command> command,
         std::vector<std::shared_ptr<Semaphore>> wait_semaphores = {},

@@ -83,11 +83,16 @@ void VoxelChunk::tick_gpu_upload(std::shared_ptr<Device> device,
                                         VK_BUFFER_USAGE_TRANSFER_DST_BIT |
                                             VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
                                         VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, 0);
-        ring_buffer->copy_to_device(buffer_data_, 0, get_cpu_data(),
-                                    {timeline_}, {timeline_});
+	VkDeviceSize ring_buffer_size = ring_buffer->get_size();
+	for (VkDeviceSize i = 0; i < get_cpu_data().size(); i += ring_buffer_size) {
+	    VkDeviceSize chunk_size = ring_buffer_size < get_cpu_data().size() - i ? ring_buffer_size : get_cpu_data().size() - i;
+	    ring_buffer->copy_to_device(buffer_data_, i, get_cpu_data().subspan(i, chunk_size),
+					{timeline_}, {timeline_});
+	    timeline_->increment();
+	    device->wait_idle();
+	}
 
         state_ = State::GPU;
-        timeline_->increment();
     } else if (state_ == State::GPU && timeline_->has_reached_wait()) {
         uploading_ = false;
     }

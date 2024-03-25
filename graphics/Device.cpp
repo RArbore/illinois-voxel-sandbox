@@ -225,6 +225,10 @@ VkQueue Device::get_queue() { return queue_; }
 
 uint32_t Device::get_queue_family() { return queue_family_; }
 
+void Device::wait_idle() {
+    vkDeviceWaitIdle(device_);
+}
+
 void Device::submit_command(
     std::shared_ptr<Command> command,
     std::vector<std::shared_ptr<Semaphore>> wait_semaphores,

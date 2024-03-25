@@ -30,6 +30,7 @@ class RingBuffer {
                    std::vector<std::shared_ptr<Semaphore>> wait_semaphores,
                    std::vector<std::shared_ptr<Semaphore>> signal_semaphores);
 
+    VkDeviceSize get_size();
     void reap_in_flight_copies();
 
   private:
