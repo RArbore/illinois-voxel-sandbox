@@ -65,6 +65,7 @@ class Voxelizer {
     uint32_t width_, height_, depth_;
     uint32_t chunks_width_, chunks_height_, chunks_depth_;
     float voxel_size_;
+    uint32_t num_chunks_voxelized_ = 0;
 
     const bool actually_write_to_disk_ = false;
 
@@ -73,7 +74,7 @@ class Voxelizer {
     const uint64_t max_memory_usage_ = (uint64_t) 1 << 33;
 
     // The dimension size of each voxel chunk (e.g. N x N x N)
-    const uint64_t voxel_chunk_size_ = (uint64_t) 1 << 12;
+    const uint64_t voxel_chunk_size_ = (uint64_t) 1 << 10;
 
     // This only keeps track of the memory used by the voxel data itself,
     // and not the rest of the program.

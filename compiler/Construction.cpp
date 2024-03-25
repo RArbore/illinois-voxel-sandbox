@@ -147,59 +147,55 @@ static )";
     
     switch (format[i].format_) {
     case Format::Raw:
-        ss << R"(    std::vector<uint32_t> raw_chunk;
-    is_empty = true;
-    for (uint32_t g_z = 0; g_z < )" << this_d << R"(; ++g_z) {
-        for (uint32_t g_y = 0; g_y < )" << this_h << R"(; ++g_y) {
-            for (uint32_t g_x = 0; g_x < )" << this_w << R"(; ++g_x) {
-                uint32_t sub_lower_x = lower_x + g_x * )" << sub_w << R"(;
-                uint32_t sub_lower_y = lower_y + g_y * )" << sub_h << R"(;
-                uint32_t sub_lower_z = lower_z + g_z * )" << sub_d << R"(;
-                bool sub_is_empty;
-                auto sub_chunk = )";
+        ss << R"(    is_empty = true;
+    uint64_t num_voxels = )" << ((uint64_t) this_w * (uint64_t) this_h * (uint64_t) this_d) << R"(;
+    std::vector<uint32_t> raw_chunk(num_voxels);
+    for (uint64_t morton = 0; morton < num_voxels; ++morton) {
+        uint_fast32_t g_x = 0, g_y = 0, g_z = 0;
+        libmorton::morton3D_64_decode(morton, g_x, g_y, g_z);
+        uint64_t linear_idx = g_x + g_y * )" << this_w << R"( + g_z * )" << this_w << R"( * )" << this_h << R"(;
+        uint32_t sub_lower_x = lower_x + g_x * )" << sub_w << R"(;
+        uint32_t sub_lower_y = lower_y + g_y * )" << sub_h << R"(;
+        uint32_t sub_lower_z = lower_z + g_z * )" << sub_d << R"(;
+        bool sub_is_empty;
+        auto sub_chunk = )";
         print_construct_lower(i);
         ss << R"(;
-                if (sub_is_empty) {
-                    raw_chunk.push_back(0);
-                } else {
-                    raw_chunk.push_back(push_node_to_buffer(buffer, sub_chunk));
-                }
-                is_empty = is_empty && sub_is_empty;
-            }
+        if (!sub_is_empty) {
+            raw_chunk.at(linear_idx) = push_node_to_buffer(buffer, sub_chunk);
         }
+        is_empty = is_empty && sub_is_empty;
     }
     return raw_chunk;
 )";
         break;
     case Format::DF: {
 	bool do_df_compression = (1 << df_bits_available) >= format[i].parameters_[3] && i + 1 < format.size();
-        ss << R"(    std::vector<uint32_t> df_chunk;
-    is_empty = true;
-    uint32_t k = )" << format[i].parameters_[3] << R"(;
-    for (uint32_t g_z = 0; g_z < )" << this_d << R"(; ++g_z) {
-        for (uint32_t g_y = 0; g_y < )" << this_h << R"(; ++g_y) {
-            for (uint32_t g_x = 0; g_x < )" << this_w << R"(; ++g_x) {
-                uint32_t sub_lower_x = lower_x + g_x * )" << sub_w << R"(;
-                uint32_t sub_lower_y = lower_y + g_y * )" << sub_h << R"(;
-                uint32_t sub_lower_z = lower_z + g_z * )" << sub_d << R"(;
-                bool sub_is_empty;
-                auto sub_chunk = )";
+        ss << R"(    is_empty = true;
+    uint64_t num_voxels = )" << ((uint64_t) this_w * (uint64_t) this_h * (uint64_t) this_d) << R"(;
+    std::vector<uint32_t> df_chunk(num_voxels * )" << (do_df_compression ? 1 : 2) << R"();
+    for (uint64_t morton = 0; morton < num_voxels; ++morton) {
+        uint_fast32_t g_x = 0, g_y = 0, g_z = 0;
+        libmorton::morton3D_64_decode(morton, g_x, g_y, g_z);
+        uint64_t linear_idx = g_x + g_y * )" << this_w << R"( + g_z * )" << this_w << R"( * )" << this_h << R"(;
+        uint32_t sub_lower_x = lower_x + g_x * )" << sub_w << R"(;
+        uint32_t sub_lower_y = lower_y + g_y * )" << sub_h << R"(;
+        uint32_t sub_lower_z = lower_z + g_z * )" << sub_d << R"(;
+        bool sub_is_empty;
+        auto sub_chunk = )";
         print_construct_lower(i);
 	ss << R"(;
-                if (sub_is_empty) {
-                    df_chunk.push_back(0);
-                } else {
-                    df_chunk.push_back(push_node_to_buffer(buffer, sub_chunk));
-                }
+        if (!sub_is_empty) {
+            df_chunk.at(linear_idx * )" << (do_df_compression ? 1 : 2) << R"() = push_node_to_buffer(buffer, sub_chunk);
+        }
 )";
 	if (!do_df_compression) {
-	    ss << R"(                df_chunk.push_back(1);
+	    ss << R"(        df_chunk.at(linear_idx * 2 + 1) = 1;
 )";
 	}
-	ss << R"(                is_empty = is_empty && sub_is_empty;
-            }
-        }
+	ss << R"(        is_empty = is_empty && sub_is_empty;
     }
+    uint32_t k = )" << format[i].parameters_[3] << R"(;
     for (uint32_t g_z = 0; g_z < )" << this_d << R"(; ++g_z) {
         for (uint32_t g_y = 0; g_y < )" << this_h << R"(; ++g_y) {
             for (uint32_t g_x = 0; g_x < )" << this_w << R"(; ++g_x) {

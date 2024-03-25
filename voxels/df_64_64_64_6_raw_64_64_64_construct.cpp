@@ -44,27 +44,25 @@ std::vector<uint32_t> df_64_64_64_6_raw_64_64_64_construct(Voxelizer &voxelizer)
 }
 
 static std::vector<uint32_t> df_64_64_64_6_raw_64_64_64_construct_node(Voxelizer &voxelizer, std::vector<uint32_t> &buffer, uint32_t lower_x, uint32_t lower_y, uint32_t lower_z, bool &is_empty) {
-    std::vector<uint32_t> df_chunk;
     is_empty = true;
-    uint32_t k = 6;
-    for (uint32_t g_z = 0; g_z < 64; ++g_z) {
-        for (uint32_t g_y = 0; g_y < 64; ++g_y) {
-            for (uint32_t g_x = 0; g_x < 64; ++g_x) {
-                uint32_t sub_lower_x = lower_x + g_x * 64;
-                uint32_t sub_lower_y = lower_y + g_y * 64;
-                uint32_t sub_lower_z = lower_z + g_z * 64;
-                bool sub_is_empty;
-                auto sub_chunk = raw_64_64_64_construct_node(voxelizer, buffer, sub_lower_x, sub_lower_y, sub_lower_z, sub_is_empty);
-                if (sub_is_empty) {
-                    df_chunk.push_back(0);
-                } else {
-                    df_chunk.push_back(push_node_to_buffer(buffer, sub_chunk));
-                }
-                df_chunk.push_back(1);
-                is_empty = is_empty && sub_is_empty;
-            }
+    uint64_t num_voxels = 262144;
+    std::vector<uint32_t> df_chunk(num_voxels * 2);
+    for (uint64_t morton = 0; morton < num_voxels; ++morton) {
+        uint_fast32_t g_x = 0, g_y = 0, g_z = 0;
+        libmorton::morton3D_64_decode(morton, g_x, g_y, g_z);
+        uint64_t linear_idx = g_x + g_y * 64 + g_z * 64 * 64;
+        uint32_t sub_lower_x = lower_x + g_x * 64;
+        uint32_t sub_lower_y = lower_y + g_y * 64;
+        uint32_t sub_lower_z = lower_z + g_z * 64;
+        bool sub_is_empty;
+        auto sub_chunk = raw_64_64_64_construct_node(voxelizer, buffer, sub_lower_x, sub_lower_y, sub_lower_z, sub_is_empty);
+        if (!sub_is_empty) {
+            df_chunk.at(linear_idx * 2) = push_node_to_buffer(buffer, sub_chunk);
         }
+        df_chunk.at(linear_idx * 2 + 1) = 1;
+        is_empty = is_empty && sub_is_empty;
     }
+    uint32_t k = 6;
     for (uint32_t g_z = 0; g_z < 64; ++g_z) {
         for (uint32_t g_y = 0; g_y < 64; ++g_y) {
             for (uint32_t g_x = 0; g_x < 64; ++g_x) {
@@ -94,24 +92,22 @@ static std::vector<uint32_t> df_64_64_64_6_raw_64_64_64_construct_node(Voxelizer
 }
 
 static std::vector<uint32_t> raw_64_64_64_construct_node(Voxelizer &voxelizer, std::vector<uint32_t> &buffer, uint32_t lower_x, uint32_t lower_y, uint32_t lower_z, bool &is_empty) {
-    std::vector<uint32_t> raw_chunk;
     is_empty = true;
-    for (uint32_t g_z = 0; g_z < 64; ++g_z) {
-        for (uint32_t g_y = 0; g_y < 64; ++g_y) {
-            for (uint32_t g_x = 0; g_x < 64; ++g_x) {
-                uint32_t sub_lower_x = lower_x + g_x * 1;
-                uint32_t sub_lower_y = lower_y + g_y * 1;
-                uint32_t sub_lower_z = lower_z + g_z * 1;
-                bool sub_is_empty;
-                auto sub_chunk = _construct_node(voxelizer, buffer, sub_lower_x, sub_lower_y, sub_lower_z, sub_is_empty);
-                if (sub_is_empty) {
-                    raw_chunk.push_back(0);
-                } else {
-                    raw_chunk.push_back(push_node_to_buffer(buffer, sub_chunk));
-                }
-                is_empty = is_empty && sub_is_empty;
-            }
+    uint64_t num_voxels = 262144;
+    std::vector<uint32_t> raw_chunk(num_voxels);
+    for (uint64_t morton = 0; morton < num_voxels; ++morton) {
+        uint_fast32_t g_x = 0, g_y = 0, g_z = 0;
+        libmorton::morton3D_64_decode(morton, g_x, g_y, g_z);
+        uint64_t linear_idx = g_x + g_y * 64 + g_z * 64 * 64;
+        uint32_t sub_lower_x = lower_x + g_x * 1;
+        uint32_t sub_lower_y = lower_y + g_y * 1;
+        uint32_t sub_lower_z = lower_z + g_z * 1;
+        bool sub_is_empty;
+        auto sub_chunk = _construct_node(voxelizer, buffer, sub_lower_x, sub_lower_y, sub_lower_z, sub_is_empty);
+        if (!sub_is_empty) {
+            raw_chunk.at(linear_idx) = push_node_to_buffer(buffer, sub_chunk);
         }
+        is_empty = is_empty && sub_is_empty;
     }
     return raw_chunk;
 }

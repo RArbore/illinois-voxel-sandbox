@@ -46,70 +46,64 @@ std::vector<uint32_t> raw_16_16_16_raw_16_16_16_raw_16_16_16_construct(Voxelizer
 }
 
 static std::vector<uint32_t> raw_16_16_16_raw_16_16_16_raw_16_16_16_construct_node(Voxelizer &voxelizer, std::vector<uint32_t> &buffer, uint32_t lower_x, uint32_t lower_y, uint32_t lower_z, bool &is_empty) {
-    std::vector<uint32_t> raw_chunk;
     is_empty = true;
-    for (uint32_t g_z = 0; g_z < 16; ++g_z) {
-        for (uint32_t g_y = 0; g_y < 16; ++g_y) {
-            for (uint32_t g_x = 0; g_x < 16; ++g_x) {
-                uint32_t sub_lower_x = lower_x + g_x * 256;
-                uint32_t sub_lower_y = lower_y + g_y * 256;
-                uint32_t sub_lower_z = lower_z + g_z * 256;
-                bool sub_is_empty;
-                auto sub_chunk = raw_16_16_16_raw_16_16_16_construct_node(voxelizer, buffer, sub_lower_x, sub_lower_y, sub_lower_z, sub_is_empty);
-                if (sub_is_empty) {
-                    raw_chunk.push_back(0);
-                } else {
-                    raw_chunk.push_back(push_node_to_buffer(buffer, sub_chunk));
-                }
-                is_empty = is_empty && sub_is_empty;
-            }
+    uint64_t num_voxels = 4096;
+    std::vector<uint32_t> raw_chunk(num_voxels);
+    for (uint64_t morton = 0; morton < num_voxels; ++morton) {
+        uint_fast32_t g_x = 0, g_y = 0, g_z = 0;
+        libmorton::morton3D_64_decode(morton, g_x, g_y, g_z);
+        uint64_t linear_idx = g_x + g_y * 16 + g_z * 16 * 16;
+        uint32_t sub_lower_x = lower_x + g_x * 256;
+        uint32_t sub_lower_y = lower_y + g_y * 256;
+        uint32_t sub_lower_z = lower_z + g_z * 256;
+        bool sub_is_empty;
+        auto sub_chunk = raw_16_16_16_raw_16_16_16_construct_node(voxelizer, buffer, sub_lower_x, sub_lower_y, sub_lower_z, sub_is_empty);
+        if (!sub_is_empty) {
+            raw_chunk.at(linear_idx) = push_node_to_buffer(buffer, sub_chunk);
         }
+        is_empty = is_empty && sub_is_empty;
     }
     return raw_chunk;
 }
 
 static std::vector<uint32_t> raw_16_16_16_raw_16_16_16_construct_node(Voxelizer &voxelizer, std::vector<uint32_t> &buffer, uint32_t lower_x, uint32_t lower_y, uint32_t lower_z, bool &is_empty) {
-    std::vector<uint32_t> raw_chunk;
     is_empty = true;
-    for (uint32_t g_z = 0; g_z < 16; ++g_z) {
-        for (uint32_t g_y = 0; g_y < 16; ++g_y) {
-            for (uint32_t g_x = 0; g_x < 16; ++g_x) {
-                uint32_t sub_lower_x = lower_x + g_x * 16;
-                uint32_t sub_lower_y = lower_y + g_y * 16;
-                uint32_t sub_lower_z = lower_z + g_z * 16;
-                bool sub_is_empty;
-                auto sub_chunk = raw_16_16_16_construct_node(voxelizer, buffer, sub_lower_x, sub_lower_y, sub_lower_z, sub_is_empty);
-                if (sub_is_empty) {
-                    raw_chunk.push_back(0);
-                } else {
-                    raw_chunk.push_back(push_node_to_buffer(buffer, sub_chunk));
-                }
-                is_empty = is_empty && sub_is_empty;
-            }
+    uint64_t num_voxels = 4096;
+    std::vector<uint32_t> raw_chunk(num_voxels);
+    for (uint64_t morton = 0; morton < num_voxels; ++morton) {
+        uint_fast32_t g_x = 0, g_y = 0, g_z = 0;
+        libmorton::morton3D_64_decode(morton, g_x, g_y, g_z);
+        uint64_t linear_idx = g_x + g_y * 16 + g_z * 16 * 16;
+        uint32_t sub_lower_x = lower_x + g_x * 16;
+        uint32_t sub_lower_y = lower_y + g_y * 16;
+        uint32_t sub_lower_z = lower_z + g_z * 16;
+        bool sub_is_empty;
+        auto sub_chunk = raw_16_16_16_construct_node(voxelizer, buffer, sub_lower_x, sub_lower_y, sub_lower_z, sub_is_empty);
+        if (!sub_is_empty) {
+            raw_chunk.at(linear_idx) = push_node_to_buffer(buffer, sub_chunk);
         }
+        is_empty = is_empty && sub_is_empty;
     }
     return raw_chunk;
 }
 
 static std::vector<uint32_t> raw_16_16_16_construct_node(Voxelizer &voxelizer, std::vector<uint32_t> &buffer, uint32_t lower_x, uint32_t lower_y, uint32_t lower_z, bool &is_empty) {
-    std::vector<uint32_t> raw_chunk;
     is_empty = true;
-    for (uint32_t g_z = 0; g_z < 16; ++g_z) {
-        for (uint32_t g_y = 0; g_y < 16; ++g_y) {
-            for (uint32_t g_x = 0; g_x < 16; ++g_x) {
-                uint32_t sub_lower_x = lower_x + g_x * 1;
-                uint32_t sub_lower_y = lower_y + g_y * 1;
-                uint32_t sub_lower_z = lower_z + g_z * 1;
-                bool sub_is_empty;
-                auto sub_chunk = _construct_node(voxelizer, buffer, sub_lower_x, sub_lower_y, sub_lower_z, sub_is_empty);
-                if (sub_is_empty) {
-                    raw_chunk.push_back(0);
-                } else {
-                    raw_chunk.push_back(push_node_to_buffer(buffer, sub_chunk));
-                }
-                is_empty = is_empty && sub_is_empty;
-            }
+    uint64_t num_voxels = 4096;
+    std::vector<uint32_t> raw_chunk(num_voxels);
+    for (uint64_t morton = 0; morton < num_voxels; ++morton) {
+        uint_fast32_t g_x = 0, g_y = 0, g_z = 0;
+        libmorton::morton3D_64_decode(morton, g_x, g_y, g_z);
+        uint64_t linear_idx = g_x + g_y * 16 + g_z * 16 * 16;
+        uint32_t sub_lower_x = lower_x + g_x * 1;
+        uint32_t sub_lower_y = lower_y + g_y * 1;
+        uint32_t sub_lower_z = lower_z + g_z * 1;
+        bool sub_is_empty;
+        auto sub_chunk = _construct_node(voxelizer, buffer, sub_lower_x, sub_lower_y, sub_lower_z, sub_is_empty);
+        if (!sub_is_empty) {
+            raw_chunk.at(linear_idx) = push_node_to_buffer(buffer, sub_chunk);
         }
+        is_empty = is_empty && sub_is_empty;
     }
     return raw_chunk;
 }

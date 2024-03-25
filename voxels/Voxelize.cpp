@@ -547,7 +547,7 @@ inline uint32_t Voxelizer::linearize_chunk_index(uint32_t x, uint32_t y, uint32_
 }
 
 void Voxelizer::voxelize_chunk(uint32_t chunk_x, uint32_t chunk_y, uint32_t chunk_z) {
-    std::cout << "INFO: Voxelizing Chunk (" << chunk_x << ", " << chunk_y << ", " << chunk_z << ")\n";
+    std::cout << "INFO: (" << (++num_chunks_voxelized_) << " / " << (chunks_width_ * chunks_height_ * chunks_depth_) << ") Voxelizing Chunk (" << chunk_x << ", " << chunk_y << ", " << chunk_z << ")\n";
     // If this function is being called, we can assume that the chunk isn't already in memory.
     // We first check if the chunk instead exists on the disk.
     uint32_t voxel_chunk_index =
