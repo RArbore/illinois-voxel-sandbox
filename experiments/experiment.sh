@@ -19,6 +19,24 @@ formats=(
 	"SVDAG(9)"
 	)
 
+flags=(
+	"-whole-level-dedup"
+	"-whole-level-dedup"
+	"-whole-level-dedup"
+	"-whole-level-dedup"
+	"-whole-level-dedup"
+	"-whole-level-dedup"
+
+	"-whole-level-dedup -df-packing"
+	"-whole-level-dedup -df-packing"
+	"-whole-level-dedup -df-packing"
+	"-whole-level-dedup -df-packing"
+	"-whole-level-dedup -df-packing"
+	"-whole-level-dedup -df-packing"
+	"-whole-level-dedup -df-packing"
+	"-whole-level-dedup -df-packing"
+	)
+
 models=(
 	"san-miguel-low-poly"
 	"hairball"
@@ -63,9 +81,11 @@ elif [ "$1" = "compile" ]; then
 	touch ints_cmake
 	touch decl_conv
 	touch map_conv
-	for format in "${formats[@]}"
+	for index in "${!formats[@]}"
 	do
-		iden=`drivers/compile "$format" -whole-level-dedup -df-packing`
+		format="${formats[$index]}"
+		flag="${flags[$index]}"
+		iden=`drivers/compile "$format" $flag`
 		echo "	$iden"_construct.cpp >> cons_cmake
 		echo "	$iden"_intersect.glsl >> ints_cmake
 		echo "std::vector<uint32_t> $iden"_construct"(Voxelizer &voxelizer);" >> decl_conv
@@ -79,7 +99,7 @@ elif [ "$1" = "convert" ]; then
 		iden=`drivers/compile "$format" -just-get-iden`
 		for model in "${models[@]}"
 		do
-			drivers/convert_model ../experiments/obj/$model/$model.obj 1 "$format" > ../experiments/obj/$model/$model.$iden.log &
+			drivers/convert_model ../experiments/obj/$model/$model.obj 1 "$format" &> ../experiments/obj/$model/$model.$iden.log &
 		done
 		wait
 	done
