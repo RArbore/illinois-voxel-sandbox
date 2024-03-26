@@ -125,7 +125,7 @@ static std::array<uint32_t, 8> svdag_5_construct_node(Voxelizer &voxelizer, std:
         libmorton::morton3D_64_decode(morton, x, y, z);
 
         std::array<uint32_t, 8> node = {0, 0, 0, 0, 0, 0, 0, 0};
-        uint32_t sub_lower_x = x + lower_x, sub_lower_y = y + lower_y, sub_lower_z = z + lower_z;
+        uint32_t sub_lower_x = x * 1 + lower_x, sub_lower_y = y * 1 + lower_y, sub_lower_z = z * 1 + lower_z;
         bool sub_is_empty;
         auto sub_chunk = _construct_node(voxelizer, buffer, sub_lower_x, sub_lower_y, sub_lower_z, sub_is_empty);
         if (!sub_is_empty) {

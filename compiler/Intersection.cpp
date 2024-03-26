@@ -155,7 +155,7 @@ bool intersect_format_)" << i << R"((uint volume_id, uint node_id, vec3 obj_ray_
         uint curr_node_child = voxel_buffers[volume_id].voxels[curr_node_id];
         uint curr_node_masks = voxel_buffers[volume_id].voxels[curr_node_id + 1];
         uint left_off = stack_frame.left_off;
-        float diff = float(1 << ()" << format[i].parameters_[0] << R"( - level));
+        vec3 diff = vec3(sub_w, sub_h, sub_d) * float(1 << ()" << format[i].parameters_[0] << R"( - level));
         for (uint idx = left_off; idx < 8; ++idx) {
             uint child = direction_kind ^ idx;
             uint valid = (curr_node_masks >> (7 - child)) & 1;
@@ -195,7 +195,7 @@ bool intersect_format_)" << i << R"((uint volume_id, uint node_id, vec3 obj_ray_
     uint curr_node_id_0 = node_id;
 )";
 		for (uint32_t j = 0; j < format[i].parameters_[0]; ++j) {
-		    ss << R"(    float diff_)" << j << R"( = float(1 << ()" << format[i].parameters_[0] << R"( - )" << j << R"());
+		    ss << R"(    vec3 diff_)" << j << R"( = vec3(sub_w, sub_h, sub_d) * float(1 << ()" << format[i].parameters_[0] << R"( - )" << j << R"());
     uint children_node_id = voxel_buffers[volume_id].voxels[curr_node_id_)" << j << R"(];
     uint children_masks = voxel_buffers[volume_id].voxels[curr_node_id_)" << j << R"( + 1];
     for (uint idx = 0; idx < 8; ++idx) {
@@ -245,7 +245,7 @@ bool intersect_format_)" << i << R"((uint volume_id, uint node_id, vec3 obj_ray_
         vec3 low = stack_frame.low;
         uint curr_node_id = stack_frame.curr_node_id;
         uint left_off = stack_frame.left_off;
-        float diff = float(1 << ()" << format[i].parameters_[0] << R"( - level));
+        vec3 diff = vec3(sub_w, sub_h, sub_d) * float(1 << ()" << format[i].parameters_[0] << R"( - level));
         for (uint idx = left_off; idx < 8; ++idx) {
             uint child = direction_kind ^ idx;
             uint child_node_id = voxel_buffers[volume_id].voxels[curr_node_id + child];
@@ -282,7 +282,7 @@ bool intersect_format_)" << i << R"((uint volume_id, uint node_id, vec3 obj_ray_
     uint curr_node_id_0 = node_id;
 )";
 		for (uint32_t j = 0; j < format[i].parameters_[0]; ++j) {
-		    ss << R"(    float diff_)" << j << R"( = float(1 << ()" << format[i].parameters_[0] << R"( - )" << j << R"());
+		    ss << R"(    vec3 diff_)" << j << R"( = vec3(sub_w, sub_h, sub_d) * float(1 << ()" << format[i].parameters_[0] << R"( - )" << j << R"());
     for (uint idx = 0; idx < 8; ++idx) {
         uint child = direction_kind ^ idx;
         uint child_node_id = voxel_buffers[volume_id].voxels[curr_node_id_)" << j << R"( + child];

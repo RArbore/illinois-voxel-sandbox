@@ -13,10 +13,14 @@ std::vector<uint32_t> df_16_16_16_6_svo_8_construct(Voxelizer &voxelizer);
 std::vector<uint32_t> df_16_16_16_6_svdag_8_construct(Voxelizer &voxelizer);
 std::vector<uint32_t> df_64_64_64_6_svo_6_construct(Voxelizer &voxelizer);
 std::vector<uint32_t> df_64_64_64_6_svdag_6_construct(Voxelizer &voxelizer);
+std::vector<uint32_t> svo_8_df_16_16_16_6_construct(Voxelizer &voxelizer);
+std::vector<uint32_t> svdag_8_df_16_16_16_6_construct(Voxelizer &voxelizer);
 std::vector<uint32_t> svo_12_construct(Voxelizer &voxelizer);
 std::vector<uint32_t> svdag_12_construct(Voxelizer &voxelizer);
 std::vector<uint32_t> df_16_16_16_6_svo_5_construct(Voxelizer &voxelizer);
 std::vector<uint32_t> df_16_16_16_6_svdag_5_construct(Voxelizer &voxelizer);
+std::vector<uint32_t> svo_5_df_16_16_16_6_construct(Voxelizer &voxelizer);
+std::vector<uint32_t> svdag_5_df_16_16_16_6_construct(Voxelizer &voxelizer);
 std::vector<uint32_t> raw_512_512_512_construct(Voxelizer &voxelizer);
 std::vector<uint32_t> raw_32_32_32_raw_16_16_16_construct(Voxelizer &voxelizer);
 std::vector<uint32_t> df_512_512_512_6_construct(Voxelizer &voxelizer);
@@ -29,10 +33,14 @@ static const std::unordered_map<std::string, std::vector<uint32_t> (*)(Voxelizer
     {"DF(16, 16, 16, 6) SVDAG(8)", df_16_16_16_6_svdag_8_construct},
     {"DF(64, 64, 64, 6) SVO(6)", df_64_64_64_6_svo_6_construct},
     {"DF(64, 64, 64, 6) SVDAG(6)", df_64_64_64_6_svdag_6_construct},
+    {"SVO(8) DF(16, 16, 16, 6)", svo_8_df_16_16_16_6_construct},
+    {"SVDAG(8) DF(16, 16, 16, 6)", svdag_8_df_16_16_16_6_construct},
     {"SVO(12)", svo_12_construct},
     {"SVDAG(12)", svdag_12_construct},
     {"DF(16, 16, 16, 6) SVO(5)", df_16_16_16_6_svo_5_construct},
     {"DF(16, 16, 16, 6) SVDAG(5)", df_16_16_16_6_svdag_5_construct},
+    {"SVO(5) DF(16, 16, 16, 6)", svo_5_df_16_16_16_6_construct},
+    {"SVDAG(5) DF(16, 16, 16, 6)", svdag_5_df_16_16_16_6_construct},
     {"Raw(512, 512, 512)", raw_512_512_512_construct},
     {"Raw(32, 32, 32) Raw(16, 16, 16)", raw_32_32_32_raw_16_16_16_construct},
     {"DF(512, 512, 512, 6)", df_512_512_512_6_construct},

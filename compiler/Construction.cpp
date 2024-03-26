@@ -276,7 +276,7 @@ static )";
         libmorton::morton3D_64_decode(morton, x, y, z);
 
         std::array<uint32_t, 2> node = {0, 0};
-        uint32_t sub_lower_x = x + lower_x, sub_lower_y = y + lower_y, sub_lower_z = z + lower_z;
+        uint32_t sub_lower_x = x * )" << sub_w << R"( + lower_x, sub_lower_y = y * )" << sub_h << R"( + lower_y, sub_lower_z = z * )" << sub_d << R"( + lower_z;
         bool sub_is_empty;
         auto sub_chunk = )";
         print_construct_lower(i);
@@ -351,7 +351,7 @@ static )";
         libmorton::morton3D_64_decode(morton, x, y, z);
 
         std::array<uint32_t, 8> node = {0, 0, 0, 0, 0, 0, 0, 0};
-        uint32_t sub_lower_x = x + lower_x, sub_lower_y = y + lower_y, sub_lower_z = z + lower_z;
+        uint32_t sub_lower_x = x * )" << sub_w << R"( + lower_x, sub_lower_y = y * )" << sub_h << R"( + lower_y, sub_lower_z = z * )" << sub_d << R"( + lower_z;
         bool sub_is_empty;
         auto sub_chunk = )";
         print_construct_lower(i);

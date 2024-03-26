@@ -6,11 +6,15 @@ formats=(
 	"DF(16, 16, 16, 6) SVDAG(8)"
 	"DF(64, 64, 64, 6) SVO(6)"
 	"DF(64, 64, 64, 6) SVDAG(6)"
+	"SVO(8) DF(16, 16, 16, 6)"
+	"SVDAG(8) DF(16, 16, 16, 6)"
 	"SVO(12)"
 	"SVDAG(12)"
 
 	"DF(16, 16, 16, 6) SVO(5)"
 	"DF(16, 16, 16, 6) SVDAG(5)"
+	"SVO(5) DF(16, 16, 16, 6)"
+	"SVDAG(5) DF(16, 16, 16, 6)"
 	"Raw(512, 512, 512)"
 	"Raw(32, 32, 32) Raw(16, 16, 16)"
 	"DF(512, 512, 512, 6)"
@@ -86,6 +90,8 @@ elif [ "$1" = "compile" ]; then
 		format="${formats[$index]}"
 		flag="${flags[$index]}"
 		iden=`drivers/compile "$format" $flag`
+		cp "$iden"_construct.cpp ../voxels/
+		cp "$iden"_intersect.glsl ../shaders/
 		echo "	$iden"_construct.cpp >> cons_cmake
 		echo "	$iden"_intersect.glsl >> ints_cmake
 		echo "std::vector<uint32_t> $iden"_construct"(Voxelizer &voxelizer);" >> decl_conv

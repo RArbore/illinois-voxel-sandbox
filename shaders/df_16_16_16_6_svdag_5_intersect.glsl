@@ -51,7 +51,7 @@ bool intersect_format_1(uint volume_id, uint node_id, vec3 obj_ray_pos, vec3 obj
         vec3 low = stack_frame.low;
         uint curr_node_id = stack_frame.curr_node_id;
         uint left_off = stack_frame.left_off;
-        float diff = float(1 << (5 - level));
+        vec3 diff = vec3(sub_w, sub_h, sub_d) * float(1 << (5 - level));
         for (uint idx = left_off; idx < 8; ++idx) {
             uint child = direction_kind ^ idx;
             uint child_node_id = voxel_buffers[volume_id].voxels[curr_node_id + child];

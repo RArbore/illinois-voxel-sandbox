@@ -41,20 +41,19 @@ static uint32_t push_node_to_buffer(std::vector<uint32_t> &buffer, const std::ar
     return offset;
 }
 
-static std::array<uint32_t, 8> svdag_9_construct_node(Voxelizer &voxelizer, std::vector<uint32_t> &buffer, uint32_t lower_x, uint32_t lower_y, uint32_t lower_z, bool &is_empty, std::unordered_map<std::array<uint32_t, 8>, uint32_t> &deduplication_map);
+static std::array<uint32_t, 8> svdag_9_construct_node(Voxelizer &voxelizer, std::vector<uint32_t> &buffer, uint32_t lower_x, uint32_t lower_y, uint32_t lower_z, bool &is_empty);
 
 static uint32_t _construct_node(Voxelizer &voxelizer, std::vector<uint32_t> &buffer, uint32_t lower_x, uint32_t lower_y, uint32_t lower_z, bool &is_empty);
 
 std::vector<uint32_t> svdag_9_construct(Voxelizer &voxelizer) {
     std::vector<uint32_t> buffer {0};
     bool is_empty;
-    std::unordered_map<std::array<uint32_t, 8>, uint32_t> deduplication_map;
-    auto root_node = svdag_9_construct_node(voxelizer, buffer, 0, 0, 0, is_empty, deduplication_map);
+    auto root_node = svdag_9_construct_node(voxelizer, buffer, 0, 0, 0, is_empty);
     buffer.at(0) = push_node_to_buffer(buffer, root_node);
     return buffer;
 }
 
-static std::array<uint32_t, 8> svdag_9_construct_node(Voxelizer &voxelizer, std::vector<uint32_t> &buffer, uint32_t lower_x, uint32_t lower_y, uint32_t lower_z, bool &is_empty, std::unordered_map<std::array<uint32_t, 8>, uint32_t> &deduplication_map) {
+static std::array<uint32_t, 8> svdag_9_construct_node(Voxelizer &voxelizer, std::vector<uint32_t> &buffer, uint32_t lower_x, uint32_t lower_y, uint32_t lower_z, bool &is_empty) {
     uint32_t power_of_two = 9;
     const uint64_t bounded_edge_length = 1 << power_of_two;
     std::vector<std::vector<std::array<uint32_t, 8>>> queues(power_of_two + 1);
@@ -68,6 +67,8 @@ static std::array<uint32_t, 8> svdag_9_construct_node(Voxelizer &voxelizer, std:
         return !node[0] && !node[1] && !node[2] && !node[3] && !node[4] && !node[5] && !node[6] && !node[7];
     };
 
+	    std::unordered_map<std::array<uint32_t, 8>, uint32_t> deduplication_map;
+
     is_empty = true;
 
     for (uint64_t morton = 0; morton < num_voxels; ++morton) {
@@ -75,7 +76,7 @@ static std::array<uint32_t, 8> svdag_9_construct_node(Voxelizer &voxelizer, std:
         libmorton::morton3D_64_decode(morton, x, y, z);
 
         std::array<uint32_t, 8> node = {0, 0, 0, 0, 0, 0, 0, 0};
-        uint32_t sub_lower_x = x + lower_x, sub_lower_y = y + lower_y, sub_lower_z = z + lower_z;
+        uint32_t sub_lower_x = x * 1 + lower_x, sub_lower_y = y * 1 + lower_y, sub_lower_z = z * 1 + lower_z;
         bool sub_is_empty;
         auto sub_chunk = _construct_node(voxelizer, buffer, sub_lower_x, sub_lower_y, sub_lower_z, sub_is_empty);
         if (!sub_is_empty) {

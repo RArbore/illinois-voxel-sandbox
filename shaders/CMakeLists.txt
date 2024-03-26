@@ -24,10 +24,14 @@ set(GLSL_SHADER_FILES
 	df_16_16_16_6_svdag_8_intersect.glsl
 	df_64_64_64_6_svo_6_intersect.glsl
 	df_64_64_64_6_svdag_6_intersect.glsl
+	svo_8_df_16_16_16_6_intersect.glsl
+	svdag_8_df_16_16_16_6_intersect.glsl
 	svo_12_intersect.glsl
 	svdag_12_intersect.glsl
 	df_16_16_16_6_svo_5_intersect.glsl
 	df_16_16_16_6_svdag_5_intersect.glsl
+	svo_5_df_16_16_16_6_intersect.glsl
+	svdag_5_df_16_16_16_6_intersect.glsl
 	raw_512_512_512_intersect.glsl
 	raw_32_32_32_raw_16_16_16_intersect.glsl
 	df_512_512_512_6_intersect.glsl
