@@ -57,6 +57,18 @@ std::string generate_construction_cpp(const std::vector<InstantiatedFormat> &for
 
 #include "Voxelize.h"
 
+template<class T, size_t N> 
+struct std::hash<std::array<T, N>> {
+    auto operator() (const std::array<T, N>& key) const {
+        std::hash<T> hasher;
+        size_t result = 0;
+        for(size_t i = 0; i < N; ++i) {
+            result = result * 31 + hasher(key[i]);
+        }
+        return result;
+    }
+};
+
 static uint32_t push_node_to_buffer(std::vector<uint32_t> &buffer, uint32_t node) {
     return node;
 }
@@ -87,7 +99,7 @@ static uint32_t push_node_to_buffer(std::vector<uint32_t> &buffer, const std::ar
 	ss << R"( )";
 	print_format_identifier(i);
 	if (opt.whole_level_dedup_ && i < format.size() && format.at(i).format_ == Format::SVDAG) {
-	    ss << R"(_construct_node(Voxelizer &voxelizer, std::vector<uint32_t> &buffer, uint32_t lower_x, uint32_t lower_y, uint32_t lower_z, bool &is_empty, std::map<std::array<uint32_t, 8>, uint32_t> &deduplication_map);
+	    ss << R"(_construct_node(Voxelizer &voxelizer, std::vector<uint32_t> &buffer, uint32_t lower_x, uint32_t lower_y, uint32_t lower_z, bool &is_empty, std::unordered_map<std::array<uint32_t, 8>, uint32_t> &deduplication_map);
 
 )";
 	} else {
@@ -106,7 +118,7 @@ static uint32_t push_node_to_buffer(std::vector<uint32_t> &buffer, const std::ar
     bool is_empty;
 )";
     if (opt.whole_level_dedup_ && format.at(0).format_ == Format::SVDAG) {
-	ss << R"(    std::map<std::array<uint32_t, 8>, uint32_t> deduplication_map;
+	ss << R"(    std::unordered_map<std::array<uint32_t, 8>, uint32_t> deduplication_map;
     auto root_node = )";
 	print_format_identifier();
 	ss << R"(_construct_node(voxelizer, buffer, 0, 0, 0, is_empty, deduplication_map);)";
@@ -129,7 +141,7 @@ static )";
     ss << R"( )";
     print_format_identifier(i);
     if (opt.whole_level_dedup_ && format.at(i).format_ == Format::SVDAG) {
-	ss << R"(_construct_node(Voxelizer &voxelizer, std::vector<uint32_t> &buffer, uint32_t lower_x, uint32_t lower_y, uint32_t lower_z, bool &is_empty, std::map<std::array<uint32_t, 8>, uint32_t> &deduplication_map) {
+	ss << R"(_construct_node(Voxelizer &voxelizer, std::vector<uint32_t> &buffer, uint32_t lower_x, uint32_t lower_y, uint32_t lower_z, bool &is_empty, std::unordered_map<std::array<uint32_t, 8>, uint32_t> &deduplication_map) {
 )";
     } else {
 	ss << R"(_construct_node(Voxelizer &voxelizer, std::vector<uint32_t> &buffer, uint32_t lower_x, uint32_t lower_y, uint32_t lower_z, bool &is_empty) {
@@ -140,7 +152,7 @@ static )";
     auto this_w = inc_w / sub_w, this_h = inc_h / sub_h, this_d = inc_d / sub_d;
 
     if (opt.whole_level_dedup_ && i + 1 < format.size() && format.at(i + 1).format_ == Format::SVDAG) {
-	ss << R"(    std::map<std::array<uint32_t, 8>, uint32_t> deduplication_map;
+	ss << R"(    std::unordered_map<std::array<uint32_t, 8>, uint32_t> deduplication_map;
 
 )";
     }
@@ -327,7 +339,7 @@ static )";
 )";
 	if (!opt.whole_level_dedup_) {
 	    ss << R"(
-	    std::map<std::array<uint32_t, 8>, uint32_t> deduplication_map;
+	    std::unordered_map<std::array<uint32_t, 8>, uint32_t> deduplication_map;
 )";
 	}
 	

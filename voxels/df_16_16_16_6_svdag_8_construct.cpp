@@ -7,6 +7,18 @@
 
 #include "Voxelize.h"
 
+template<class T, size_t N> 
+struct std::hash<std::array<T, N>> {
+    auto operator() (const std::array<T, N>& key) const {
+        std::hash<T> hasher;
+        size_t result = 0;
+        for(size_t i = 0; i < N; ++i) {
+            result = result * 31 + hasher(key[i]);
+        }
+        return result;
+    }
+};
+
 static uint32_t push_node_to_buffer(std::vector<uint32_t> &buffer, uint32_t node) {
     return node;
 }
@@ -31,7 +43,7 @@ static uint32_t push_node_to_buffer(std::vector<uint32_t> &buffer, const std::ar
 
 static std::vector<uint32_t> df_16_16_16_6_svdag_8_construct_node(Voxelizer &voxelizer, std::vector<uint32_t> &buffer, uint32_t lower_x, uint32_t lower_y, uint32_t lower_z, bool &is_empty);
 
-static std::array<uint32_t, 8> svdag_8_construct_node(Voxelizer &voxelizer, std::vector<uint32_t> &buffer, uint32_t lower_x, uint32_t lower_y, uint32_t lower_z, bool &is_empty, std::map<std::array<uint32_t, 8>, uint32_t> &deduplication_map);
+static std::array<uint32_t, 8> svdag_8_construct_node(Voxelizer &voxelizer, std::vector<uint32_t> &buffer, uint32_t lower_x, uint32_t lower_y, uint32_t lower_z, bool &is_empty, std::unordered_map<std::array<uint32_t, 8>, uint32_t> &deduplication_map);
 
 static uint32_t _construct_node(Voxelizer &voxelizer, std::vector<uint32_t> &buffer, uint32_t lower_x, uint32_t lower_y, uint32_t lower_z, bool &is_empty);
 
@@ -44,7 +56,7 @@ std::vector<uint32_t> df_16_16_16_6_svdag_8_construct(Voxelizer &voxelizer) {
 }
 
 static std::vector<uint32_t> df_16_16_16_6_svdag_8_construct_node(Voxelizer &voxelizer, std::vector<uint32_t> &buffer, uint32_t lower_x, uint32_t lower_y, uint32_t lower_z, bool &is_empty) {
-    std::map<std::array<uint32_t, 8>, uint32_t> deduplication_map;
+    std::unordered_map<std::array<uint32_t, 8>, uint32_t> deduplication_map;
 
     is_empty = true;
     uint64_t num_voxels = 4096;
@@ -93,7 +105,7 @@ static std::vector<uint32_t> df_16_16_16_6_svdag_8_construct_node(Voxelizer &vox
     return df_chunk;
 }
 
-static std::array<uint32_t, 8> svdag_8_construct_node(Voxelizer &voxelizer, std::vector<uint32_t> &buffer, uint32_t lower_x, uint32_t lower_y, uint32_t lower_z, bool &is_empty, std::map<std::array<uint32_t, 8>, uint32_t> &deduplication_map) {
+static std::array<uint32_t, 8> svdag_8_construct_node(Voxelizer &voxelizer, std::vector<uint32_t> &buffer, uint32_t lower_x, uint32_t lower_y, uint32_t lower_z, bool &is_empty, std::unordered_map<std::array<uint32_t, 8>, uint32_t> &deduplication_map) {
     uint32_t power_of_two = 8;
     const uint64_t bounded_edge_length = 1 << power_of_two;
     std::vector<std::vector<std::array<uint32_t, 8>>> queues(power_of_two + 1);

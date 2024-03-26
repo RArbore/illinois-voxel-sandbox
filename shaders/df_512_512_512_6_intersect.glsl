@@ -7,6 +7,12 @@
 
 hitAttributeEXT uint leaf_id;
 
+struct StackFrame {
+    vec3 low;
+    uint curr_node_id;
+    uint left_off;
+};
+
 vec3 subpositions(uint child) {
     return vec3(
 		bool(child % 2) ? 1.0 : 0.0,

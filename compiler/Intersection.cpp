@@ -26,6 +26,12 @@ std::string generate_intersection_glsl(const std::vector<InstantiatedFormat> &fo
 
 hitAttributeEXT uint leaf_id;
 
+struct StackFrame {
+    vec3 low;
+    uint curr_node_id;
+    uint left_off;
+};
+
 vec3 subpositions(uint child) {
     return vec3(
 		bool(child % 2) ? 1.0 : 0.0,
@@ -137,16 +143,18 @@ bool intersect_format_)" << i << R"((uint volume_id, uint node_id, vec3 obj_ray_
 	    if (!opt.unroll_sv_) {
 		ss << R"(    int direction_kind = int(obj_ray_dir.x < 0.0) + 2 * int(obj_ray_dir.y < 0.0) + 4 * int(obj_ray_dir.z < 0.0);
     vec3 first_low = lower;
-    vec4 stack[)" << (format[i].parameters_[0] + 1) << R"(];
-    stack[0] = vec4(first_low, uintBitsToFloat(node_id & 0x0FFFFFFF));
+    StackFrame stack[)" << (format[i].parameters_[0] + 1) << R"(];
+    stack[0].low = first_low;
+    stack[0].curr_node_id = node_id;
+    stack[0].left_off = 0;
     int level = 0;
     while (level >= 0 && level < )" << format[i].parameters_[0] << R"() {
-        vec4 stack_frame = stack[level];
-        vec3 low = stack_frame.xyz;
-        uint curr_node_id = floatBitsToUint(stack_frame.w) & 0x0FFFFFFF;
+        StackFrame stack_frame = stack[level];
+        vec3 low = stack_frame.low;
+        uint curr_node_id = stack_frame.curr_node_id;
         uint curr_node_child = voxel_buffers[volume_id].voxels[curr_node_id];
         uint curr_node_masks = voxel_buffers[volume_id].voxels[curr_node_id + 1];
-        uint left_off = floatBitsToUint(stack_frame.w) >> 28;
+        uint left_off = stack_frame.left_off;
         float diff = float(1 << ()" << format[i].parameters_[0] << R"( - level));
         for (uint idx = left_off; idx < 8; ++idx) {
             uint child = direction_kind ^ idx;
@@ -164,9 +172,13 @@ bool intersect_format_)" << i << R"((uint volume_id, uint node_id, vec3 obj_ray_
                             return true;
                         }
                     } else {
-                        stack[level] = vec4(low, uintBitsToFloat(curr_node_id | ((idx + 1) << 28)));
+                        stack[level].low = low;
+                        stack[level].curr_node_id = curr_node_id;
+                        stack[level].left_off = idx + 1;
                         ++level;
-                        stack[level] = vec4(sub_low, uintBitsToFloat(child_node_id));
+                        stack[level].low = sub_low;
+                        stack[level].curr_node_id = child_node_id;
+                        stack[level].left_off = 0;
                         ++level;
                         break;
                     }
@@ -223,14 +235,16 @@ bool intersect_format_)" << i << R"((uint volume_id, uint node_id, vec3 obj_ray_
 	    if (!opt.unroll_sv_) {
 		ss << R"(    int direction_kind = int(obj_ray_dir.x < 0.0) + 2 * int(obj_ray_dir.y < 0.0) + 4 * int(obj_ray_dir.z < 0.0);
     vec3 first_low = lower;
-    vec4 stack[)" << (format[i].parameters_[0] + 1) << R"(];
-    stack[0] = vec4(first_low, uintBitsToFloat(node_id & 0x0FFFFFFF));
+    StackFrame stack[)" << (format[i].parameters_[0] + 1) << R"(];
+    stack[0].low = first_low;
+    stack[0].curr_node_id = node_id;
+    stack[0].left_off = 0;
     int level = 0;
     while (level >= 0 && level < )" << format[i].parameters_[0] << R"() {
-        vec4 stack_frame = stack[level];
-        vec3 low = stack_frame.xyz;
-        uint curr_node_id = floatBitsToUint(stack_frame.w) & 0x0FFFFFFF;
-        uint left_off = floatBitsToUint(stack_frame.w) >> 28;
+        StackFrame stack_frame = stack[level];
+        vec3 low = stack_frame.low;
+        uint curr_node_id = stack_frame.curr_node_id;
+        uint left_off = stack_frame.left_off;
         float diff = float(1 << ()" << format[i].parameters_[0] << R"( - level));
         for (uint idx = left_off; idx < 8; ++idx) {
             uint child = direction_kind ^ idx;
@@ -245,9 +259,13 @@ bool intersect_format_)" << i << R"((uint volume_id, uint node_id, vec3 obj_ray_
                             return true;
                         }
                     } else {
-                        stack[level] = vec4(low, uintBitsToFloat(curr_node_id | ((idx + 1) << 28)));
+                        stack[level].low = low;
+                        stack[level].curr_node_id = curr_node_id;
+                        stack[level].left_off = idx + 1;
                         ++level;
-                        stack[level] = vec4(sub_low, uintBitsToFloat(child_node_id));
+                        stack[level].low = sub_low;
+                        stack[level].curr_node_id = child_node_id;
+                        stack[level].left_off = 0;
                         ++level;
                         break;
                     }

@@ -496,6 +496,7 @@ Voxelizer::Voxelizer(std::string_view filepath,
     voxel_size_ = fmax(float(max.x - min.x) / width_, voxel_size_);
     voxel_size_ = fmax(float(max.y - min.y) / height_, voxel_size_);
     voxel_size_ = fmax(float(max.z - min.z) / depth_, voxel_size_);
+    voxel_size_ *= 1.01F;
 
     std::cout << "Voxel Size: " << voxel_size_ << std::endl;
 
