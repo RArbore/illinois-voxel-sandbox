@@ -58,7 +58,7 @@ std::vector<uint32_t> df_32_32_32_6_df_16_16_16_6_construct(Voxelizer &voxelizer
 static std::vector<uint32_t> df_32_32_32_6_df_16_16_16_6_construct_node(Voxelizer &voxelizer, std::vector<uint32_t> &buffer, uint32_t lower_x, uint32_t lower_y, uint32_t lower_z, bool &is_empty) {
     is_empty = true;
     uint64_t num_voxels = 32768;
-    std::vector<uint32_t> df_chunk(num_voxels * 2);
+    std::vector<uint32_t> df_chunk(num_voxels * 1);
     for (uint64_t morton = 0; morton < num_voxels; ++morton) {
         uint_fast32_t g_x = 0, g_y = 0, g_z = 0;
         libmorton::morton3D_64_decode(morton, g_x, g_y, g_z);
@@ -69,9 +69,8 @@ static std::vector<uint32_t> df_32_32_32_6_df_16_16_16_6_construct_node(Voxelize
         bool sub_is_empty;
         auto sub_chunk = df_16_16_16_6_construct_node(voxelizer, buffer, sub_lower_x, sub_lower_y, sub_lower_z, sub_is_empty);
         if (!sub_is_empty) {
-            df_chunk.at(linear_idx * 2) = push_node_to_buffer(buffer, sub_chunk);
+            df_chunk.at(linear_idx * 1) = push_node_to_buffer(buffer, sub_chunk);
         }
-        df_chunk.at(linear_idx * 2 + 1) = 1;
         is_empty = is_empty && sub_is_empty;
     }
     uint32_t k = 6;
@@ -84,7 +83,7 @@ static std::vector<uint32_t> df_32_32_32_6_df_16_16_16_6_construct_node(Voxelize
                     for (uint32_t ky = g_y > k ? g_y - k : 0; ky <= g_y + k && ky < 32; ++ky) {
                         for (uint32_t kx = g_x > k ? g_x - k : 0; kx <= g_x + k && kx < 32; ++kx) {
                             size_t k_voxel_offset = kx + ky * 32 + kz * 32 * 32;
-                            if (df_chunk[k_voxel_offset * 2] != 0) {
+                            if (df_chunk[k_voxel_offset] & 268435455) {
                                 uint32_t dist =
                                 (g_z > kz ? g_z - kz : kz - g_z) +
                                 (g_y > ky ? g_y - ky : ky - g_y) +
@@ -96,7 +95,7 @@ static std::vector<uint32_t> df_32_32_32_6_df_16_16_16_6_construct_node(Voxelize
                         }
                     }
                 }
-                df_chunk[g_voxel_offset * 2 + 1] = (min_dist - 1);
+                df_chunk[g_voxel_offset] |= (min_dist - 1) << (32 - 4);
             }
         }
     }

@@ -41,19 +41,20 @@ static uint32_t push_node_to_buffer(std::vector<uint32_t> &buffer, const std::ar
     return offset;
 }
 
-static std::array<uint32_t, 8> svdag_9_construct_node(Voxelizer &voxelizer, std::vector<uint32_t> &buffer, uint32_t lower_x, uint32_t lower_y, uint32_t lower_z, bool &is_empty);
+static std::array<uint32_t, 8> svdag_9_construct_node(Voxelizer &voxelizer, std::vector<uint32_t> &buffer, uint32_t lower_x, uint32_t lower_y, uint32_t lower_z, bool &is_empty, std::unordered_map<std::array<uint32_t, 8>, uint32_t> &deduplication_map);
 
 static uint32_t _construct_node(Voxelizer &voxelizer, std::vector<uint32_t> &buffer, uint32_t lower_x, uint32_t lower_y, uint32_t lower_z, bool &is_empty);
 
 std::vector<uint32_t> svdag_9_construct(Voxelizer &voxelizer) {
     std::vector<uint32_t> buffer {0};
     bool is_empty;
-    auto root_node = svdag_9_construct_node(voxelizer, buffer, 0, 0, 0, is_empty);
+    std::unordered_map<std::array<uint32_t, 8>, uint32_t> deduplication_map;
+    auto root_node = svdag_9_construct_node(voxelizer, buffer, 0, 0, 0, is_empty, deduplication_map);
     buffer.at(0) = push_node_to_buffer(buffer, root_node);
     return buffer;
 }
 
-static std::array<uint32_t, 8> svdag_9_construct_node(Voxelizer &voxelizer, std::vector<uint32_t> &buffer, uint32_t lower_x, uint32_t lower_y, uint32_t lower_z, bool &is_empty) {
+static std::array<uint32_t, 8> svdag_9_construct_node(Voxelizer &voxelizer, std::vector<uint32_t> &buffer, uint32_t lower_x, uint32_t lower_y, uint32_t lower_z, bool &is_empty, std::unordered_map<std::array<uint32_t, 8>, uint32_t> &deduplication_map) {
     uint32_t power_of_two = 9;
     const uint64_t bounded_edge_length = 1 << power_of_two;
     std::vector<std::vector<std::array<uint32_t, 8>>> queues(power_of_two + 1);
@@ -66,8 +67,6 @@ static std::array<uint32_t, 8> svdag_9_construct_node(Voxelizer &voxelizer, std:
     auto is_node_empty = [](const std::array<uint32_t, 8> &node) {
         return !node[0] && !node[1] && !node[2] && !node[3] && !node[4] && !node[5] && !node[6] && !node[7];
     };
-
-	    std::unordered_map<std::array<uint32_t, 8>, uint32_t> deduplication_map;
 
     is_empty = true;
 
