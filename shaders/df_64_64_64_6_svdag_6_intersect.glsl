@@ -21,6 +21,54 @@ vec3 subpositions(uint child) {
 		);
 }
 
+uint32_t lookup_utility_restart_svo(uint volume_id, uint node_id, uint depth, ivec3 voxel) {
+    ivec3 low = ivec3(0);
+    uint diff = 1 << depth;
+    while (true) {
+        uint child_first_id = voxel_buffers[volume_id].voxels[node_id];
+        uint child_masks = voxel_buffers[volume_id].voxels[node_id + 1];
+
+        uvec3 rel_pos = voxel - low;
+        bvec3 child_pos = greaterThanEqual(rel_pos, uvec3(diff / 2));
+        uint child_idx = uint(child_pos.x) + 2 * uint(child_pos.y) + 4 * uint(child_pos.z);
+        uint valid = (child_masks >> (7 - child_idx)) & 1;
+        if (bool(valid)) {
+            uint leaf = (child_masks >> (15 - child_idx)) & 1;
+            uint num_valid = bitCount((child_masks & 0xFF) >> (8 - child_idx));
+            uint child_node_id = child_first_id + num_valid * 2;
+            if (bool(leaf)) {
+                return voxel_buffers[volume_id].voxels[child_node_id];
+            }
+	    node_id = child_node_id;
+        } else {
+            return 0;
+        }
+        low += ivec3(uvec3(child_pos) * diff / 2);
+        diff /= 2;
+    }
+}
+
+uint32_t lookup_utility_restart_svdag(uint volume_id, uint node_id, uint depth, ivec3 voxel) {
+    ivec3 low = ivec3(0);
+    uint diff = 1 << depth;
+    while (true) {
+        uvec3 rel_pos = voxel - low;
+        bvec3 child_pos = greaterThanEqual(rel_pos, uvec3(diff / 2));
+        uint child_idx = uint(child_pos.x) + 2 * uint(child_pos.y) + 4 * uint(child_pos.z);
+        uint child_node_id = voxel_buffers[volume_id].voxels[node_id + child_idx];
+        if (child_node_id != 0) {
+            if (voxel_buffers[volume_id].voxels[child_node_id + 1] == 0xFFFFFFFF) {
+                return voxel_buffers[volume_id].voxels[child_node_id];
+            }
+        } else {
+            return 0;
+        }
+	node_id = child_node_id;
+        low += ivec3(uvec3(child_pos) * diff / 2);
+        diff /= 2;
+    }
+}
+
 bool intersect_format_2(uint volume_id, uint node_id, vec3 obj_ray_pos, vec3 obj_ray_dir, vec3 lower, float o_t, uint hit_kind) {
     leaf_id = node_id;
     float intersect_time = length(gl_ObjectToWorldEXT * vec4(obj_ray_pos + obj_ray_dir * o_t, 1.0) - gl_ObjectToWorldEXT * vec4(obj_ray_pos, 1.0));

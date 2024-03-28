@@ -2,12 +2,12 @@
 set -exo pipefail
 
 formats=(
-#"DF(16, 16, 16, 6) SVO(8)"
-#"DF(16, 16, 16, 6) SVDAG(8)"
-#"DF(64, 64, 64, 6) SVO(6)"
-#"DF(64, 64, 64, 6) SVDAG(6)"
-#"SVO(8) Raw(16, 16, 16)"
-#"SVDAG(8) Raw(16, 16, 16)"
+	"DF(16, 16, 16, 6) SVO(8)"
+	"DF(16, 16, 16, 6) SVDAG(8)"
+	"DF(64, 64, 64, 6) SVO(6)"
+	"DF(64, 64, 64, 6) SVDAG(6)"
+	"SVO(8) Raw(16, 16, 16)"
+	"SVDAG(8) Raw(16, 16, 16)"
 	"DF(16, 16, 16, 6) Raw(16, 16, 16) SVDAG(4)"
 	"SVO(12)"
 	"SVDAG(12)"
@@ -26,12 +26,12 @@ formats=(
 	)
 
 flags=(
-#"-whole-level-dedup"
-#"-whole-level-dedup"
-#"-whole-level-dedup"
-#"-whole-level-dedup"
-#"-whole-level-dedup"
-#"-whole-level-dedup"
+	"-whole-level-dedup"
+	"-whole-level-dedup"
+	"-whole-level-dedup"
+	"-whole-level-dedup"
+	"-whole-level-dedup"
+	"-whole-level-dedup"
 	"-whole-level-dedup"
 	"-whole-level-dedup"
 	"-whole-level-dedup"

@@ -19,6 +19,7 @@ struct InstantiatedFormat {
 
 struct Optimizations {
     bool unroll_sv_;
+    bool restart_sv_;
     bool whole_level_dedup_;
     bool df_packing_;
 };
