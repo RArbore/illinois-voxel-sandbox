@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 set -exo pipefail
 
+MAX_STORAGE_BUFFER_RANGE=4294967295
+
 formats=(
 	"DF(16, 16, 16, 6) SVO(8)"
 	"DF(16, 16, 16, 6) SVDAG(8)"
@@ -54,6 +56,13 @@ models=(
 	"hairball"
 	"buddha"
 	"sponza"
+	)
+
+camera_positions=(
+	"59.0 89.0 23.5 36.5 239.5"
+	"41.0 50.0 113.0 0.0 173.5"
+	"3.5 37.5 -33.5 12.0 375.0"
+	"26.0 69.5 26.0 43.0 103.5"
 	)
 
 if [ "$1" = "download" ]; then
@@ -116,6 +125,25 @@ elif [ "$1" = "convert" ]; then
 			drivers/convert_model ../experiments/obj/$model/$model.obj 1 "$format" &> ../experiments/obj/$model/$model.$iden.log &
 		done
 		wait
+	done
+	cd ../experiments
+elif [ "$1" = "run" ]; then
+	cd ../build
+	for format in "${formats[@]}"
+	do
+		iden=`drivers/compile "$format" -just-get-iden`
+		for index in "${!models[@]}"
+		do
+			model="${models[$index]}"
+			camera_position="${camera_positions[$index]}"
+			FILE="../experiments/obj/$model/$model.$iden"
+			FILESIZE=`stat -c%s $FILE`
+			if (( FILESIZE >= MAX_STORAGE_BUFFER_RANGE )); then
+				echo "Not viewing $FILE, since it's too large to fit in a storage buffer."
+			else
+				drivers/model_viewer $FILE "$format" $camera_position
+			fi
+		done
 	done
 	cd ../experiments
 else

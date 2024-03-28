@@ -71,8 +71,26 @@ int main(int argc, char *argv[]) {
     objects.emplace_back(std::move(object));
     auto scene = build_scene(context, objects);
 
-    glm::vec3 camera_pos = glm::vec3(50.0f, 50.0f, 100.0f);
-    auto camera = create_camera(window, camera_pos, 0.0f, 180.0f, 0.1f, 0.25f);
+    float camera_x = 50.0f;
+    float camera_y = 50.0f;
+    float camera_z = 100.0f;
+    float pitch = 0.0f;
+    float yaw = 180.0f;
+
+    if (argv[3]) {
+	ASSERT(argv[4], "If providing camera information, must provide the camera Y.");
+	ASSERT(argv[5], "If providing camera information, must provide the camera Z.");
+	ASSERT(argv[6], "If providing camera information, must provide the camera pitch.");
+	ASSERT(argv[7], "If providing camera information, must provide the camera yaw.");
+	camera_x = atof(argv[3]);
+	camera_y = atof(argv[4]);
+	camera_z = atof(argv[5]);
+	pitch = atof(argv[6]);
+	yaw = atof(argv[7]);
+    }
+
+    glm::vec3 camera_pos = glm::vec3(camera_x, camera_y, camera_z);
+    auto camera = create_camera(window, camera_pos, pitch, yaw, 0.1f, 0.25f);
 
     while (!window->should_close()) {
         window->poll_events();
