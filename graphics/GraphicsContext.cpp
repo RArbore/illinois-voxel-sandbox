@@ -560,8 +560,7 @@ double render_frame(std::shared_ptr<GraphicsContext> context,
                         .count() /
                     1000000.0;
     context->last_time_ = current_time;
-    ++context->frame_index_;
-    return dt;
+    return context->frame_index_++ ? dt : 0.0;
 }
 
 std::shared_ptr<GraphicsModel>

@@ -92,6 +92,8 @@ int main(int argc, char *argv[]) {
     glm::vec3 camera_pos = glm::vec3(camera_x, camera_y, camera_z);
     auto camera = create_camera(window, camera_pos, pitch, yaw, 0.1f, 0.25f);
 
+    int num_frames = 0;
+    double accum_time = 0.0;
     while (!window->should_close()) {
         window->poll_events();
         auto camera_info = camera->get_uniform_buffer();
@@ -99,5 +101,12 @@ int main(int argc, char *argv[]) {
                                  camera->get_front(), camera_info);
         camera->mark_rendered();
         camera->handle_keys(dt);
+	accum_time += dt;
+	if (accum_time > 6000.0 && argv[3]) {
+	    std::cout << "INFO: Final FPS measurement: " << (static_cast<double>(num_frames) / 5.0) << "\n";
+	    return 0;
+	} else if (accum_time > 1000.0) {
+	    ++num_frames;
+	}
     }
 }

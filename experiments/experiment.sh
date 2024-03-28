@@ -122,13 +122,15 @@ elif [ "$1" = "convert" ]; then
 		iden=`drivers/compile "$format" -just-get-iden`
 		for model in "${models[@]}"
 		do
-			drivers/convert_model ../experiments/obj/$model/$model.obj 1 "$format" &> ../experiments/obj/$model/$model.$iden.log &
+			time drivers/convert_model ../experiments/obj/$model/$model.obj 1 "$format" &> ../experiments/obj/$model/$model.$iden.log &
 		done
 		wait
 	done
 	cd ../experiments
 elif [ "$1" = "run" ]; then
 	cd ../build
+	rm -f ../experiments/measurements
+	touch ../experiments/measurements
 	for format in "${formats[@]}"
 	do
 		iden=`drivers/compile "$format" -just-get-iden`
@@ -138,10 +140,13 @@ elif [ "$1" = "run" ]; then
 			camera_position="${camera_positions[$index]}"
 			FILE="../experiments/obj/$model/$model.$iden"
 			FILESIZE=`stat -c%s $FILE`
+			echo "$format" >> ../experiments/measurements
+			echo "$model" >> ../experiments/measurements
+			echo "$FILESIZE" >> ../experiments/measurements
 			if (( FILESIZE >= MAX_STORAGE_BUFFER_RANGE )); then
-				echo "Not viewing $FILE, since it's too large to fit in a storage buffer."
+				echo "Not viewing $FILE, since it's too large to fit in a storage buffer." >> ../experiments/measurements
 			else
-				drivers/model_viewer $FILE "$format" $camera_position
+				drivers/model_viewer $FILE "$format" $camera_position | grep "Final" >> ../experiments/measurements
 			fi
 		done
 	done
