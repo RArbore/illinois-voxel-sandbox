@@ -1,6 +1,16 @@
 # illinois-voxel-sandbox
 A high performance voxel engine.
 
+## Run experiments
+Run the following commands, in order if starting from scratch. The beginning of each line is the directory to run each command from.
+
+1. `build/: make -j`
+2. `experiments/: ./experiment.sh download`
+3. `experiments/: ./experiment.sh compile`
+4. `build/: make -j`
+5. `experiments/: ./experiment.sh convert`
+6. `experiments/: ./experiment.sh run`
+
 ## Instructions for using hybrid formats
 
 1. Build the entire project (`make -j`)
