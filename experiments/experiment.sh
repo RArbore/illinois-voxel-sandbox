@@ -122,7 +122,7 @@ elif [ "$1" = "convert" ]; then
 		iden=`drivers/compile "$format" -just-get-iden`
 		for model in "${models[@]}"
 		do
-			time drivers/convert_model ../experiments/obj/$model/$model.obj 1 "$format" &> ../experiments/obj/$model/$model.$iden.log &
+			{ /usr/bin/time -v drivers/convert_model ../experiments/obj/$model/$model.obj 1 "$format"; } &> ../experiments/obj/$model/$model.$iden.log &
 		done
 		wait
 	done
