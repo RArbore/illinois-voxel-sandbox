@@ -12,8 +12,7 @@ add_library(ogt OgtImpl.cpp)
 add_library(tinyobj TinyOBJImpl.cpp)
 add_library(stbimage STBImageImpl.cpp)
 
-add_library(json INTERFACE)
-target_sources(json PUBLIC nlohmann_json.hpp)
+add_subdirectory(json)
 
 find_package(Vulkan REQUIRED)
 target_link_libraries(vma PRIVATE Vulkan::Vulkan)
