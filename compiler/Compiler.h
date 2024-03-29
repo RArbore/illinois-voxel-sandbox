@@ -3,6 +3,7 @@
 #include <iostream>
 #include <cstdint>
 #include <string>
+#include <tuple>
 #include <vector>
 
 enum class Format {
