@@ -1,4 +1,5 @@
 #include <cstdint>
+#include <fstream>
 #include <vector>
 #include <array>
 #include <map>
@@ -19,43 +20,50 @@ struct std::hash<std::array<T, N>> {
     }
 };
 
-static uint32_t push_node_to_buffer(std::vector<uint32_t> &buffer, uint32_t node) {
+static uint32_t push_node_to_buffer(std::pair<std::ofstream &, uint32_t &> buffer, uint32_t node) {
     return node;
 }
 
-static uint32_t push_node_to_buffer(std::vector<uint32_t> &buffer, const std::vector<uint32_t> &node) {
-    uint32_t offset = buffer.size();
-    buffer.insert(buffer.end(), node.cbegin(), node.cend());
+static uint32_t push_node_to_buffer(std::pair<std::ofstream &, uint32_t &> buffer, const std::vector<uint32_t> &node) {
+    uint32_t offset = buffer.second;
+    buffer.first.write(reinterpret_cast<const char *>(node.data()), node.size() * sizeof(uint32_t));
+    buffer.second += node.size();
     return offset;
 }
 
-static uint32_t push_node_to_buffer(std::vector<uint32_t> &buffer, const std::array<uint32_t, 2> &node) {
-    uint32_t offset = buffer.size();
-    buffer.insert(buffer.end(), node.cbegin(), node.cend());
+static uint32_t push_node_to_buffer(std::pair<std::ofstream &, uint32_t &> buffer, const std::array<uint32_t, 2> &node) {
+    uint32_t offset = buffer.second;
+    buffer.first.write(reinterpret_cast<const char *>(node.data()), node.size() * sizeof(uint32_t));
+    buffer.second += node.size();
     return offset;
 }
 
-static uint32_t push_node_to_buffer(std::vector<uint32_t> &buffer, const std::array<uint32_t, 8> &node) {
-    uint32_t offset = buffer.size();
-    buffer.insert(buffer.end(), node.cbegin(), node.cend());
+static uint32_t push_node_to_buffer(std::pair<std::ofstream &, uint32_t &> buffer, const std::array<uint32_t, 8> &node) {
+    uint32_t offset = buffer.second;
+    buffer.first.write(reinterpret_cast<const char *>(node.data()), node.size() * sizeof(uint32_t));
+    buffer.second += node.size();
     return offset;
 }
 
-static std::vector<uint32_t> df_16_16_16_6_svo_8_construct_node(Voxelizer &voxelizer, std::vector<uint32_t> &buffer, uint32_t lower_x, uint32_t lower_y, uint32_t lower_z, bool &is_empty);
+static std::vector<uint32_t> df_16_16_16_6_svo_8_construct_node(Voxelizer &voxelizer, std::pair<std::ofstream &, uint32_t &> buffer, uint32_t lower_x, uint32_t lower_y, uint32_t lower_z, bool &is_empty);
 
-static std::array<uint32_t, 2> svo_8_construct_node(Voxelizer &voxelizer, std::vector<uint32_t> &buffer, uint32_t lower_x, uint32_t lower_y, uint32_t lower_z, bool &is_empty);
+static std::array<uint32_t, 2> svo_8_construct_node(Voxelizer &voxelizer, std::pair<std::ofstream &, uint32_t &> buffer, uint32_t lower_x, uint32_t lower_y, uint32_t lower_z, bool &is_empty);
 
-static uint32_t _construct_node(Voxelizer &voxelizer, std::vector<uint32_t> &buffer, uint32_t lower_x, uint32_t lower_y, uint32_t lower_z, bool &is_empty);
+static uint32_t _construct_node(Voxelizer &voxelizer, std::pair<std::ofstream &, uint32_t &> buffer, uint32_t lower_x, uint32_t lower_y, uint32_t lower_z, bool &is_empty);
 
-std::vector<uint32_t> df_16_16_16_6_svo_8_construct(Voxelizer &voxelizer) {
-    std::vector<uint32_t> buffer {0};
+void df_16_16_16_6_svo_8_construct(Voxelizer &voxelizer, std::ofstream &buffer) {
     bool is_empty;
-    auto root_node = df_16_16_16_6_svo_8_construct_node(voxelizer, buffer, 0, 0, 0, is_empty);
-    buffer.at(0) = push_node_to_buffer(buffer, root_node);
-    return buffer;
+    uint32_t size = 0;
+    buffer.write(reinterpret_cast<const char *>(&size), sizeof(uint32_t));
+    ++size;
+    auto root_node = df_16_16_16_6_svo_8_construct_node(voxelizer, {buffer, size}, 0, 0, 0, is_empty);
+    uint32_t root = push_node_to_buffer({buffer, size}, root_node);
+    buffer.seekp(0, std::ios_base::beg);
+    buffer.write(reinterpret_cast<const char *>(&root), sizeof(uint32_t));
+    buffer.seekp(0, std::ios_base::end);
 }
 
-static std::vector<uint32_t> df_16_16_16_6_svo_8_construct_node(Voxelizer &voxelizer, std::vector<uint32_t> &buffer, uint32_t lower_x, uint32_t lower_y, uint32_t lower_z, bool &is_empty) {
+static std::vector<uint32_t> df_16_16_16_6_svo_8_construct_node(Voxelizer &voxelizer, std::pair<std::ofstream &, uint32_t &> buffer, uint32_t lower_x, uint32_t lower_y, uint32_t lower_z, bool &is_empty) {
     is_empty = true;
     uint64_t num_voxels = 4096;
     std::vector<uint32_t> df_chunk(num_voxels * 2);
@@ -103,7 +111,7 @@ static std::vector<uint32_t> df_16_16_16_6_svo_8_construct_node(Voxelizer &voxel
     return df_chunk;
 }
 
-static std::array<uint32_t, 2> svo_8_construct_node(Voxelizer &voxelizer, std::vector<uint32_t> &buffer, uint32_t lower_x, uint32_t lower_y, uint32_t lower_z, bool &is_empty) {
+static std::array<uint32_t, 2> svo_8_construct_node(Voxelizer &voxelizer, std::pair<std::ofstream &, uint32_t &> buffer, uint32_t lower_x, uint32_t lower_y, uint32_t lower_z, bool &is_empty) {
     uint32_t power_of_two = 8;
     const uint64_t bounded_edge_length = 1 << power_of_two;
     std::vector<std::vector<std::array<uint32_t, 2>>> queues(power_of_two + 1);
@@ -173,7 +181,7 @@ static std::array<uint32_t, 2> svo_8_construct_node(Voxelizer &voxelizer, std::v
     return queues.at(0).at(0);
 }
 
-static uint32_t _construct_node(Voxelizer &voxelizer, std::vector<uint32_t> &buffer, uint32_t lower_x, uint32_t lower_y, uint32_t lower_z, bool &is_empty) {
+static uint32_t _construct_node(Voxelizer &voxelizer, std::pair<std::ofstream &, uint32_t &> buffer, uint32_t lower_x, uint32_t lower_y, uint32_t lower_z, bool &is_empty) {
     uint32_t voxel = voxelizer.at(lower_x, lower_y, lower_z);
     is_empty = voxel == 0;
     return voxel;

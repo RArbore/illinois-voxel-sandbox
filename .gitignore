@@ -11,3 +11,4 @@ models
 *.jpg
 *.JPG
 experiments/obj/
+experiments/measurements

@@ -9,28 +9,28 @@
 #include <voxels/VoxelChunkGeneration.h>
 #include <voxels/Voxelize.h>
 
-std::vector<uint32_t> df_16_16_16_6_svo_8_construct(Voxelizer &voxelizer);
-std::vector<uint32_t> df_16_16_16_6_svdag_8_construct(Voxelizer &voxelizer);
-std::vector<uint32_t> df_64_64_64_6_svo_6_construct(Voxelizer &voxelizer);
-std::vector<uint32_t> df_64_64_64_6_svdag_6_construct(Voxelizer &voxelizer);
-std::vector<uint32_t> svo_8_raw_16_16_16_construct(Voxelizer &voxelizer);
-std::vector<uint32_t> svdag_8_raw_16_16_16_construct(Voxelizer &voxelizer);
-std::vector<uint32_t> df_16_16_16_6_raw_16_16_16_svdag_4_construct(Voxelizer &voxelizer);
-std::vector<uint32_t> svo_12_construct(Voxelizer &voxelizer);
-std::vector<uint32_t> svdag_12_construct(Voxelizer &voxelizer);
-std::vector<uint32_t> df_16_16_16_6_svo_5_construct(Voxelizer &voxelizer);
-std::vector<uint32_t> df_16_16_16_6_svdag_5_construct(Voxelizer &voxelizer);
-std::vector<uint32_t> svo_5_raw_16_16_16_construct(Voxelizer &voxelizer);
-std::vector<uint32_t> svdag_5_raw_16_16_16_construct(Voxelizer &voxelizer);
-std::vector<uint32_t> raw_512_512_512_construct(Voxelizer &voxelizer);
-std::vector<uint32_t> raw_32_32_32_raw_16_16_16_construct(Voxelizer &voxelizer);
-std::vector<uint32_t> raw_8_8_8_raw_8_8_8_raw_8_8_8_construct(Voxelizer &voxelizer);
-std::vector<uint32_t> df_512_512_512_6_construct(Voxelizer &voxelizer);
-std::vector<uint32_t> df_32_32_32_6_df_16_16_16_6_construct(Voxelizer &voxelizer);
-std::vector<uint32_t> svo_9_construct(Voxelizer &voxelizer);
-std::vector<uint32_t> svdag_9_construct(Voxelizer &voxelizer);
+void df_16_16_16_6_svo_8_construct(Voxelizer &voxelizer, std::ofstream &buffer);
+void df_16_16_16_6_svdag_8_construct(Voxelizer &voxelizer, std::ofstream &buffer);
+void df_64_64_64_6_svo_6_construct(Voxelizer &voxelizer, std::ofstream &buffer);
+void df_64_64_64_6_svdag_6_construct(Voxelizer &voxelizer, std::ofstream &buffer);
+void svo_8_raw_16_16_16_construct(Voxelizer &voxelizer, std::ofstream &buffer);
+void svdag_8_raw_16_16_16_construct(Voxelizer &voxelizer, std::ofstream &buffer);
+void df_16_16_16_6_raw_16_16_16_svdag_4_construct(Voxelizer &voxelizer, std::ofstream &buffer);
+void svo_12_construct(Voxelizer &voxelizer, std::ofstream &buffer);
+void svdag_12_construct(Voxelizer &voxelizer, std::ofstream &buffer);
+void df_16_16_16_6_svo_5_construct(Voxelizer &voxelizer, std::ofstream &buffer);
+void df_16_16_16_6_svdag_5_construct(Voxelizer &voxelizer, std::ofstream &buffer);
+void svo_5_raw_16_16_16_construct(Voxelizer &voxelizer, std::ofstream &buffer);
+void svdag_5_raw_16_16_16_construct(Voxelizer &voxelizer, std::ofstream &buffer);
+void raw_512_512_512_construct(Voxelizer &voxelizer, std::ofstream &buffer);
+void raw_32_32_32_raw_16_16_16_construct(Voxelizer &voxelizer, std::ofstream &buffer);
+void raw_8_8_8_raw_8_8_8_raw_8_8_8_construct(Voxelizer &voxelizer, std::ofstream &buffer);
+void df_512_512_512_6_construct(Voxelizer &voxelizer, std::ofstream &buffer);
+void df_32_32_32_6_df_16_16_16_6_construct(Voxelizer &voxelizer, std::ofstream &buffer);
+void svo_9_construct(Voxelizer &voxelizer, std::ofstream &buffer);
+void svdag_9_construct(Voxelizer &voxelizer, std::ofstream &buffer);
 
-static const std::unordered_map<std::string, std::vector<uint32_t> (*)(Voxelizer &)> format_to_conversion_function = {
+static const std::unordered_map<std::string, void (*)(Voxelizer &, std::ofstream &)> format_to_conversion_function = {
     {"DF(16, 16, 16, 6) SVO(8)", df_16_16_16_6_svo_8_construct},
     {"DF(16, 16, 16, 6) SVDAG(8)", df_16_16_16_6_svdag_8_construct},
     {"DF(64, 64, 64, 6) SVO(6)", df_64_64_64_6_svo_6_construct},
@@ -158,8 +158,10 @@ int main(int argc, char *argv[]) {
 	std::string format(argv[3]);
         auto bounds = calculate_bounds(parse_format(format));
         Voxelizer voxelizer(model_path, bounds);
-        auto model = format_to_conversion_function.at(format)(voxelizer);
-        write(reinterpret_cast<const char *>(model.data()),
-              model.size() * sizeof(uint32_t), format_identifier(parse_format(format)));
+
+        model_path = model_path.substr(0, model_path.size() - 4) + "." + format_identifier(parse_format(format));
+        std::ofstream stream(model_path, std::ios::out | std::ios::binary);
+
+        format_to_conversion_function.at(format)(voxelizer, stream);
     }
 }
