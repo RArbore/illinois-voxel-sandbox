@@ -38,6 +38,8 @@ set(GLSL_SHADER_FILES
 	raw_8_8_8_raw_8_8_8_raw_8_8_8_intersect.glsl
 	df_512_512_512_6_intersect.glsl
 	df_32_32_32_6_df_16_16_16_6_intersect.glsl
+	df_8_8_8_6_raw_8_8_8_svdag_3_intersect.glsl
+	df_8_8_8_6_df_8_8_8_6_svdag_3_intersect.glsl
 	svo_9_intersect.glsl
 	svdag_9_intersect.glsl
 	)

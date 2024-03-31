@@ -27,6 +27,8 @@ void raw_32_32_32_raw_16_16_16_construct(Voxelizer &voxelizer, std::ofstream &bu
 void raw_8_8_8_raw_8_8_8_raw_8_8_8_construct(Voxelizer &voxelizer, std::ofstream &buffer);
 void df_512_512_512_6_construct(Voxelizer &voxelizer, std::ofstream &buffer);
 void df_32_32_32_6_df_16_16_16_6_construct(Voxelizer &voxelizer, std::ofstream &buffer);
+void df_8_8_8_6_raw_8_8_8_svdag_3_construct(Voxelizer &voxelizer, std::ofstream &buffer);
+void df_8_8_8_6_df_8_8_8_6_svdag_3_construct(Voxelizer &voxelizer, std::ofstream &buffer);
 void svo_9_construct(Voxelizer &voxelizer, std::ofstream &buffer);
 void svdag_9_construct(Voxelizer &voxelizer, std::ofstream &buffer);
 
@@ -49,6 +51,8 @@ static const std::unordered_map<std::string, void (*)(Voxelizer &, std::ofstream
     {"Raw(8, 8, 8) Raw(8, 8, 8) Raw(8, 8, 8)", raw_8_8_8_raw_8_8_8_raw_8_8_8_construct},
     {"DF(512, 512, 512, 6)", df_512_512_512_6_construct},
     {"DF(32, 32, 32, 6) DF(16, 16, 16, 6)", df_32_32_32_6_df_16_16_16_6_construct},
+    {"DF(8, 8, 8, 6) Raw(8, 8, 8) SVDAG(3)", df_8_8_8_6_raw_8_8_8_svdag_3_construct},
+    {"DF(8, 8, 8, 6) DF(8, 8, 8, 6) SVDAG(3)", df_8_8_8_6_df_8_8_8_6_svdag_3_construct},
     {"SVO(9)", svo_9_construct},
     {"SVDAG(9)", svdag_9_construct}
 };

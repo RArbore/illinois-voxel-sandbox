@@ -25,6 +25,8 @@ add_library(
 	raw_8_8_8_raw_8_8_8_raw_8_8_8_construct.cpp
 	df_512_512_512_6_construct.cpp
 	df_32_32_32_6_df_16_16_16_6_construct.cpp
+	df_8_8_8_6_raw_8_8_8_svdag_3_construct.cpp
+	df_8_8_8_6_df_8_8_8_6_svdag_3_construct.cpp
 	svo_9_construct.cpp
 	svdag_9_construct.cpp
 	)

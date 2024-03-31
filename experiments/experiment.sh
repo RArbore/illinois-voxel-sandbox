@@ -23,6 +23,8 @@ formats=(
 	"Raw(8, 8, 8) Raw(8, 8, 8) Raw(8, 8, 8)"
 	"DF(512, 512, 512, 6)"
 	"DF(32, 32, 32, 6) DF(16, 16, 16, 6)"
+	"DF(8, 8, 8, 6) Raw(8, 8, 8) SVDAG(3)"
+	"DF(8, 8, 8, 6) DF(8, 8, 8, 6) SVDAG(3)"
 	"SVO(9)"
 	"SVDAG(9)"
 	)
@@ -37,7 +39,9 @@ flags=(
 	"-whole-level-dedup -df-packing -restart-sv"
 	"-whole-level-dedup -df-packing -restart-sv"
 	"-whole-level-dedup -df-packing -restart-sv"
-
+	
+	"-whole-level-dedup -df-packing -restart-sv"
+	"-whole-level-dedup -df-packing -restart-sv"
 	"-whole-level-dedup -df-packing -restart-sv"
 	"-whole-level-dedup -df-packing -restart-sv"
 	"-whole-level-dedup -df-packing -restart-sv"
@@ -111,7 +115,7 @@ elif [ "$1" = "compile" ]; then
 		cp "$iden"_intersect.glsl ../shaders/
 		echo "	$iden"_construct.cpp >> cons_cmake
 		echo "	$iden"_intersect.glsl >> ints_cmake
-		echo "std::vector<uint32_t> $iden"_construct"(Voxelizer &voxelizer);" >> decl_conv
+		echo "void $iden"_construct"(Voxelizer &voxelizer, std::ofstream &buffer);" >> decl_conv
 		echo "    {\"$format\", $iden"_construct"}," >> map_conv
 	done
 	cd ../experiments
@@ -129,8 +133,9 @@ elif [ "$1" = "convert" ]; then
 	cd ../experiments
 elif [ "$1" = "run" ]; then
 	cd ../build
-	rm -f ../experiments/measurements
-	touch ../experiments/measurements
+	OUT="${2:-measurements}"
+	rm -f ../experiments/$OUT
+	touch ../experiments/$OUT
 	for format in "${formats[@]}"
 	do
 		iden=`drivers/compile "$format" -just-get-iden`
@@ -140,13 +145,13 @@ elif [ "$1" = "run" ]; then
 			camera_position="${camera_positions[$index]}"
 			FILE="../experiments/obj/$model/$model.$iden"
 			FILESIZE=`stat -c%s $FILE`
-			echo "$format" >> ../experiments/measurements
-			echo "$model" >> ../experiments/measurements
-			echo "$FILESIZE" >> ../experiments/measurements
+			echo "$format" >> ../experiments/$OUT
+			echo "$model" >> ../experiments/$OUT
+			echo "$FILESIZE" >> ../experiments/$OUT
 			if (( FILESIZE >= MAX_STORAGE_BUFFER_RANGE )); then
-				echo "Not viewing $FILE, since it's too large to fit in a storage buffer." >> ../experiments/measurements
+				echo "Not viewing $FILE, since it's too large to fit in a storage buffer." >> ../experiments/$OUT
 			else
-				drivers/model_viewer $FILE "$format" $camera_position | grep "Final" >> ../experiments/measurements
+				drivers/model_viewer $FILE "$format" $camera_position | grep "Final" >> ../experiments/$OUT
 			fi
 		done
 	done

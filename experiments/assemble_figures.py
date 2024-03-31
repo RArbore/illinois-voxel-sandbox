@@ -52,9 +52,10 @@ for model_idx in range(0, num_models):
     for format_idx in range(0, NUM_4K_FORMATS):
         plt.annotate(formats[format_idx], (data[format_idx, model_idx, 0], data[format_idx, model_idx, 1]))
 
+    plt.xscale('log')
     plt.xlabel("Model Size (bytes)")
     plt.ylabel("Ray Intersection Performance (FPS)")
-    plt.title("Rendering Performance vs. Compression for 4096^3 formats (" + models[model_idx] + ")")
+    plt.title("Rendering Performance vs. Compression for 4096^3 formats (" + models[model_idx] + ", " + sys.argv[1] + ")")
     plt.show()
 
 for model_idx in range(0, num_models):
@@ -62,7 +63,8 @@ for model_idx in range(0, num_models):
     for format_idx in range(NUM_4K_FORMATS, num_formats):
         plt.annotate(formats[format_idx], (data[format_idx, model_idx, 0], data[format_idx, model_idx, 1]))
 
+    plt.xscale('log')
     plt.xlabel("Model Size (bytes)")
     plt.ylabel("Ray Intersection Performance (FPS)")
-    plt.title("Rendering Performance vs. Compression for 512^3 formats (" + models[model_idx] + ")")
+    plt.title("Rendering Performance vs. Compression for 512^3 formats (" + models[model_idx] + ", " + sys.argv[1] + ")")
     plt.show()
