@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+from adjustText import adjust_text
 import matplotlib.pyplot as plt
 import numpy as np
 import sys
@@ -48,23 +49,38 @@ for datapoint in datapoints:
     data[format_idx, model_idx, 1] = datapoint[3]
 
 for model_idx in range(0, num_models):
+    plt.figure(figsize=(12, 8))
     plt.scatter(data[:NUM_4K_FORMATS, model_idx, 0], data[:NUM_4K_FORMATS, model_idx, 1])
+    texts = []
     for format_idx in range(0, NUM_4K_FORMATS):
-        plt.annotate(formats[format_idx], (data[format_idx, model_idx, 0], data[format_idx, model_idx, 1]))
+        x, y = data[format_idx, model_idx, 0], data[format_idx, model_idx, 1]
+        if y == 0.0 and formats[format_idx].startswith("SV") and models[model_idx] == "sponza":
+            y = format_idx / 1000.0
+        texts.append(plt.text(x, y, formats[format_idx]))
 
+    plot_cutoff = 0.0 in data[:NUM_4K_FORMATS, model_idx, 1]
+
+    if plot_cutoff:
+        plt.axvline(2 ** 32)
+        plt.text((2 ** 32) * 1.01, 2, 'GPU Size Cutoff', rotation=270)
     plt.xscale('log')
     plt.xlabel("Model Size (bytes)")
     plt.ylabel("Ray Intersection Performance (FPS)")
     plt.title("Rendering Performance vs. Compression for 4096^3 formats (" + models[model_idx] + ", " + sys.argv[1] + ")")
+    adjust_text(texts)
     plt.show()
 
 for model_idx in range(0, num_models):
+    plt.figure(figsize=(12, 8))
     plt.scatter(data[NUM_4K_FORMATS:, model_idx, 0], data[NUM_4K_FORMATS:, model_idx, 1])
+    texts = []
     for format_idx in range(NUM_4K_FORMATS, num_formats):
-        plt.annotate(formats[format_idx], (data[format_idx, model_idx, 0], data[format_idx, model_idx, 1]))
+        x, y = data[format_idx, model_idx, 0], data[format_idx, model_idx, 1]
+        texts.append(plt.text(x, y, formats[format_idx]))
 
     plt.xscale('log')
     plt.xlabel("Model Size (bytes)")
     plt.ylabel("Ray Intersection Performance (FPS)")
     plt.title("Rendering Performance vs. Compression for 512^3 formats (" + models[model_idx] + ", " + sys.argv[1] + ")")
+    adjust_text(texts)
     plt.show()

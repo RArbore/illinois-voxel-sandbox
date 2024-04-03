@@ -8,12 +8,12 @@
 
 #include "Voxelize.h"
 
-template<class T, size_t N> 
-struct std::hash<std::array<T, N>> {
-    auto operator() (const std::array<T, N>& key) const {
+template<class T> 
+struct std::hash<std::vector<T>> {
+    auto operator() (const std::vector<T>& key) const {
         std::hash<T> hasher;
         size_t result = 0;
-        for(size_t i = 0; i < N; ++i) {
+        for(size_t i = 0; i < key.size(); ++i) {
             result = result * 31 + hasher(key[i]);
         }
         return result;
@@ -32,13 +32,6 @@ static uint32_t push_node_to_buffer(std::pair<std::ofstream &, uint32_t &> buffe
 }
 
 static uint32_t push_node_to_buffer(std::pair<std::ofstream &, uint32_t &> buffer, const std::array<uint32_t, 2> &node) {
-    uint32_t offset = buffer.second;
-    buffer.first.write(reinterpret_cast<const char *>(node.data()), node.size() * sizeof(uint32_t));
-    buffer.second += node.size();
-    return offset;
-}
-
-static uint32_t push_node_to_buffer(std::pair<std::ofstream &, uint32_t &> buffer, const std::array<uint32_t, 8> &node) {
     uint32_t offset = buffer.second;
     buffer.first.write(reinterpret_cast<const char *>(node.data()), node.size() * sizeof(uint32_t));
     buffer.second += node.size();

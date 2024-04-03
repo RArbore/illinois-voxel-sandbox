@@ -52,18 +52,23 @@ uint32_t lookup_utility_restart_svdag(uint volume_id, uint node_id, uint depth, 
     ivec3 low = ivec3(0);
     uint diff = 1 << depth;
     while (true) {
+        uint child_masks = voxel_buffers[volume_id].voxels[node_id];
+
         uvec3 rel_pos = voxel - low;
         bvec3 child_pos = greaterThanEqual(rel_pos, uvec3(diff / 2));
         uint child_idx = uint(child_pos.x) + 2 * uint(child_pos.y) + 4 * uint(child_pos.z);
-        uint child_node_id = voxel_buffers[volume_id].voxels[node_id + child_idx];
-        if (child_node_id != 0) {
-            if (voxel_buffers[volume_id].voxels[child_node_id + 1] == 0xFFFFFFFF) {
+        uint valid = (child_masks >> (7 - child_idx)) & 1;
+        if (bool(valid)) {
+            uint leaf = (child_masks >> (15 - child_idx)) & 1;
+            uint num_valid = bitCount((child_masks & 0xFF) >> (8 - child_idx));
+            uint child_node_id = voxel_buffers[volume_id].voxels[node_id + 1 + num_valid];
+            if (bool(leaf)) {
                 return voxel_buffers[volume_id].voxels[child_node_id];
             }
+	    node_id = child_node_id;
         } else {
             return 0;
         }
-	node_id = child_node_id;
         low += ivec3(uvec3(child_pos) * diff / 2);
         diff /= 2;
     }

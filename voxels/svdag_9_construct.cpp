@@ -8,12 +8,12 @@
 
 #include "Voxelize.h"
 
-template<class T, size_t N> 
-struct std::hash<std::array<T, N>> {
-    auto operator() (const std::array<T, N>& key) const {
+template<class T> 
+struct std::hash<std::vector<T>> {
+    auto operator() (const std::vector<T>& key) const {
         std::hash<T> hasher;
         size_t result = 0;
-        for(size_t i = 0; i < N; ++i) {
+        for(size_t i = 0; i < key.size(); ++i) {
             result = result * 31 + hasher(key[i]);
         }
         return result;
@@ -38,14 +38,7 @@ static uint32_t push_node_to_buffer(std::pair<std::ofstream &, uint32_t &> buffe
     return offset;
 }
 
-static uint32_t push_node_to_buffer(std::pair<std::ofstream &, uint32_t &> buffer, const std::array<uint32_t, 8> &node) {
-    uint32_t offset = buffer.second;
-    buffer.first.write(reinterpret_cast<const char *>(node.data()), node.size() * sizeof(uint32_t));
-    buffer.second += node.size();
-    return offset;
-}
-
-static std::array<uint32_t, 8> svdag_9_construct_node(Voxelizer &voxelizer, std::pair<std::ofstream &, uint32_t &> buffer, uint32_t lower_x, uint32_t lower_y, uint32_t lower_z, bool &is_empty, std::unordered_map<std::array<uint32_t, 8>, uint32_t> &deduplication_map);
+static std::vector<uint32_t> svdag_9_construct_node(Voxelizer &voxelizer, std::pair<std::ofstream &, uint32_t &> buffer, uint32_t lower_x, uint32_t lower_y, uint32_t lower_z, bool &is_empty, std::unordered_map<std::vector<uint32_t>, uint32_t> &deduplication_map);
 
 static uint32_t _construct_node(Voxelizer &voxelizer, std::pair<std::ofstream &, uint32_t &> buffer, uint32_t lower_x, uint32_t lower_y, uint32_t lower_z, bool &is_empty);
 
@@ -54,7 +47,7 @@ void svdag_9_construct(Voxelizer &voxelizer, std::ofstream &buffer) {
     uint32_t size = 0;
     buffer.write(reinterpret_cast<const char *>(&size), sizeof(uint32_t));
     ++size;
-    std::unordered_map<std::array<uint32_t, 8>, uint32_t> deduplication_map;
+    std::unordered_map<std::vector<uint32_t>, uint32_t> deduplication_map;
     auto root_node = svdag_9_construct_node(voxelizer, {buffer, size}, 0, 0, 0, is_empty, deduplication_map);
     uint32_t root = push_node_to_buffer({buffer, size}, root_node);
     buffer.seekp(0, std::ios_base::beg);
@@ -62,18 +55,22 @@ void svdag_9_construct(Voxelizer &voxelizer, std::ofstream &buffer) {
     buffer.seekp(0, std::ios_base::end);
 }
 
-static std::array<uint32_t, 8> svdag_9_construct_node(Voxelizer &voxelizer, std::pair<std::ofstream &, uint32_t &> buffer, uint32_t lower_x, uint32_t lower_y, uint32_t lower_z, bool &is_empty, std::unordered_map<std::array<uint32_t, 8>, uint32_t> &deduplication_map) {
+static std::vector<uint32_t> svdag_9_construct_node(Voxelizer &voxelizer, std::pair<std::ofstream &, uint32_t &> buffer, uint32_t lower_x, uint32_t lower_y, uint32_t lower_z, bool &is_empty, std::unordered_map<std::vector<uint32_t>, uint32_t> &deduplication_map) {
     uint32_t power_of_two = 9;
     const uint64_t bounded_edge_length = 1 << power_of_two;
-    std::vector<std::vector<std::array<uint32_t, 8>>> queues(power_of_two + 1);
+    std::vector<std::vector<std::vector<uint32_t>>> queues(power_of_two + 1);
     const uint64_t num_voxels = bounded_edge_length * bounded_edge_length * bounded_edge_length;
 
-    auto nodes_equal = [](const std::array<uint32_t, 8> &a, const std::array<uint32_t, 8> &b) {
+    auto nodes_equal = [](const std::vector<uint32_t> &a, const std::vector<uint32_t> &b) {
         return a == b;
     };
 
-    auto is_node_empty = [](const std::array<uint32_t, 8> &node) {
-        return !node[0] && !node[1] && !node[2] && !node[3] && !node[4] && !node[5] && !node[6] && !node[7];
+    auto is_node_empty = [](const std::vector<uint32_t> &node) {
+        return !node.at(0);
+    };
+
+    auto is_node_leaf = [](const std::vector<uint32_t> &node) {
+        return node.at(0) && node.size() == 1;
     };
 
     is_empty = true;
@@ -82,23 +79,26 @@ static std::array<uint32_t, 8> svdag_9_construct_node(Voxelizer &voxelizer, std:
         uint_fast32_t x = 0, y = 0, z = 0;
         libmorton::morton3D_64_decode(morton, x, y, z);
 
-        std::array<uint32_t, 8> node = {0, 0, 0, 0, 0, 0, 0, 0};
+        std::vector<uint32_t> node = {0};
         uint32_t sub_lower_x = x * 1 + lower_x, sub_lower_y = y * 1 + lower_y, sub_lower_z = z * 1 + lower_z;
         bool sub_is_empty;
         auto sub_chunk = _construct_node(voxelizer, buffer, sub_lower_x, sub_lower_y, sub_lower_z, sub_is_empty);
         if (!sub_is_empty) {
             node[0] = push_node_to_buffer(buffer, sub_chunk);
-            node[1] = 0xFFFFFFFF;
             is_empty = false;
         }
 
         queues.at(power_of_two).emplace_back(node);
         uint32_t d = power_of_two;
         while (d > 0 && queues.at(d).size() == 8) {
-            std::array<uint32_t, 8> node = {0, 0, 0, 0, 0, 0, 0, 0};
+            std::vector<uint32_t> node = {0};
 
             bool identical = true;
             for (uint32_t i = 0; i < 8; ++i) {
+                bool child_is_valid = !is_node_empty(queues.at(d).at(i));
+                bool child_is_leaf = is_node_leaf(queues.at(d).at(i));
+                node[0] |= child_is_valid << (7 - i);
+                node[0] |= (child_is_valid && child_is_leaf) << (15 - i);
                 identical = identical && nodes_equal(queues.at(d).at(i), queues.at(d).at(0));
             }
 
@@ -108,13 +108,14 @@ static std::array<uint32_t, 8> svdag_9_construct_node(Voxelizer &voxelizer, std:
                 for (uint32_t i = 0; i < 8; ++i) {
                     auto child = queues.at(d).at(i);
                     if (!is_node_empty(child)) {
+                        uint32_t child_idx;
                         if (deduplication_map.contains(child)) {
-                            node[i] = deduplication_map[child];
+                            child_idx = deduplication_map[child];
                         } else {
-                            uint32_t child_idx = push_node_to_buffer(buffer, child);
-                            node[i] = child_idx;
+                            child_idx = push_node_to_buffer(buffer, child);
                             deduplication_map.emplace(child, child_idx);
                         }
+                        node.push_back(child_idx);
                     }
                 }
             }
