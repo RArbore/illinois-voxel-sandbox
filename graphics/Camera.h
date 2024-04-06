@@ -31,7 +31,6 @@ class Camera {
     glm::vec3 get_front() const;
     glm::vec3 get_position() const;
 
-  private:
     std::shared_ptr<Window> window_;
     glm::vec3 origin_, world_up_, front_, right_;
     float pitch_, yaw_;

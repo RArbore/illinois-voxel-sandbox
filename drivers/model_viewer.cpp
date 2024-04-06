@@ -108,5 +108,8 @@ int main(int argc, char *argv[]) {
 	} else if (accum_time > 1000.0) {
 	    ++num_frames;
 	}
+	if (accum_time > 1000.0 && num_frames % 500 == 0 && !argv[3]) {
+	    std::cout << "INFO: Camera Position: " << camera->origin_.x << " " << camera->origin_.y << " " << camera->origin_.z << " " << camera->pitch_ << " " << camera->yaw_ << "\n";
+	}
     }
 }

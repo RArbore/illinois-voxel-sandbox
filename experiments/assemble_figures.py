@@ -81,7 +81,7 @@ for datapoint in datapoints:
 colors = ["#FF0000", "#00FF00", "#0000FF", "#FF00FF"]
 lightcolors = ["#FF7F7F", "#7FFF7F", "#7F7FFF", "#FF7FFF"]
 
-plt.figure(figsize=(12, 8))
+plt.figure(figsize=(6, 5))
 for model_idx in range(0, num_models):
     x, y = data[:NUM_4K_FORMATS, model_idx, 0], data[:NUM_4K_FORMATS, model_idx, 1]
     pareto = [all([(tx <= ox or ty >= oy) for ox, oy in zip(x, y)]) for tx, ty in zip(x, y)]
@@ -122,7 +122,7 @@ plt.show()
 
 print("")
 
-plt.figure(figsize=(12, 8))
+plt.figure(figsize=(6, 5))
 for model_idx in range(0, num_models):
     x, y = data[NUM_4K_FORMATS:, model_idx, 0], data[NUM_4K_FORMATS:, model_idx, 1]
     pareto = [all([(tx <= ox or ty >= oy) for ox, oy in zip(x, y)]) for tx, ty in zip(x, y)]
