@@ -78,6 +78,8 @@ for datapoint in datapoints:
     data[format_idx, model_idx, 0] = datapoint[2]
     data[format_idx, model_idx, 1] = datapoint[3]
 
+models = list(map(lambda x: x.replace("-low-poly", ""), models))
+
 colors = ["#FF0000", "#00FF00", "#0000FF", "#FF00FF"]
 lightcolors = ["#FF7F7F", "#7FFF7F", "#7F7FFF", "#FF7FFF"]
 

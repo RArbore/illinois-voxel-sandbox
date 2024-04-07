@@ -4,27 +4,45 @@ set -exo pipefail
 MAX_STORAGE_BUFFER_RANGE=4294967295
 
 formats=(
+	"DF(16, 16, 16, 6) DF(16, 16, 16, 6) SVDAG(4)"
+	"DF(16, 16, 16, 6) Raw(16, 16, 16) SVDAG(4)"
+	"Raw(16, 16, 16) Raw(16, 16, 16) SVDAG(4)"
+	"Raw(16, 16, 16) SVO(4) SVDAG(4)"
+	"Raw(16, 16, 16) Raw(16, 16, 16) Raw(16, 16, 16)"
 	"DF(16, 16, 16, 6) SVO(8)"
 	"DF(16, 16, 16, 6) SVDAG(8)"
 	"DF(64, 64, 64, 6) SVO(6)"
 	"DF(64, 64, 64, 6) SVDAG(6)"
-	"SVO(8) Raw(16, 16, 16)"
-	"SVDAG(8) Raw(16, 16, 16)"
-	"DF(16, 16, 16, 6) Raw(16, 16, 16) SVDAG(4)"
+	"Raw(16, 16, 16) SVO(8)"
+	"Raw(16, 16, 16) SVDAG(8)"
+	"Raw(64, 64, 64) SVO(6)"
+	"Raw(64, 64, 64) SVDAG(6)"
+	"Raw(8, 8, 8) SVDAG(9)"
+	"Raw(512, 512, 512) SVDAG(3)"
+	"SVO(8) SVDAG(4)"
+	"SVO(6) SVDAG(6)"
+	"SVO(4) SVDAG(8)"
 	"SVO(12)"
 	"SVDAG(12)"
 	
+	"DF(8, 8, 8, 6) DF(8, 8, 8, 6) SVDAG(3)"
+	"DF(8, 8, 8, 6) Raw(8, 8, 8) SVDAG(3)"
+	"Raw(8, 8, 8, 6) Raw(8, 8, 8) SVDAG(3)"
+	"Raw(8, 8, 8) Raw(8, 8, 8) Raw(8, 8, 8)"
+	"Raw(16, 16, 16) Raw(2, 2, 2) Raw(16, 16, 16)"
 	"DF(16, 16, 16, 6) SVO(5)"
 	"DF(16, 16, 16, 6) SVDAG(5)"
+	"Raw(16, 16, 16) SVO(5)"
+	"Raw(16, 16, 16) SVDAG(5)"
+	"Raw(4, 4, 4) SVDAG(7)"
+	"Raw(128, 128, 128) SVDAG(2)"
 	"SVO(5) Raw(16, 16, 16)"
 	"SVDAG(5) Raw(16, 16, 16)"
-	"Raw(512, 512, 512)"
-	"Raw(32, 32, 32) Raw(16, 16, 16)"
-	"Raw(8, 8, 8) Raw(8, 8, 8) Raw(8, 8, 8)"
-	"DF(512, 512, 512, 6)"
 	"DF(32, 32, 32, 6) DF(16, 16, 16, 6)"
-	"DF(8, 8, 8, 6) Raw(8, 8, 8) SVDAG(3)"
-	"DF(8, 8, 8, 6) DF(8, 8, 8, 6) SVDAG(3)"
+	"DF(32, 32, 32, 6) Raw(16, 16, 16)"
+	"Raw(32, 32, 32) Raw(16, 16, 16)"
+	"Raw(512, 512, 512)"
+	"DF(512, 512, 512, 6)"
 	"SVO(9)"
 	"SVDAG(9)"
 	)
@@ -39,7 +57,25 @@ flags=(
 	"-whole-level-dedup -df-packing -restart-sv"
 	"-whole-level-dedup -df-packing -restart-sv"
 	"-whole-level-dedup -df-packing -restart-sv"
-	
+	"-whole-level-dedup -df-packing -restart-sv"
+	"-whole-level-dedup -df-packing -restart-sv"
+	"-whole-level-dedup -df-packing -restart-sv"
+	"-whole-level-dedup -df-packing -restart-sv"
+	"-whole-level-dedup -df-packing -restart-sv"
+	"-whole-level-dedup -df-packing -restart-sv"
+	"-whole-level-dedup -df-packing -restart-sv"
+	"-whole-level-dedup -df-packing -restart-sv"
+	"-whole-level-dedup -df-packing -restart-sv"
+	"-whole-level-dedup -df-packing -restart-sv"
+	"-whole-level-dedup -df-packing -restart-sv"
+
+	"-whole-level-dedup -df-packing -restart-sv"
+	"-whole-level-dedup -df-packing -restart-sv"
+	"-whole-level-dedup -df-packing -restart-sv"
+	"-whole-level-dedup -df-packing -restart-sv"
+	"-whole-level-dedup -df-packing -restart-sv"
+	"-whole-level-dedup -df-packing -restart-sv"
+	"-whole-level-dedup -df-packing -restart-sv"
 	"-whole-level-dedup -df-packing -restart-sv"
 	"-whole-level-dedup -df-packing -restart-sv"
 	"-whole-level-dedup -df-packing -restart-sv"
@@ -126,7 +162,10 @@ elif [ "$1" = "convert" ]; then
 		iden=`drivers/compile "$format" -just-get-iden`
 		for model in "${models[@]}"
 		do
-			{ /usr/bin/time -v drivers/convert_model ../experiments/obj/$model/$model.obj 1 "$format"; } &> ../experiments/obj/$model/$model.$iden.log &
+			out_file="../experiments/obj/$model/$model.$iden"
+			if [ "$2" = "force" ] || [ ! -f $out_file ]; then
+				{ /usr/bin/time -v drivers/convert_model ../experiments/obj/$model/$model.obj 1 "$format"; } &> $out_file.log &
+			fi
 		done
 		wait
 	done
