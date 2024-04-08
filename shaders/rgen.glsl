@@ -9,7 +9,7 @@
 
 layout(location = 0) rayPayloadEXT RayPayload payload;
 
-const int MAX_BOUNCES = 2;
+const int MAX_BOUNCES = 1;
 
 uint hash(uint x) {
     x += (x << 10u);
@@ -60,6 +60,7 @@ void main() {
                 }
             }
 
+            /*
             // Choose a random light to sample to 
             if (num_emissive_voxels > 0) {
                 vec4 random_light = imageLoad(blue_noise, blue_noise_coords + ivec2(vec2(3, 3) * slice_2_from_4(random, bounce + 3)));
@@ -123,6 +124,8 @@ void main() {
             ray_origin = isect.world_position + 0.01 * isect.world_normal;
             ray_direction = new_direction;
             weight *= bsdf * abs(dot(new_direction, isect.world_normal)) / pdf;
+            */
+	    L += isect.color.xyz;
         } else {
             L += weight * payload.color.xyz * payload.color.w; // add the sky color if the first ray is a miss
             break;
