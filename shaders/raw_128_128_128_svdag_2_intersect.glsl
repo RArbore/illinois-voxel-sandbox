@@ -85,25 +85,24 @@ bool intersect_format_1(uint volume_id, uint node_id, vec3 obj_ray_pos, vec3 obj
     float sub_w = 1.0;
     float sub_h = 1.0;
     float sub_d = 1.0;
-    float inc_w = 16.0;
-    float inc_h = 16.0;
-    float inc_d = 16.0;
-    float this_w = 16.0;
-    float this_h = 16.0;
-    float this_d = 16.0;
+    float inc_w = 4.0;
+    float inc_h = 4.0;
+    float inc_d = 4.0;
+    float this_w = 4.0;
+    float this_h = 4.0;
+    float this_d = 4.0;
 
     vec3 chunk_ray_pos = (obj_ray_pos - lower) / vec3(sub_w, sub_h, sub_d);
     vec3 chunk_ray_dir = obj_ray_dir;
     vec3 chunk_ray_intersect_point = chunk_ray_pos + chunk_ray_dir * max(o_t, 0.0) / vec3(sub_w, sub_h, sub_d);
-    ivec3 chunk_ray_voxel = ivec3(min(chunk_ray_intersect_point, ivec3(15, 15, 15)));
+    ivec3 chunk_ray_voxel = ivec3(min(chunk_ray_intersect_point, ivec3(3, 3, 3)));
     ivec3 chunk_ray_step = ivec3(sign(chunk_ray_dir));
     vec3 chunk_ray_delta = abs(vec3(length(chunk_ray_dir)) / chunk_ray_dir);
     vec3 chunk_side_dist = (sign(chunk_ray_dir) * (vec3(chunk_ray_voxel) - chunk_ray_intersect_point) + (sign(chunk_ray_dir) * 0.5) + 0.5) * chunk_ray_delta;
 
-    while (all(greaterThanEqual(chunk_ray_voxel, ivec3(0))) && all(lessThan(chunk_ray_voxel, ivec3(16, 16, 16)))) {
-        uint32_t voxel_index = linearize_index(chunk_ray_voxel, 16, 16, 16);
-        uint32_t child_id = voxel_buffers[volume_id].voxels[node_id + voxel_index];
-
+    while (all(greaterThanEqual(chunk_ray_voxel, ivec3(0))) && all(lessThan(chunk_ray_voxel, ivec3(4, 4, 4)))) {
+        uint32_t child_id = lookup_utility_restart_svdag(volume_id, node_id, 2, chunk_ray_voxel);
+        
         if (child_id != 0) {
             aabb_intersect_result r = hit_aabb(chunk_ray_voxel * vec3(sub_w, sub_h, sub_d) + lower, (chunk_ray_voxel + 1) * vec3(sub_w, sub_h, sub_d) + lower, obj_ray_pos, obj_ray_dir);
             if (intersect_format_2(volume_id, child_id, obj_ray_pos, obj_ray_dir, chunk_ray_voxel * vec3(sub_w, sub_h, sub_d) + lower, r.front_t, r.k)) {
@@ -119,27 +118,28 @@ bool intersect_format_1(uint volume_id, uint node_id, vec3 obj_ray_pos, vec3 obj
 }
 
 bool intersect_format_0(uint volume_id, uint node_id, vec3 obj_ray_pos, vec3 obj_ray_dir, vec3 lower, float o_t, uint hit_kind) {
-    float sub_w = 16.0;
-    float sub_h = 16.0;
-    float sub_d = 16.0;
-    float inc_w = 4096.0;
-    float inc_h = 4096.0;
-    float inc_d = 4096.0;
-    float this_w = 256.0;
-    float this_h = 256.0;
-    float this_d = 256.0;
+    float sub_w = 4.0;
+    float sub_h = 4.0;
+    float sub_d = 4.0;
+    float inc_w = 512.0;
+    float inc_h = 512.0;
+    float inc_d = 512.0;
+    float this_w = 128.0;
+    float this_h = 128.0;
+    float this_d = 128.0;
 
     vec3 chunk_ray_pos = (obj_ray_pos - lower) / vec3(sub_w, sub_h, sub_d);
     vec3 chunk_ray_dir = obj_ray_dir;
     vec3 chunk_ray_intersect_point = chunk_ray_pos + chunk_ray_dir * max(o_t, 0.0) / vec3(sub_w, sub_h, sub_d);
-    ivec3 chunk_ray_voxel = ivec3(min(chunk_ray_intersect_point, ivec3(255, 255, 255)));
+    ivec3 chunk_ray_voxel = ivec3(min(chunk_ray_intersect_point, ivec3(127, 127, 127)));
     ivec3 chunk_ray_step = ivec3(sign(chunk_ray_dir));
     vec3 chunk_ray_delta = abs(vec3(length(chunk_ray_dir)) / chunk_ray_dir);
     vec3 chunk_side_dist = (sign(chunk_ray_dir) * (vec3(chunk_ray_voxel) - chunk_ray_intersect_point) + (sign(chunk_ray_dir) * 0.5) + 0.5) * chunk_ray_delta;
 
-    while (all(greaterThanEqual(chunk_ray_voxel, ivec3(0))) && all(lessThan(chunk_ray_voxel, ivec3(256, 256, 256)))) {
-        uint32_t child_id = lookup_utility_restart_svo(volume_id, node_id, 8, chunk_ray_voxel);
-        
+    while (all(greaterThanEqual(chunk_ray_voxel, ivec3(0))) && all(lessThan(chunk_ray_voxel, ivec3(128, 128, 128)))) {
+        uint32_t voxel_index = linearize_index(chunk_ray_voxel, 128, 128, 128);
+        uint32_t child_id = voxel_buffers[volume_id].voxels[node_id + voxel_index];
+
         if (child_id != 0) {
             aabb_intersect_result r = hit_aabb(chunk_ray_voxel * vec3(sub_w, sub_h, sub_d) + lower, (chunk_ray_voxel + 1) * vec3(sub_w, sub_h, sub_d) + lower, obj_ray_pos, obj_ray_dir);
             if (intersect_format_1(volume_id, child_id, obj_ray_pos, obj_ray_dir, chunk_ray_voxel * vec3(sub_w, sub_h, sub_d) + lower, r.front_t, r.k)) {
@@ -161,7 +161,7 @@ void main() {
     vec3 obj_ray_pos = gl_WorldToObjectEXT * vec4(gl_WorldRayOriginEXT, 1.0);
     vec3 obj_ray_dir = normalize(gl_WorldToObjectEXT * vec4(gl_WorldRayDirectionEXT, 0.0));
 
-    aabb_intersect_result r = hit_aabb(vec3(0.0), vec3(4096.0, 4096.0, 4096.0), obj_ray_pos, obj_ray_dir);
+    aabb_intersect_result r = hit_aabb(vec3(0.0), vec3(512.0, 512.0, 512.0), obj_ray_pos, obj_ray_dir);
     if (r.front_t != -FAR_AWAY) {
         intersect_format_0(volume_id, root_id, obj_ray_pos, obj_ray_dir, vec3(0.0), r.front_t, r.k);
     }

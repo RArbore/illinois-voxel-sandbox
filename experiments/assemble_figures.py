@@ -35,7 +35,7 @@ def write_roman(num):
 
     return "".join([a for a in roman_num(num)])
 
-NUM_4K_FORMATS = 9
+NUM_2K_FORMATS = 20
 
 with open(sys.argv[1]) as f:
     content = f.readlines()
@@ -84,7 +84,7 @@ colors = ["#FF0000", "#00FF00", "#0000FF", "#FF00FF"]
 lightcolors = ["#FF7F7F", "#7FFF7F", "#7F7FFF", "#FF7FFF"]
 
 def plot_model_at_resolution(data, model_idx, resolution, s):
-    plt.figure(figsize=(6, 5))
+    plt.figure(figsize=(7, 3.5))
     x, y = data[:, 0], data[:, 1]
     pareto = [all([(tx <= ox or ty >= oy) for ox, oy in zip(x, y)]) for tx, ty in zip(x, y)]
     points = list(zip(data[:, 0], data[:, 1]))
@@ -94,11 +94,16 @@ def plot_model_at_resolution(data, model_idx, resolution, s):
     plt.plot(p1, p2, c="gray", linestyle='dashed')
     plt.scatter(x, y, c=[colors[model_idx] if p else lightcolors[model_idx] for p in pareto], s=[float(p) * 25.0 + 15.0 for p in pareto])
 
+    pareto_frontier = set()
+    for format_idx in range(s[0], s[1]):
+        if pareto[format_idx - s[0]]:
+            pareto_frontier.add(formats[format_idx])
+
     texts = []
     for format_idx in range(s[0], s[1]):
         x, y = data[format_idx - s[0], 0], data[format_idx - s[0], 1]
-        if y == 0.0 and formats[format_idx].startswith("SV") and models[model_idx] == "sponza":
-            y = format_idx / 1000.0
+        #if y == 0.0 and formats[format_idx].startswith("SV") and models[model_idx] == "sponza":
+        #    y = format_idx / 1000.0
         texts.append(plt.text(x, y, write_roman(format_idx + 1 - s[0])))
 
     plot_cutoff = 0.0 in data[:, 1]
@@ -109,17 +114,26 @@ def plot_model_at_resolution(data, model_idx, resolution, s):
     plt.xscale('log')
     plt.xlabel("Model Size (bytes)")
     plt.ylabel("Ray Intersection Performance (FPS)")
-    plt.title("Rendering Performance vs. Compression for " + str(models[model_idx]) + " at " + resolution + " resolution")
+    plt.title(str(models[model_idx]) + " at " + resolution + " resolution")
     adjust_text(texts)
-    plt.show()
+    plt.savefig(str(models[model_idx]) + "-" + resolution.replace("^3", ""), bbox_inches='tight', pad_inches=0.02)
+    return pareto_frontier
 
-slices = {"4096^3" : [0, NUM_4K_FORMATS], "512^3" : [NUM_4K_FORMATS, num_formats]}
-for resolution in ["4096^3", "512^3"]:
+slices = {"2048^3" : [0, NUM_2K_FORMATS], "512^3" : [NUM_2K_FORMATS, num_formats]}
+for resolution in ["2048^3", "512^3"]:
     s = slices[resolution]
+    pareto_frontiers = []
     for model_idx in range(0, num_models):
         d = data[s[0]:s[1], model_idx]
-        plot_model_at_resolution(d, model_idx, resolution, s)
+        pareto_frontiers.append(plot_model_at_resolution(d, model_idx, resolution, s))
+
+    print("Common Pareto frontier for " + resolution)
+    common = set.intersection(*pareto_frontiers)
+    for f in common:
+        print(f)
     
+    print("")
+    print("Format labels for " + resolution)
     for format_idx in range(s[0], s[1]):
         print(formats[format_idx], write_roman(format_idx + 1 - s[0]))
 

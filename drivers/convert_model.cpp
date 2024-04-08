@@ -9,50 +9,86 @@
 #include <voxels/VoxelChunkGeneration.h>
 #include <voxels/Voxelize.h>
 
-void df_16_16_16_6_svo_8_construct(Voxelizer &voxelizer, std::ofstream &buffer);
-void df_16_16_16_6_svdag_8_construct(Voxelizer &voxelizer, std::ofstream &buffer);
-void df_64_64_64_6_svo_6_construct(Voxelizer &voxelizer, std::ofstream &buffer);
-void df_64_64_64_6_svdag_6_construct(Voxelizer &voxelizer, std::ofstream &buffer);
-void svo_8_raw_16_16_16_construct(Voxelizer &voxelizer, std::ofstream &buffer);
-void svdag_8_raw_16_16_16_construct(Voxelizer &voxelizer, std::ofstream &buffer);
-void df_16_16_16_6_raw_16_16_16_svdag_4_construct(Voxelizer &voxelizer, std::ofstream &buffer);
-void svo_12_construct(Voxelizer &voxelizer, std::ofstream &buffer);
-void svdag_12_construct(Voxelizer &voxelizer, std::ofstream &buffer);
+void df_16_16_16_6_df_8_8_8_6_svdag_4_construct(Voxelizer &voxelizer, std::ofstream &buffer);
+void df_16_16_16_6_raw_8_8_8_svdag_4_construct(Voxelizer &voxelizer, std::ofstream &buffer);
+void raw_16_16_16_raw_8_8_8_svdag_4_construct(Voxelizer &voxelizer, std::ofstream &buffer);
+void raw_16_16_16_svo_3_svdag_4_construct(Voxelizer &voxelizer, std::ofstream &buffer);
+void raw_16_16_16_raw_16_16_16_raw_8_8_8_construct(Voxelizer &voxelizer, std::ofstream &buffer);
+void df_16_16_16_6_svo_7_construct(Voxelizer &voxelizer, std::ofstream &buffer);
+void df_16_16_16_6_svdag_7_construct(Voxelizer &voxelizer, std::ofstream &buffer);
+void df_64_64_64_6_svo_5_construct(Voxelizer &voxelizer, std::ofstream &buffer);
+void df_64_64_64_6_svdag_5_construct(Voxelizer &voxelizer, std::ofstream &buffer);
+void raw_16_16_16_svo_7_construct(Voxelizer &voxelizer, std::ofstream &buffer);
+void raw_16_16_16_svdag_7_construct(Voxelizer &voxelizer, std::ofstream &buffer);
+void raw_64_64_64_svo_5_construct(Voxelizer &voxelizer, std::ofstream &buffer);
+void raw_64_64_64_svdag_5_construct(Voxelizer &voxelizer, std::ofstream &buffer);
+void raw_8_8_8_svdag_8_construct(Voxelizer &voxelizer, std::ofstream &buffer);
+void raw_256_256_256_svdag_3_construct(Voxelizer &voxelizer, std::ofstream &buffer);
+void svo_7_svdag_4_construct(Voxelizer &voxelizer, std::ofstream &buffer);
+void svo_5_svdag_6_construct(Voxelizer &voxelizer, std::ofstream &buffer);
+void svo_3_svdag_8_construct(Voxelizer &voxelizer, std::ofstream &buffer);
+void svo_11_construct(Voxelizer &voxelizer, std::ofstream &buffer);
+void svdag_11_construct(Voxelizer &voxelizer, std::ofstream &buffer);
+void df_8_8_8_6_df_8_8_8_6_svdag_3_construct(Voxelizer &voxelizer, std::ofstream &buffer);
+void df_8_8_8_6_raw_8_8_8_svdag_3_construct(Voxelizer &voxelizer, std::ofstream &buffer);
+void raw_8_8_8_raw_8_8_8_svdag_3_construct(Voxelizer &voxelizer, std::ofstream &buffer);
+void raw_8_8_8_raw_8_8_8_raw_8_8_8_construct(Voxelizer &voxelizer, std::ofstream &buffer);
+void raw_16_16_16_raw_2_2_2_raw_16_16_16_construct(Voxelizer &voxelizer, std::ofstream &buffer);
 void df_16_16_16_6_svo_5_construct(Voxelizer &voxelizer, std::ofstream &buffer);
 void df_16_16_16_6_svdag_5_construct(Voxelizer &voxelizer, std::ofstream &buffer);
+void raw_16_16_16_svo_5_construct(Voxelizer &voxelizer, std::ofstream &buffer);
+void raw_16_16_16_svdag_5_construct(Voxelizer &voxelizer, std::ofstream &buffer);
+void raw_4_4_4_svdag_7_construct(Voxelizer &voxelizer, std::ofstream &buffer);
+void raw_128_128_128_svdag_2_construct(Voxelizer &voxelizer, std::ofstream &buffer);
 void svo_5_raw_16_16_16_construct(Voxelizer &voxelizer, std::ofstream &buffer);
 void svdag_5_raw_16_16_16_construct(Voxelizer &voxelizer, std::ofstream &buffer);
-void raw_512_512_512_construct(Voxelizer &voxelizer, std::ofstream &buffer);
-void raw_32_32_32_raw_16_16_16_construct(Voxelizer &voxelizer, std::ofstream &buffer);
-void raw_8_8_8_raw_8_8_8_raw_8_8_8_construct(Voxelizer &voxelizer, std::ofstream &buffer);
-void df_512_512_512_6_construct(Voxelizer &voxelizer, std::ofstream &buffer);
 void df_32_32_32_6_df_16_16_16_6_construct(Voxelizer &voxelizer, std::ofstream &buffer);
-void df_8_8_8_6_raw_8_8_8_svdag_3_construct(Voxelizer &voxelizer, std::ofstream &buffer);
-void df_8_8_8_6_df_8_8_8_6_svdag_3_construct(Voxelizer &voxelizer, std::ofstream &buffer);
+void df_32_32_32_6_raw_16_16_16_construct(Voxelizer &voxelizer, std::ofstream &buffer);
+void raw_32_32_32_raw_16_16_16_construct(Voxelizer &voxelizer, std::ofstream &buffer);
+void raw_512_512_512_construct(Voxelizer &voxelizer, std::ofstream &buffer);
+void df_512_512_512_6_construct(Voxelizer &voxelizer, std::ofstream &buffer);
 void svo_9_construct(Voxelizer &voxelizer, std::ofstream &buffer);
 void svdag_9_construct(Voxelizer &voxelizer, std::ofstream &buffer);
 
 static const std::unordered_map<std::string, void (*)(Voxelizer &, std::ofstream &)> format_to_conversion_function = {
-    {"DF(16, 16, 16, 6) SVO(8)", df_16_16_16_6_svo_8_construct},
-    {"DF(16, 16, 16, 6) SVDAG(8)", df_16_16_16_6_svdag_8_construct},
-    {"DF(64, 64, 64, 6) SVO(6)", df_64_64_64_6_svo_6_construct},
-    {"DF(64, 64, 64, 6) SVDAG(6)", df_64_64_64_6_svdag_6_construct},
-    {"SVO(8) Raw(16, 16, 16)", svo_8_raw_16_16_16_construct},
-    {"SVDAG(8) Raw(16, 16, 16)", svdag_8_raw_16_16_16_construct},
-    {"DF(16, 16, 16, 6) Raw(16, 16, 16) SVDAG(4)", df_16_16_16_6_raw_16_16_16_svdag_4_construct},
-    {"SVO(12)", svo_12_construct},
-    {"SVDAG(12)", svdag_12_construct},
+    {"DF(16, 16, 16, 6) DF(8, 8, 8, 6) SVDAG(4)", df_16_16_16_6_df_8_8_8_6_svdag_4_construct},
+    {"DF(16, 16, 16, 6) Raw(8, 8, 8) SVDAG(4)", df_16_16_16_6_raw_8_8_8_svdag_4_construct},
+    {"Raw(16, 16, 16) Raw(8, 8, 8) SVDAG(4)", raw_16_16_16_raw_8_8_8_svdag_4_construct},
+    {"Raw(16, 16, 16) SVO(3) SVDAG(4)", raw_16_16_16_svo_3_svdag_4_construct},
+    {"Raw(16, 16, 16) Raw(16, 16, 16) Raw(8, 8, 8)", raw_16_16_16_raw_16_16_16_raw_8_8_8_construct},
+    {"DF(16, 16, 16, 6) SVO(7)", df_16_16_16_6_svo_7_construct},
+    {"DF(16, 16, 16, 6) SVDAG(7)", df_16_16_16_6_svdag_7_construct},
+    {"DF(64, 64, 64, 6) SVO(5)", df_64_64_64_6_svo_5_construct},
+    {"DF(64, 64, 64, 6) SVDAG(5)", df_64_64_64_6_svdag_5_construct},
+    {"Raw(16, 16, 16) SVO(7)", raw_16_16_16_svo_7_construct},
+    {"Raw(16, 16, 16) SVDAG(7)", raw_16_16_16_svdag_7_construct},
+    {"Raw(64, 64, 64) SVO(5)", raw_64_64_64_svo_5_construct},
+    {"Raw(64, 64, 64) SVDAG(5)", raw_64_64_64_svdag_5_construct},
+    {"Raw(8, 8, 8) SVDAG(8)", raw_8_8_8_svdag_8_construct},
+    {"Raw(256, 256, 256) SVDAG(3)", raw_256_256_256_svdag_3_construct},
+    {"SVO(7) SVDAG(4)", svo_7_svdag_4_construct},
+    {"SVO(5) SVDAG(6)", svo_5_svdag_6_construct},
+    {"SVO(3) SVDAG(8)", svo_3_svdag_8_construct},
+    {"SVO(11)", svo_11_construct},
+    {"SVDAG(11)", svdag_11_construct},
+    {"DF(8, 8, 8, 6) DF(8, 8, 8, 6) SVDAG(3)", df_8_8_8_6_df_8_8_8_6_svdag_3_construct},
+    {"DF(8, 8, 8, 6) Raw(8, 8, 8) SVDAG(3)", df_8_8_8_6_raw_8_8_8_svdag_3_construct},
+    {"Raw(8, 8, 8) Raw(8, 8, 8) SVDAG(3)", raw_8_8_8_raw_8_8_8_svdag_3_construct},
+    {"Raw(8, 8, 8) Raw(8, 8, 8) Raw(8, 8, 8)", raw_8_8_8_raw_8_8_8_raw_8_8_8_construct},
+    {"Raw(16, 16, 16) Raw(2, 2, 2) Raw(16, 16, 16)", raw_16_16_16_raw_2_2_2_raw_16_16_16_construct},
     {"DF(16, 16, 16, 6) SVO(5)", df_16_16_16_6_svo_5_construct},
     {"DF(16, 16, 16, 6) SVDAG(5)", df_16_16_16_6_svdag_5_construct},
+    {"Raw(16, 16, 16) SVO(5)", raw_16_16_16_svo_5_construct},
+    {"Raw(16, 16, 16) SVDAG(5)", raw_16_16_16_svdag_5_construct},
+    {"Raw(4, 4, 4) SVDAG(7)", raw_4_4_4_svdag_7_construct},
+    {"Raw(128, 128, 128) SVDAG(2)", raw_128_128_128_svdag_2_construct},
     {"SVO(5) Raw(16, 16, 16)", svo_5_raw_16_16_16_construct},
     {"SVDAG(5) Raw(16, 16, 16)", svdag_5_raw_16_16_16_construct},
-    {"Raw(512, 512, 512)", raw_512_512_512_construct},
-    {"Raw(32, 32, 32) Raw(16, 16, 16)", raw_32_32_32_raw_16_16_16_construct},
-    {"Raw(8, 8, 8) Raw(8, 8, 8) Raw(8, 8, 8)", raw_8_8_8_raw_8_8_8_raw_8_8_8_construct},
-    {"DF(512, 512, 512, 6)", df_512_512_512_6_construct},
     {"DF(32, 32, 32, 6) DF(16, 16, 16, 6)", df_32_32_32_6_df_16_16_16_6_construct},
-    {"DF(8, 8, 8, 6) Raw(8, 8, 8) SVDAG(3)", df_8_8_8_6_raw_8_8_8_svdag_3_construct},
-    {"DF(8, 8, 8, 6) DF(8, 8, 8, 6) SVDAG(3)", df_8_8_8_6_df_8_8_8_6_svdag_3_construct},
+    {"DF(32, 32, 32, 6) Raw(16, 16, 16)", df_32_32_32_6_raw_16_16_16_construct},
+    {"Raw(32, 32, 32) Raw(16, 16, 16)", raw_32_32_32_raw_16_16_16_construct},
+    {"Raw(512, 512, 512)", raw_512_512_512_construct},
+    {"DF(512, 512, 512, 6)", df_512_512_512_6_construct},
     {"SVO(9)", svo_9_construct},
     {"SVDAG(9)", svdag_9_construct}
 };
