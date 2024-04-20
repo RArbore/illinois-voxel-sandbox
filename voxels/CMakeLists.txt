@@ -6,47 +6,6 @@ add_library(
 	VoxelChunkGeneration.cpp 
 	Conversion.cpp 
 	Voxelize.cpp 
-
-	df_16_16_16_6_df_8_8_8_6_svdag_4_construct.cpp
-	df_16_16_16_6_raw_8_8_8_svdag_4_construct.cpp
-	raw_16_16_16_raw_8_8_8_svdag_4_construct.cpp
-	raw_16_16_16_svo_3_svdag_4_construct.cpp
-	raw_16_16_16_raw_16_16_16_raw_8_8_8_construct.cpp
-	df_16_16_16_6_svo_7_construct.cpp
-	df_16_16_16_6_svdag_7_construct.cpp
-	df_64_64_64_6_svo_5_construct.cpp
-	df_64_64_64_6_svdag_5_construct.cpp
-	raw_16_16_16_svo_7_construct.cpp
-	raw_16_16_16_svdag_7_construct.cpp
-	raw_64_64_64_svo_5_construct.cpp
-	raw_64_64_64_svdag_5_construct.cpp
-	raw_8_8_8_svdag_8_construct.cpp
-	raw_256_256_256_svdag_3_construct.cpp
-	svo_7_svdag_4_construct.cpp
-	svo_5_svdag_6_construct.cpp
-	svo_3_svdag_8_construct.cpp
-	svo_11_construct.cpp
-	svdag_11_construct.cpp
-	df_8_8_8_6_df_8_8_8_6_svdag_3_construct.cpp
-	df_8_8_8_6_raw_8_8_8_svdag_3_construct.cpp
-	raw_8_8_8_raw_8_8_8_svdag_3_construct.cpp
-	raw_8_8_8_raw_8_8_8_raw_8_8_8_construct.cpp
-	raw_16_16_16_raw_2_2_2_raw_16_16_16_construct.cpp
-	df_16_16_16_6_svo_5_construct.cpp
-	df_16_16_16_6_svdag_5_construct.cpp
-	raw_16_16_16_svo_5_construct.cpp
-	raw_16_16_16_svdag_5_construct.cpp
-	raw_4_4_4_svdag_7_construct.cpp
-	raw_128_128_128_svdag_2_construct.cpp
-	svo_5_raw_16_16_16_construct.cpp
-	svdag_5_raw_16_16_16_construct.cpp
-	df_32_32_32_6_df_16_16_16_6_construct.cpp
-	df_32_32_32_6_raw_16_16_16_construct.cpp
-	raw_32_32_32_raw_16_16_16_construct.cpp
-	raw_512_512_512_construct.cpp
-	df_512_512_512_6_construct.cpp
-	svo_9_construct.cpp
-	svdag_9_construct.cpp
 	)
 
 target_include_directories(voxels PUBLIC ${CMAKE_SOURCE_DIR})
