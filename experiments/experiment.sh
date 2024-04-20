@@ -48,47 +48,47 @@ formats=(
 	)
 
 flags=(
-	"-whole-level-dedup -df-packing -restart-sv"
-	"-whole-level-dedup -df-packing -restart-sv"
-	"-whole-level-dedup -df-packing -restart-sv"
-	"-whole-level-dedup -df-packing -restart-sv"
-	"-whole-level-dedup -df-packing -restart-sv"
-	"-whole-level-dedup -df-packing -restart-sv"
-	"-whole-level-dedup -df-packing -restart-sv"
-	"-whole-level-dedup -df-packing -restart-sv"
-	"-whole-level-dedup -df-packing -restart-sv"
-	"-whole-level-dedup -df-packing -restart-sv"
-	"-whole-level-dedup -df-packing -restart-sv"
-	"-whole-level-dedup -df-packing -restart-sv"
-	"-whole-level-dedup -df-packing -restart-sv"
-	"-whole-level-dedup -df-packing -restart-sv"
-	"-whole-level-dedup -df-packing -restart-sv"
-	"-whole-level-dedup -df-packing -restart-sv"
-	"-whole-level-dedup -df-packing -restart-sv"
-	"-whole-level-dedup -df-packing -restart-sv"
-	"-whole-level-dedup -df-packing -restart-sv"
-	"-whole-level-dedup -df-packing -restart-sv"
+	"-whole-level-dedup -df-packing"
+	"-whole-level-dedup -df-packing"
+	"-whole-level-dedup -df-packing"
+	"-whole-level-dedup -df-packing"
+	"-whole-level-dedup -df-packing"
+	"-whole-level-dedup -df-packing"
+	"-whole-level-dedup -df-packing"
+	"-whole-level-dedup -df-packing"
+	"-whole-level-dedup -df-packing"
+	"-whole-level-dedup -df-packing"
+	"-whole-level-dedup -df-packing"
+	"-whole-level-dedup -df-packing"
+	"-whole-level-dedup -df-packing"
+	"-whole-level-dedup -df-packing"
+	"-whole-level-dedup -df-packing"
+	"-whole-level-dedup -df-packing"
+	"-whole-level-dedup -df-packing"
+	"-whole-level-dedup -df-packing"
+	"-whole-level-dedup -df-packing"
+	"-whole-level-dedup -df-packing"
 
-	"-whole-level-dedup -df-packing -restart-sv"
-	"-whole-level-dedup -df-packing -restart-sv"
-	"-whole-level-dedup -df-packing -restart-sv"
-	"-whole-level-dedup -df-packing -restart-sv"
-	"-whole-level-dedup -df-packing -restart-sv"
-	"-whole-level-dedup -df-packing -restart-sv"
-	"-whole-level-dedup -df-packing -restart-sv"
-	"-whole-level-dedup -df-packing -restart-sv"
-	"-whole-level-dedup -df-packing -restart-sv"
-	"-whole-level-dedup -df-packing -restart-sv"
-	"-whole-level-dedup -df-packing -restart-sv"
-	"-whole-level-dedup -df-packing -restart-sv"
-	"-whole-level-dedup -df-packing -restart-sv"
-	"-whole-level-dedup -df-packing -restart-sv"
-	"-whole-level-dedup -df-packing -restart-sv"
-	"-whole-level-dedup -df-packing -restart-sv"
-	"-whole-level-dedup -df-packing -restart-sv"
-	"-whole-level-dedup -df-packing -restart-sv"
-	"-whole-level-dedup -df-packing -restart-sv"
-	"-whole-level-dedup -df-packing -restart-sv"
+	"-whole-level-dedup -df-packing"
+	"-whole-level-dedup -df-packing"
+	"-whole-level-dedup -df-packing"
+	"-whole-level-dedup -df-packing"
+	"-whole-level-dedup -df-packing"
+	"-whole-level-dedup -df-packing"
+	"-whole-level-dedup -df-packing"
+	"-whole-level-dedup -df-packing"
+	"-whole-level-dedup -df-packing"
+	"-whole-level-dedup -df-packing"
+	"-whole-level-dedup -df-packing"
+	"-whole-level-dedup -df-packing"
+	"-whole-level-dedup -df-packing"
+	"-whole-level-dedup -df-packing"
+	"-whole-level-dedup -df-packing"
+	"-whole-level-dedup -df-packing"
+	"-whole-level-dedup -df-packing"
+	"-whole-level-dedup -df-packing"
+	"-whole-level-dedup -df-packing"
+	"-whole-level-dedup -df-packing"
 	)
 
 models=(
@@ -103,6 +103,41 @@ camera_positions=(
 	"41.0 50.0 113.0 0.0 173.5"
 	"3.5 37.5 -33.5 12.0 375.0"
 	"26.0 69.5 26.0 43.0 103.5"
+	)
+
+construction_opt_formats=(
+	"SVDAG(11)"
+	"Raw(256, 256, 256) SVDAG(3)"
+	"DF(64, 64, 64, 6) SVDAG(5)"
+	"DF(16, 16, 16, 6) SVDAG(7)"
+	"SVDAG(9)"
+	"Raw(128, 128, 128) SVDAG(2)"
+	"DF(32, 32, 32, 6) Raw(16, 16, 16)"
+	"DF(16, 16, 16, 6) SVDAG(5)"
+	)
+
+intersection_opt_formats=(
+	"SVO(11)"
+	"SVDAG(11)"
+	"SVO(3) SVDAG(8)"
+	"SVO(7) SVDAG(4)"
+	"SVO(9)"
+	"SVDAG(9)"
+	"Raw(16, 16, 16) SVDAG(5)"
+	"Raw(8, 8, 8) Raw(8, 8, 8) SVDAG(3)"
+	)
+
+construction_opt_flags=(
+	""
+	"-whole-level-dedup"
+	"-df-packing"
+	"-whole-level-dedup -df-packing -restart-sv"
+	)
+
+intersection_opt_flags=(
+	""
+	"-restart-sv"
+	"-unroll-sv"
 	)
 
 if [ "$1" = "download" ]; then
@@ -189,6 +224,77 @@ elif [ "$1" = "run" ]; then
 			else
 				drivers/model_viewer $FILE "$format" $camera_position | grep "Final" >> ../experiments/$OUT
 			fi
+		done
+	done
+	cd ../experiments
+elif [ "$1" = "construction_opt_run" ]; then
+	cd ../build
+	OUT="${2:-construction-opt-measurements}"
+	rm -f ../experiments/$OUT
+	touch ../experiments/$OUT
+	for flag in "${construction_opt_flags[@]}"
+	do
+		for format in "${construction_opt_formats[@]}"
+		do
+			iden=`drivers/compile "$format" $flag`
+			cp "$iden"_construct.cpp ../voxels/
+			cp "$iden"_intersect.glsl ../shaders/
+		done
+		make -j$(nproc)
+		for model in "${models[@]}"
+		do
+			for format in "${construction_opt_formats[@]}"
+			do
+				iden=`drivers/compile "$format" -just-get-iden`
+				{ /usr/bin/time -v drivers/convert_model ../experiments/obj/$model/$model.obj 1 "$format"; } &> ../experiments/obj/$model/$model.$iden.log &
+			done
+			wait
+		done
+		for format in "${construction_opt_formats[@]}"
+		do
+			iden=`drivers/compile "$format" -just-get-iden`
+			for model in "${models[@]}"
+			do
+				FILE="../experiments/obj/$model/$model.$iden"
+				FILESIZE=`stat -c%s $FILE`
+				echo "$format $flag" >> ../experiments/$OUT
+				echo "$model" >> ../experiments/$OUT
+				echo "$FILESIZE" >> ../experiments/$OUT
+			done
+		done
+	done
+	cd ../experiments
+elif [ "$1" = "intersection_opt_run" ]; then
+	cd ../build
+	OUT="${2:-intersection-opt-measurements}"
+	rm -f ../experiments/$OUT
+	touch ../experiments/$OUT
+	for flag in "${intersection_opt_flags[@]}"
+	do
+		for format in "${intersection_opt_formats[@]}"
+		do
+			iden=`drivers/compile "$format" $flag`
+			cp "$iden"_intersect.glsl ../shaders/
+		done
+		make -j$(nproc)
+		for format in "${intersection_opt_formats[@]}"
+		do
+			iden=`drivers/compile "$format" -just-get-iden`
+			for index in "${!models[@]}"
+			do
+				model="${models[$index]}"
+				camera_position="${camera_positions[$index]}"
+				FILE="../experiments/obj/$model/$model.$iden"
+				FILESIZE=`stat -c%s $FILE`
+				echo "$format $flag" >> ../experiments/$OUT
+				echo "$model" >> ../experiments/$OUT
+				echo "$FILESIZE" >> ../experiments/$OUT
+				if (( FILESIZE >= MAX_STORAGE_BUFFER_RANGE )); then
+					echo "Not viewing $FILE, since it's too large to fit in a storage buffer." >> ../experiments/$OUT
+				else
+					drivers/model_viewer $FILE "$format" $camera_position | grep "Final" >> ../experiments/$OUT
+				fi
+			done
 		done
 	done
 	cd ../experiments

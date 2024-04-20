@@ -76,7 +76,7 @@ for datapoint in datapoints:
     format_idx = formats.index(datapoint[0])
     model_idx = models.index(datapoint[1])
     data[format_idx, model_idx, 0] = datapoint[2]
-    data[format_idx, model_idx, 1] = datapoint[3]
+    data[format_idx, model_idx, 1] = 1000.0 / datapoint[3] if datapoint[3] != 0.0 else 0.0
 
 models = list(map(lambda x: x.replace("-low-poly", ""), models))
 
@@ -86,13 +86,15 @@ lightcolors = ["#FF7F7F", "#7FFF7F", "#7F7FFF", "#FF7FFF"]
 def plot_model_at_resolution(data, model_idx, resolution, s):
     plt.figure(figsize=(7, 3.5))
     x, y = data[:, 0], data[:, 1]
-    pareto = [all([(tx <= ox or ty >= oy) for ox, oy in zip(x, y)]) for tx, ty in zip(x, y)]
-    points = list(zip(data[:, 0], data[:, 1]))
+    pareto = [all([(tx <= ox or ty <= oy) for ox, oy in zip(x, y)]) and ty != 0.0 for tx, ty in zip(x, y)]
+    points = list(zip(x, y))
     indices = list(filter(lambda idx: pareto[idx], argsort(points)))
     p1 = [points[idx][0] for idx in indices]
     p2 = [points[idx][1] for idx in indices]
     plt.plot(p1, p2, c="gray", linestyle='dashed')
-    plt.scatter(x, y, c=[colors[model_idx] if p else lightcolors[model_idx] for p in pareto], s=[float(p) * 25.0 + 15.0 for p in pareto])
+    color=[colors[model_idx] if p else lightcolors[model_idx] for p in pareto]
+    size=[float(p) * 25.0 + 15.0 for p in pareto]
+    plt.scatter(x[y != 0.0], y[y != 0.0], c=[color[idx] for idx in np.nonzero(y != 0.0)[0].astype(int)], s=[size[idx] for idx in np.nonzero(y != 0.0)[0].astype(int)])
 
     pareto_frontier = set()
     for format_idx in range(s[0], s[1]):
@@ -104,16 +106,17 @@ def plot_model_at_resolution(data, model_idx, resolution, s):
         x, y = data[format_idx - s[0], 0], data[format_idx - s[0], 1]
         #if y == 0.0 and formats[format_idx].startswith("SV") and models[model_idx] == "sponza":
         #    y = format_idx / 1000.0
-        texts.append(plt.text(x, y, write_roman(format_idx + 1 - s[0])))
+        if y != 0.0:
+            texts.append(plt.text(x, y, write_roman(format_idx + 1 - s[0])))
 
-    plot_cutoff = 0.0 in data[:, 1]
-    if plot_cutoff:
-        plt.axvline(2 ** 32)
-        plt.text((2 ** 32) * 1.01, 2, 'GPU Size Cutoff (4 GiB)', rotation=270)
+    #plot_cutoff = 0.0 in data[:, 1]
+    #if plot_cutoff:
+    #    plt.axvline(2 ** 32)
+    #    plt.text((2 ** 32) * 1.01, 2, 'GPU Size Cutoff (4 GiB)', rotation=270)
     
     plt.xscale('log')
     plt.xlabel("Model Size (bytes)")
-    plt.ylabel("Ray Intersection Performance (FPS)")
+    plt.ylabel("Frame Time (ms)")
     plt.title(str(models[model_idx]) + " at " + resolution + " resolution")
     adjust_text(texts)
     plt.savefig(str(models[model_idx]) + "-" + resolution.replace("^3", ""), bbox_inches='tight', pad_inches=0.02)
