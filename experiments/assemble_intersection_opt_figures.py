@@ -62,7 +62,7 @@ for format_idx in range(8):
 
 plt.axhline(y=1.0, color="#606060", linestyle="dashed")
 plt.xticks(np.arange(8) * 5.0 + 1.5, labels=formats[0:8], rotation=30, ha='right', rotation_mode='anchor')
-plt.ylabel("Normalized Decrease in Frame Time (ms)", y=0.4)
+plt.ylabel("Normalized Decrease in Frame Time", y=0.4)
 plt.legend()
 plt.savefig("intersection-restart-sv.png", bbox_inches='tight', pad_inches=0.025)
 
@@ -72,7 +72,7 @@ for format_idx in range(8):
 
 plt.axhline(y=1.0, color="#606060", linestyle="dashed")
 plt.xticks(np.arange(8) * 5.0 + 1.5, labels=formats[0:8], rotation=30, ha='right', rotation_mode='anchor')
-plt.ylabel("Normalized Decrease in Frame Time (ms)", y=0.4)
+plt.ylabel("Normalized Decrease in Frame Time", y=0.4)
 plt.legend()
 plt.savefig("intersection-unroll-sv.png", bbox_inches='tight', pad_inches=0.02)
 

@@ -105,7 +105,7 @@ camera_positions=(
 	"26.0 69.5 26.0 43.0 103.5"
 	)
 
-construction_opt_formats=(
+construction_whole_level_dedup_formats=(
 	"SVDAG(11)"
 	"Raw(256, 256, 256) SVDAG(3)"
 	"DF(64, 64, 64, 6) SVDAG(5)"
@@ -114,6 +114,17 @@ construction_opt_formats=(
 	"Raw(128, 128, 128) SVDAG(2)"
 	"DF(32, 32, 32, 6) Raw(16, 16, 16)"
 	"DF(16, 16, 16, 6) SVDAG(5)"
+	)
+
+construction_df_packing_formats=(
+	"DF(16, 16, 16, 6) SVDAG(7)"
+	"DF(64, 64, 64, 6) SVDAG(5)"
+	"DF(8, 8, 8, 6) DF(8, 8, 8, 6) SVDAG(3)"
+	"DF(8, 8, 8, 6) Raw(8, 8, 8) SVDAG(3)"
+	"DF(16, 16, 16, 6) SVO(5)"
+	"DF(16, 16, 16, 6) SVDAG(5)"
+	"DF(32, 32, 32, 6) DF(16, 16, 16, 6)"
+	"DF(32, 32, 32, 6) Raw(16, 16, 16)"
 	)
 
 intersection_opt_formats=(
@@ -127,11 +138,14 @@ intersection_opt_formats=(
 	"Raw(8, 8, 8) Raw(8, 8, 8) SVDAG(3)"
 	)
 
-construction_opt_flags=(
+construction_whole_level_dedup_flags=(
 	""
 	"-whole-level-dedup"
+	)
+
+construction_df_packing_flags=(
+	""
 	"-df-packing"
-	"-whole-level-dedup -df-packing -restart-sv"
 	)
 
 intersection_opt_flags=(
@@ -202,6 +216,9 @@ elif [ "$1" = "convert" ]; then
 		wait
 	done
 	cd ../experiments
+elif [ "$1" = "collect_convert_results" ]; then
+	OUT="${2:-construction-measurements}"
+	ls obj/*/*.log | xargs cat | grep -e "Converting model to" -e "Elapsed (wall clock) time" -e "Maximum resident set size" -e "Command being timed" | sed 's/Converting model to //' | sed 's/	Command being timed: "drivers\/convert_model ..\/experiments\/obj\///' | sed 's/\/.*\.obj.*//' | sed -s 's/	Elapsed (wall clock) time (h:mm:ss or m:ss): //' | sed -s 's/	Maximum resident set size (kbytes): //' > $OUT
 elif [ "$1" = "run" ]; then
 	cd ../build
 	OUT="${2:-measurements}"
@@ -232,9 +249,9 @@ elif [ "$1" = "construction_opt_run" ]; then
 	OUT="${2:-construction-opt-measurements}"
 	rm -f ../experiments/$OUT
 	touch ../experiments/$OUT
-	for flag in "${construction_opt_flags[@]}"
+	for flag in "${construction_whole_level_dedup_flags[@]}"
 	do
-		for format in "${construction_opt_formats[@]}"
+		for format in "${construction_whole_level_dedup_formats[@]}"
 		do
 			iden=`drivers/compile "$format" $flag`
 			cp "$iden"_construct.cpp ../voxels/
@@ -243,14 +260,45 @@ elif [ "$1" = "construction_opt_run" ]; then
 		make -j$(nproc)
 		for model in "${models[@]}"
 		do
-			for format in "${construction_opt_formats[@]}"
+			for format in "${construction_whole_level_dedup_formats[@]}"
 			do
 				iden=`drivers/compile "$format" -just-get-iden`
 				{ /usr/bin/time -v drivers/convert_model ../experiments/obj/$model/$model.obj 1 "$format"; } &> ../experiments/obj/$model/$model.$iden.log &
 			done
 			wait
 		done
-		for format in "${construction_opt_formats[@]}"
+		for format in "${construction_whole_level_dedup_formats[@]}"
+		do
+			iden=`drivers/compile "$format" -just-get-iden`
+			for model in "${models[@]}"
+			do
+				FILE="../experiments/obj/$model/$model.$iden"
+				FILESIZE=`stat -c%s $FILE`
+				echo "$format $flag" >> ../experiments/$OUT
+				echo "$model" >> ../experiments/$OUT
+				echo "$FILESIZE" >> ../experiments/$OUT
+			done
+		done
+	done
+	for flag in "${construction_df_packing_flags[@]}"
+	do
+		for format in "${construction_df_packing_formats[@]}"
+		do
+			iden=`drivers/compile "$format" $flag`
+			cp "$iden"_construct.cpp ../voxels/
+			cp "$iden"_intersect.glsl ../shaders/
+		done
+		make -j$(nproc)
+		for model in "${models[@]}"
+		do
+			for format in "${construction_df_packing_formats[@]}"
+			do
+				iden=`drivers/compile "$format" -just-get-iden`
+				{ /usr/bin/time -v drivers/convert_model ../experiments/obj/$model/$model.obj 1 "$format"; } &> ../experiments/obj/$model/$model.$iden.log &
+			done
+			wait
+		done
+		for format in "${construction_df_packing_formats[@]}"
 		do
 			iden=`drivers/compile "$format" -just-get-iden`
 			for model in "${models[@]}"
