@@ -106,14 +106,14 @@ camera_positions=(
 	)
 
 construction_whole_level_dedup_formats=(
-	"SVDAG(11)"
 	"Raw(256, 256, 256) SVDAG(3)"
-	"DF(64, 64, 64, 6) SVDAG(5)"
-	"DF(16, 16, 16, 6) SVDAG(7)"
-	"SVDAG(9)"
+	"Raw(64, 64, 64) SVDAG(5)"
+	"Raw(16, 16, 16) SVDAG(7)"
+	"Raw(8, 8, 8) SVDAG(8)"
 	"Raw(128, 128, 128) SVDAG(2)"
-	"DF(32, 32, 32, 6) Raw(16, 16, 16)"
-	"DF(16, 16, 16, 6) SVDAG(5)"
+	"Raw(8, 8, 8) Raw(8, 8, 8) SVDAG(3)"
+	"Raw(16, 16, 16) SVDAG(5)"
+	"Raw(4, 4, 4) SVDAG(7)"
 	)
 
 construction_df_packing_formats=(

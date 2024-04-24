@@ -117,11 +117,37 @@ colors = ["#FF0000", "#00FF00", "#0000FF", "#FF00FF"]
 plt.figure(figsize=(7,3.5))
 for model_idx in range(num_models):
     plt.bar(np.arange(num_formats/2) + 1.25 * model_idx * num_formats / 2, data[:20, model_idx, 0].reshape((-1)), label=models[model_idx], color=colors[model_idx])
+plt.xticks(np.sort(np.concatenate((1.25 * np.arange(num_models) * num_formats / 2, 19.0 + 1.25 * np.arange(num_models) * num_formats / 2))), labels=["I", "XX", "I", "XX", "I", "XX", "I", "XX"])
+plt.ylabel("Construction Time (seconds)")
 plt.legend()
-plt.show()
+plt.savefig("construction-2048-times.png", bbox_inches='tight', pad_inches=0.02)
 
 plt.figure(figsize=(7,3.5))
 for model_idx in range(num_models):
     plt.bar(np.arange(num_formats/2) + 1.25 * model_idx * num_formats / 2, data[20:, model_idx, 0].reshape((-1)), label=models[model_idx], color=colors[model_idx])
+plt.xticks(np.sort(np.concatenate((1.25 * np.arange(num_models) * num_formats / 2, 19.0 + 1.25 * np.arange(num_models) * num_formats / 2))), labels=["I", "XX", "I", "XX", "I", "XX", "I", "XX"])
+plt.ylabel("Construction Time (seconds)")
 plt.legend()
-plt.show()
+plt.savefig("construction-512-times.png", bbox_inches='tight', pad_inches=0.02)
+
+print(data[:, :, 1])
+print(np.mean(data[:, :, 1] / 1024 / 1024, axis=0))
+print(np.min(data[:, :, 1] / 1024 / 1024, axis=0))
+print(np.max(data[:, :, 1] / 1024 / 1024, axis=0))
+print(np.std(data[:, :, 1] / 1024 / 1024, axis=0))
+rdata = data[:, :, 1].reshape((-1)) / 1024 / 1024
+rlabels = models + [None, None, None, None] * (data.shape[0] - 1)
+rcolors = colors * data.shape[0]
+ridx = np.argsort(rdata).astype(int)
+rdata = np.array([rdata[idx] for idx in ridx])
+rlabels = np.array([rlabels[idx] for idx in ridx])
+rcolors = np.array([rcolors[idx] for idx in ridx])
+plt.figure(figsize=(7,3.5))
+plt.bar(np.arange(160), rdata, color=rcolors, label=rlabels)
+plt.axhline(y=4.0, color="#606060", linestyle="dashed")
+plt.xticks([])
+plt.ylabel("Maximum Memory Used (GiB)")
+handles, labels = plt.gca().get_legend_handles_labels()
+order = [3, 2, 1, 0]
+plt.legend([handles[idx] for idx in order],[labels[idx] for idx in order])
+plt.savefig("construction-max-memory.png", bbox_inches='tight', pad_inches=0.02)
