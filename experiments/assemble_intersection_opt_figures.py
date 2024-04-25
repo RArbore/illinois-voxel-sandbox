@@ -6,6 +6,9 @@ import matplotlib.pyplot as plt
 import numpy as np
 import sys
 
+def argsort(seq):
+    return [x for x,y in sorted(enumerate(seq), key = lambda x: len(x[1]))]
+
 with open(sys.argv[1]) as f:
     content = f.readlines()
 
@@ -56,22 +59,28 @@ relative_unroll = unroll / baseline
 relative_restart = np.concatenate((relative_restart, gmean(relative_restart, axis=1).reshape(-1, 1)), axis=1)
 relative_unroll = np.concatenate((relative_unroll, gmean(relative_unroll, axis=1).reshape(-1, 1)), axis=1)
 
+print(formats)
+
+print(formats[0:8])
+f_idx = argsort(formats[0:8])
+print(f_idx)
+
 plt.figure(figsize=(7, 3.5))
-for format_idx in range(8):
-    plt.bar(np.arange(num_models + 1) * 0.8 + format_idx * 5.0, relative_restart[format_idx], color=["#FF7F7F", "#7FFF7F", "#7F7FFF", "#FF7FFF", "#7F7F7F"], label=models + ["Geomean"] if format_idx == 0 else None)
+for idx, format_idx in enumerate(f_idx):
+    plt.bar(np.arange(num_models + 1) * 0.8 + idx * 5.0, relative_restart[format_idx], color=["#FF7F7F", "#7FFF7F", "#7F7FFF", "#FF7FFF", "#7F7F7F"], label=models + ["Geomean"] if format_idx == 0 else None, edgecolor='#606060')
 
 plt.axhline(y=1.0, color="#606060", linestyle="dashed")
-plt.xticks(np.arange(8) * 5.0 + 1.5, labels=formats[0:8], rotation=30, ha='right', rotation_mode='anchor')
+plt.xticks(np.arange(8) * 5.0 + 1.5, labels=[formats[0:8][idx] for idx in f_idx], rotation=30, ha='right', rotation_mode='anchor')
 plt.ylabel("Normalized Decrease in Frame Time", y=0.4)
 plt.legend()
 plt.savefig("intersection-restart-sv.png", bbox_inches='tight', pad_inches=0.025)
 
 plt.figure(figsize=(7, 3.5))
-for format_idx in range(8):
-    plt.bar(np.arange(num_models + 1) * 0.8 + format_idx * 5.0, relative_unroll[format_idx], color=["#FF7F7F", "#7FFF7F", "#7F7FFF", "#FF7FFF", "#7F7F7F"], label=models + ["Geomean"] if format_idx == 0 else None)
+for idx, format_idx in enumerate(f_idx):
+    plt.bar(np.arange(num_models + 1) * 0.8 + idx * 5.0, relative_unroll[format_idx], color=["#FF7F7F", "#7FFF7F", "#7F7FFF", "#FF7FFF", "#7F7F7F"], label=models + ["Geomean"] if format_idx == 0 else None, edgecolor='#606060')
 
 plt.axhline(y=1.0, color="#606060", linestyle="dashed")
-plt.xticks(np.arange(8) * 5.0 + 1.5, labels=formats[0:8], rotation=30, ha='right', rotation_mode='anchor')
+plt.xticks(np.arange(8) * 5.0 + 1.5, labels=[formats[0:8][idx] for idx in f_idx], rotation=30, ha='right', rotation_mode='anchor')
 plt.ylabel("Normalized Decrease in Frame Time", y=0.4)
 plt.legend()
 plt.savefig("intersection-unroll-sv.png", bbox_inches='tight', pad_inches=0.02)

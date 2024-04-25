@@ -112,11 +112,11 @@ for datapoint in datapoints:
 
 models = list(map(lambda x: x.replace("-low-poly", ""), models))
 
-colors = ["#FF0000", "#00FF00", "#0000FF", "#FF00FF"]
+colors = ["#FF7F7F", "#7FFF7F", "#7F7FFF", "#FF7FFF"]
 
 plt.figure(figsize=(7,3.5))
 for model_idx in range(num_models):
-    plt.bar(np.arange(num_formats/2) + 1.25 * model_idx * num_formats / 2, data[:20, model_idx, 0].reshape((-1)), label=models[model_idx], color=colors[model_idx])
+    plt.bar(np.arange(num_formats/2) + 1.25 * model_idx * num_formats / 2, data[:20, model_idx, 0].reshape((-1)), label=models[model_idx], color=colors[model_idx], width=1.0, edgecolor='#606060')
 plt.xticks(np.sort(np.concatenate((1.25 * np.arange(num_models) * num_formats / 2, 19.0 + 1.25 * np.arange(num_models) * num_formats / 2))), labels=["I", "XX", "I", "XX", "I", "XX", "I", "XX"])
 plt.ylabel("Construction Time (seconds)")
 plt.legend()
@@ -124,7 +124,7 @@ plt.savefig("construction-2048-times.png", bbox_inches='tight', pad_inches=0.02)
 
 plt.figure(figsize=(7,3.5))
 for model_idx in range(num_models):
-    plt.bar(np.arange(num_formats/2) + 1.25 * model_idx * num_formats / 2, data[20:, model_idx, 0].reshape((-1)), label=models[model_idx], color=colors[model_idx])
+    plt.bar(np.arange(num_formats/2) + 1.25 * model_idx * num_formats / 2, data[20:, model_idx, 0].reshape((-1)), label=models[model_idx], color=colors[model_idx], width=1.0, edgecolor='#606060')
 plt.xticks(np.sort(np.concatenate((1.25 * np.arange(num_models) * num_formats / 2, 19.0 + 1.25 * np.arange(num_models) * num_formats / 2))), labels=["I", "XX", "I", "XX", "I", "XX", "I", "XX"])
 plt.ylabel("Construction Time (seconds)")
 plt.legend()
@@ -143,7 +143,7 @@ rdata = np.array([rdata[idx] for idx in ridx])
 rlabels = np.array([rlabels[idx] for idx in ridx])
 rcolors = np.array([rcolors[idx] for idx in ridx])
 plt.figure(figsize=(7,3.5))
-plt.bar(np.arange(160), rdata, color=rcolors, label=rlabels)
+plt.bar(np.arange(160), rdata, color=rcolors, label=rlabels, width=1.0, edgecolor='#606060')
 plt.axhline(y=4.0, color="#606060", linestyle="dashed")
 plt.xticks([])
 plt.ylabel("Maximum Memory Used (GiB)")
