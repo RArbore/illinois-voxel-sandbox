@@ -55,8 +55,14 @@ Device::Device(std::shared_ptr<Window> window) : window_(window) {
         sizeof(validation_layers) / sizeof(validation_layers[0]);
     create_info.ppEnabledLayerNames = validation_layers;
 
-    ASSERT(vkCreateInstance(&create_info, nullptr, &instance_),
-           "Couldn't create Vulkan instance.");
+    auto instance_result = vkCreateInstance(&create_info, nullptr, &instance_);
+    if (instance_result == VK_ERROR_LAYER_NOT_PRESENT) {
+    create_info.enabledLayerCount = 0;
+    create_info.ppEnabledLayerNames = nullptr;
+        ASSERT(vkCreateInstance(&create_info, nullptr, &instance_), "Couldn't create Vulkan instance.");
+    } else {
+        ASSERT(instance_result, "Couldn't create Vulkan instance.");
+    }
 
     ASSERT(glfwCreateWindowSurface(instance_, window_->get_window(), nullptr,
                                    &surface_),

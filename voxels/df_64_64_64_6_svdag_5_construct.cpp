@@ -40,7 +40,7 @@ static uint32_t push_node_to_buffer(std::pair<std::ofstream &, uint32_t &> buffe
 
 static std::vector<uint32_t> df_64_64_64_6_svdag_5_construct_node(Voxelizer &voxelizer, std::pair<std::ofstream &, uint32_t &> buffer, uint32_t lower_x, uint32_t lower_y, uint32_t lower_z, bool &is_empty);
 
-static std::vector<uint32_t> svdag_5_construct_node(Voxelizer &voxelizer, std::pair<std::ofstream &, uint32_t &> buffer, uint32_t lower_x, uint32_t lower_y, uint32_t lower_z, bool &is_empty);
+static std::vector<uint32_t> svdag_5_construct_node(Voxelizer &voxelizer, std::pair<std::ofstream &, uint32_t &> buffer, uint32_t lower_x, uint32_t lower_y, uint32_t lower_z, bool &is_empty, std::unordered_map<std::vector<uint32_t>, uint32_t> &deduplication_map);
 
 static uint32_t _construct_node(Voxelizer &voxelizer, std::pair<std::ofstream &, uint32_t &> buffer, uint32_t lower_x, uint32_t lower_y, uint32_t lower_z, bool &is_empty);
 
@@ -57,6 +57,8 @@ void df_64_64_64_6_svdag_5_construct(Voxelizer &voxelizer, std::ofstream &buffer
 }
 
 static std::vector<uint32_t> df_64_64_64_6_svdag_5_construct_node(Voxelizer &voxelizer, std::pair<std::ofstream &, uint32_t &> buffer, uint32_t lower_x, uint32_t lower_y, uint32_t lower_z, bool &is_empty) {
+    std::unordered_map<std::vector<uint32_t>, uint32_t> deduplication_map;
+
     is_empty = true;
     uint64_t num_voxels = 262144;
     std::vector<uint32_t> df_chunk(num_voxels * 2);
@@ -68,7 +70,7 @@ static std::vector<uint32_t> df_64_64_64_6_svdag_5_construct_node(Voxelizer &vox
         uint32_t sub_lower_y = lower_y + g_y * 32;
         uint32_t sub_lower_z = lower_z + g_z * 32;
         bool sub_is_empty;
-        auto sub_chunk = svdag_5_construct_node(voxelizer, buffer, sub_lower_x, sub_lower_y, sub_lower_z, sub_is_empty);
+        auto sub_chunk = svdag_5_construct_node(voxelizer, buffer, sub_lower_x, sub_lower_y, sub_lower_z, sub_is_empty, deduplication_map);
         if (!sub_is_empty) {
             df_chunk.at(linear_idx * 2) = push_node_to_buffer(buffer, sub_chunk);
         }
@@ -104,7 +106,7 @@ static std::vector<uint32_t> df_64_64_64_6_svdag_5_construct_node(Voxelizer &vox
     return df_chunk;
 }
 
-static std::vector<uint32_t> svdag_5_construct_node(Voxelizer &voxelizer, std::pair<std::ofstream &, uint32_t &> buffer, uint32_t lower_x, uint32_t lower_y, uint32_t lower_z, bool &is_empty) {
+static std::vector<uint32_t> svdag_5_construct_node(Voxelizer &voxelizer, std::pair<std::ofstream &, uint32_t &> buffer, uint32_t lower_x, uint32_t lower_y, uint32_t lower_z, bool &is_empty, std::unordered_map<std::vector<uint32_t>, uint32_t> &deduplication_map) {
     uint32_t power_of_two = 5;
     const uint64_t bounded_edge_length = 1 << power_of_two;
     std::vector<std::vector<std::vector<uint32_t>>> queues(power_of_two + 1);
@@ -121,8 +123,6 @@ static std::vector<uint32_t> svdag_5_construct_node(Voxelizer &voxelizer, std::p
     auto is_node_leaf = [](const std::vector<uint32_t> &node) {
         return node.at(0) && node.size() == 1;
     };
-
-	    std::unordered_map<std::vector<uint32_t>, uint32_t> deduplication_map;
 
     is_empty = true;
 

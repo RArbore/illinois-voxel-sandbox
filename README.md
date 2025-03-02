@@ -1,6 +1,33 @@
 # illinois-voxel-sandbox
 A high performance voxel engine.
 
+## Basic setup
+First, clone the repo and its submodules:
+```
+git clone https://github.com/RArbore/illinois-voxel-sandbox.git --recursive
+```
+Then, build the project:
+```
+mkdir build
+cd build
+cmake ..
+make -j
+```
+Then, download the models:
+```
+cd ../experiments
+./experiment.sh download
+```
+Then, convert a model:
+```
+cd ../build
+drivers/convert_model ../experiments/obj/buddha/buddha.obj 1 "SVDAG(9)"
+```
+Then, view the converted model:
+```
+drivers/model_viewer ../experiments/obj/buddha/buddha.svdag_9 "SVDAG(9)"
+```
+
 ## Run experiments
 Run the following commands, in order if starting from scratch. The beginning of each line is the directory to run each command from.
 

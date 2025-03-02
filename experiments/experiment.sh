@@ -211,7 +211,7 @@ elif [ "$1" = "convert" ]; then
 		iden=`drivers/compile "$format" -just-get-iden`
 		for model in "${models[@]}"
 		do
-			{ /usr/bin/time -v drivers/convert_model ../experiments/obj/$model/$model.obj 1 "$format"; } &> ../experiments/obj/$model/$model.$iden.log &
+			{ drivers/convert_model ../experiments/obj/$model/$model.obj 1 "$format"; } &> ../experiments/obj/$model/$model.$iden.log &
 		done
 		wait
 	done
@@ -263,7 +263,7 @@ elif [ "$1" = "construction_opt_run" ]; then
 			for format in "${construction_whole_level_dedup_formats[@]}"
 			do
 				iden=`drivers/compile "$format" -just-get-iden`
-				{ /usr/bin/time -v drivers/convert_model ../experiments/obj/$model/$model.obj 1 "$format"; } &> ../experiments/obj/$model/$model.$iden.log &
+				{ drivers/convert_model ../experiments/obj/$model/$model.obj 1 "$format"; } &> ../experiments/obj/$model/$model.$iden.log &
 			done
 			wait
 		done
@@ -294,7 +294,7 @@ elif [ "$1" = "construction_opt_run" ]; then
 			for format in "${construction_df_packing_formats[@]}"
 			do
 				iden=`drivers/compile "$format" -just-get-iden`
-				{ /usr/bin/time -v drivers/convert_model ../experiments/obj/$model/$model.obj 1 "$format"; } &> ../experiments/obj/$model/$model.$iden.log &
+				{ drivers/convert_model ../experiments/obj/$model/$model.obj 1 "$format"; } &> ../experiments/obj/$model/$model.$iden.log &
 			done
 			wait
 		done

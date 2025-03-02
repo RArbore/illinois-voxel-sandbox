@@ -9,7 +9,6 @@
 layout(location = 0) rayPayloadInEXT RayPayload payload;
 
 hitAttributeEXT uint leaf_id;
-hitAttributeEXT uint voxel_normal_id;
 
 void main() {
     uint svdag_id = gl_InstanceCustomIndexEXT;

@@ -9,7 +9,7 @@
 
 layout(location = 0) rayPayloadEXT RayPayload payload;
 
-const int MAX_BOUNCES = 1;
+const int MAX_BOUNCES = 2;
 
 uint hash(uint x) {
     x += (x << 10u);
@@ -51,7 +51,6 @@ void main() {
         if (payload.hit) {
             RayPayload isect = payload;
 
-	    /*
             if (bounce == 0 && !bool(download_bit)) {
                 imageStore(image_normals, ivec2(gl_LaunchIDEXT), vec4(isect.world_normal, 1.0f));
                 imageStore(image_positions, ivec2(gl_LaunchIDEXT), vec4(isect.world_position, 1.0f));
@@ -125,8 +124,6 @@ void main() {
             ray_direction = new_direction;
             weight *= bsdf * abs(dot(new_direction, isect.world_normal)) / pdf;
 	    //L += isect.color.xyz;
-	    */
-	    L += isect.color.xyz;
         } else {
             L += weight * payload.color.xyz * payload.color.w; // add the sky color if the first ray is a miss
             break;
